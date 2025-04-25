@@ -167,3 +167,133 @@ TEST(RequestViewBenchmark, MultiThreadedDecodePerformance) {
             << " in " << elapsed << " ns, "
             << decode_rate << " decode/s" << std::endl;
 }
+
+TEST(RequestViewTest, ParseRequestWithZeroMaxRequests) {
+    auto buffer = build_request_buffer(4, {127, 0, 0, 1}, 8080, 0, 60000, "/zero");
+
+    const auto view = request_view::from_buffer(buffer);
+
+    EXPECT_EQ(view.header_->ip_version_, 4);
+    EXPECT_EQ(view.header_->max_requests_, 0);
+    EXPECT_EQ(view.url_, "/zero");
+
+    auto out = view.to_buffer();
+    ASSERT_EQ(out.size(), buffer.size());
+    ASSERT_TRUE(std::equal(out.begin(), out.end(), buffer.begin()));
+}
+
+TEST(RequestViewTest, ParseRequestWithMaxUInt32MaxRequests) {
+    auto buffer = build_request_buffer(4, {192, 168, 1, 1}, 8080, 0xFFFFFFFF, 60000, "/max-requests");
+
+    const auto view = request_view::from_buffer(buffer);
+
+    EXPECT_EQ(view.header_->ip_version_, 4);
+    EXPECT_EQ(view.header_->max_requests_, 0xFFFFFFFF);
+    EXPECT_EQ(view.url_, "/max-requests");
+
+    auto out = view.to_buffer();
+    ASSERT_EQ(out.size(), buffer.size());
+    ASSERT_TRUE(std::equal(out.begin(), out.end(), buffer.begin()));
+}
+
+TEST(RequestViewTest, ParseRequestWithZeroTTL) {
+    auto buffer = build_request_buffer(4, {127, 0, 0, 1}, 8080, 5, 0, "/zero-ttl");
+
+    const auto view = request_view::from_buffer(buffer);
+
+    EXPECT_EQ(view.header_->ttl_, 0);
+    EXPECT_EQ(view.url_, "/zero-ttl");
+
+    auto out = view.to_buffer();
+    ASSERT_EQ(out.size(), buffer.size());
+    ASSERT_TRUE(std::equal(out.begin(), out.end(), buffer.begin()));
+}
+
+TEST(RequestViewTest, ParseRequestWithMaxTTL) {
+    auto buffer = build_request_buffer(4, {127, 0, 0, 1}, 8080, 5, 0xFFFFFFFF, "/max-ttl");
+
+    const auto view = request_view::from_buffer(buffer);
+
+    EXPECT_EQ(view.header_->ttl_, 0xFFFFFFFF);
+    EXPECT_EQ(view.url_, "/max-ttl");
+
+    auto out = view.to_buffer();
+    ASSERT_EQ(out.size(), buffer.size());
+    ASSERT_TRUE(std::equal(out.begin(), out.end(), buffer.begin()));
+}
+
+TEST(RequestViewTest, ParseRequestWithEmptyURL) {
+    auto buffer = build_request_buffer(4, {127, 0, 0, 1}, 8080, 5, 60000, "");
+
+    const auto view = request_view::from_buffer(buffer);
+
+    EXPECT_EQ(view.url_, "");
+    EXPECT_EQ(view.header_->size_, 0);
+
+    auto out = view.to_buffer();
+    ASSERT_EQ(out.size(), sizeof(request_header));
+    ASSERT_TRUE(std::equal(out.begin(), out.end(), buffer.begin()));
+}
+
+TEST(RequestViewTest, ParseRequestWithMaxSizeURL) {
+    const std::string max_url(255, 'a');
+    auto buffer = build_request_buffer(4, {10, 0, 0, 1}, 8080, 5, 60000, max_url);
+
+    const auto view = request_view::from_buffer(buffer);
+
+    EXPECT_EQ(view.header_->size_, 255);
+    EXPECT_EQ(view.url_.size(), 255);
+    EXPECT_TRUE(std::all_of(view.url_.begin(), view.url_.end(), [](char c) { return c == 'a'; }));
+
+    auto out = view.to_buffer();
+    ASSERT_EQ(out.size(), sizeof(request_header) + 255);
+    ASSERT_TRUE(std::equal(out.begin(), out.end(), buffer.begin()));
+}
+
+TEST(RequestViewTest, ToBufferPreservesHeaderAndPayload) {
+    auto buffer = build_request_buffer(4, {192, 168, 0, 1}, 1234, 100, 10000, "/preserve");
+
+    const auto view = request_view::from_buffer(buffer);
+    auto reconstructed = view.to_buffer();
+
+    ASSERT_EQ(reconstructed.size(), buffer.size());
+    ASSERT_TRUE(std::equal(reconstructed.begin(), reconstructed.end(), buffer.begin()));
+}
+
+TEST(RequestViewTest, RejectsInvalidIPVersion) {
+    auto buffer = build_request_buffer(7, {127, 0, 0, 1}, 8080, 5, 60000, "/invalid-ip");
+
+    const auto view = request_view::from_buffer(buffer);
+
+    EXPECT_NE(view.header_->ip_version_, 4);
+    EXPECT_NE(view.header_->ip_version_, 6);
+}
+
+TEST(RequestViewTest, RejectsCorruptHeaderOverflowSize) {
+    auto buffer = build_request_buffer(4, {127, 0, 0, 1}, 8080, 5, 60000, "/short");
+
+    auto *raw = reinterpret_cast<uint8_t *>(buffer.data());
+    raw[sizeof(request_header) - 1] = 250;
+
+    ASSERT_THROW(request_view::from_buffer(buffer), std::runtime_error);
+}
+
+TEST(RequestViewBenchmark, PerformanceBenchmarkExtremeRequests) {
+    auto buffer = build_request_buffer(
+        4, {127, 0, 0, 1}, 8080, 0xFFFFFFFF, 0xFFFFFFFF, "/extreme"
+    );
+
+    constexpr size_t iterations = 1'000'000;
+    const auto start = high_resolution_clock::now();
+
+    for (size_t i = 0; i < iterations; ++i) {
+        auto view = request_view::from_buffer(buffer);
+        EXPECT_EQ(view.header_->max_requests_, 0xFFFFFFFF);
+    }
+
+    const auto end = high_resolution_clock::now();
+    const auto duration = duration_cast<milliseconds>(end - start);
+
+    std::cout << "Extreme iterations: " << iterations
+              << " in " << duration.count() << " ms" << std::endl;
+}
