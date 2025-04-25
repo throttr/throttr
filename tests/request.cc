@@ -7,7 +7,7 @@ std::vector<uint8_t> build_request_buffer(
     const uint8_t ip_version,
     const std::vector<uint8_t> &ip_bytes,
     const uint16_t port,
-    const std::string &url,
+    std::string_view url,
     const uint8_t max_requests,
     const uint32_t ttl_ms
 ) {
