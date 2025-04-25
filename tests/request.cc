@@ -120,14 +120,14 @@ TEST(RequestViewBenchmark, DecodePerformance) {
 
 TEST(RequestViewBenchmark, MultiThreadedDecodePerformance) {
     constexpr size_t num_threads = 2;
-    std::atomic<bool> start_flag{false};
+    std::atomic start_flag{false};
     std::atomic<size_t> completed_threads{0};
 
-    std::vector<std::thread> threads;
+    std::vector<std::jthread> threads;
     threads.reserve(num_threads);
 
     for (size_t t = 0; t < num_threads; ++t) {
-        threads.emplace_back([&] {
+        threads.emplace_back([&start_flag, &completed_threads] {
             const auto buffer = build_request_buffer(4, {127, 0, 0, 1}, 8080, 5, 60000, "/api/test");
             const auto span = std::span(
                 buffer.data(), buffer.size()
@@ -154,10 +154,6 @@ TEST(RequestViewBenchmark, MultiThreadedDecodePerformance) {
 
     const auto end = high_resolution_clock::now();
     const auto elapsed = std::chrono::duration_cast<milliseconds>(end - start).count();
-
-    for (auto& thread : threads) {
-        thread.join();
-    }
 
     constexpr size_t total_decodes = num_threads * 1'000'000;
     std::cout << "Decodes: " << total_decodes
