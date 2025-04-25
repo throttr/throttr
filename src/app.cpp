@@ -37,8 +37,7 @@ namespace throttr {
         std::vector<std::jthread> _threads;
         _threads.reserve(threads_);
 
-        auto _i = threads_;
-        while (_i-- > 0) {
+        for (auto _i = threads_; _i > 0; --_i) {
             std::puts("Launching thread ...");
             _threads.emplace_back([self = shared_from_this()] {
                 std::puts("Thread running ...");
@@ -48,11 +47,9 @@ namespace throttr {
 
         ioc_.run();
 
-        auto it = _threads.begin();
-        while (it != _threads.end()) {
+        for (auto &_thread: _threads) {
             std::puts("Joining thread ...");
-            it->join();
-            ++it;
+            _thread.join();
         }
 
         return EXIT_SUCCESS;
