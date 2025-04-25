@@ -26,100 +26,45 @@
 
 namespace throttr {
     struct request {
+        /**
+         * IP address
+         */
         std::variant<std::monostate, std::span<const uint8_t, 4>, std::span<const uint8_t, 16>> ip;
+
+        /**
+         * Port
+         */
         uint16_t port = 0;
+
+        /**
+         * URL
+         */
         std::string_view url;
+
+        /**
+         * Max requests
+         */
         uint8_t max_requests = 0;
+
+        /**
+         * TTL
+         */
         uint32_t ttl_ms = 0;
 
-        static request from_string(const std::string_view buffer) {
-            request req;
+        /**
+         * From string
+         *
+         * @param buffer
+         * @return request
+         */
+        static request from_string(std::string_view buffer);
 
-            auto ptr = reinterpret_cast<const uint8_t*>(buffer.data());
-            const uint8_t* end = ptr + buffer.size();
-
-            if (ptr >= end) {
-                throw std::runtime_error("buffer too small");
-            }
-
-            if (const uint8_t ip_version = *ptr++; ip_version == 4) {
-                if (ptr + 4 > end) {
-                    throw std::runtime_error("invalid IPv4 buffer");
-                }
-                req.ip = std::span<const uint8_t, 4>(ptr, 4);
-                ptr += 4;
-            } else if (ip_version == 6) {
-                if (ptr + 16 > end) {
-                    throw std::runtime_error("invalid IPv6 buffer");
-                }
-                req.ip = std::span<const uint8_t, 16>(ptr, 16);
-                ptr += 16;
-            } else {
-                throw std::runtime_error("unsupported IP version");
-            }
-
-            if (ptr + 2 > end) {
-                throw std::runtime_error("missing port");
-            }
-            req.port = (ptr[0] << 8) | ptr[1];
-            ptr += 2;
-
-            if (ptr >= end) {
-                throw std::runtime_error("missing URL length");
-            }
-            const uint8_t url_len = *ptr++;
-            if (ptr + url_len > end) {
-                throw std::runtime_error("URL out of bounds");
-            }
-            req.url = std::string_view(reinterpret_cast<const char*>(ptr), url_len);
-            ptr += url_len;
-
-            if (ptr >= end) {
-                throw std::runtime_error("missing max_requests");
-            }
-            req.max_requests = *ptr++;
-
-            if (ptr + 4 > end) {
-                throw std::runtime_error("missing TTL");
-            }
-            req.ttl_ms = (ptr[0] << 24) | (ptr[1] << 16) | (ptr[2] << 8) | ptr[3];
-            ptr += 4;
-
-            return req;
-        }
-
-        [[nodiscard]] std::vector<uint8_t> to_bytes() const {
-            std::vector<uint8_t> out;
-
-            if (std::holds_alternative<std::span<const uint8_t, 4>>(ip)) {
-                out.push_back(4);
-                auto span = std::get<std::span<const uint8_t, 4>>(ip);
-                out.insert(out.end(), span.begin(), span.end());
-            } else if (std::holds_alternative<std::span<const uint8_t, 16>>(ip)) {
-                out.push_back(6);
-                auto span = std::get<std::span<const uint8_t, 16>>(ip);
-                out.insert(out.end(), span.begin(), span.end());
-            } else {
-                throw std::runtime_error("IP not initialized");
-            }
-
-            out.push_back(static_cast<uint8_t>(port >> 8));
-            out.push_back(static_cast<uint8_t>(port & 0xFF));
-
-            if (url.size() > 255)
-                throw std::runtime_error("URL too long");
-            out.push_back(static_cast<uint8_t>(url.size()));
-            out.insert(out.end(), url.begin(), url.end());
-
-            out.push_back(max_requests);
-
-            out.push_back(static_cast<uint8_t>((ttl_ms >> 24) & 0xFF));
-            out.push_back(static_cast<uint8_t>((ttl_ms >> 16) & 0xFF));
-            out.push_back(static_cast<uint8_t>((ttl_ms >> 8) & 0xFF));
-            out.push_back(static_cast<uint8_t>(ttl_ms & 0xFF));
-
-            return out;
-        }
+        /**
+         * To bytes
+         *
+         * @return vector<uint8_t>
+         */
+        [[nodiscard]] std::vector<uint8_t> to_bytes() const;
     };
 }
 
