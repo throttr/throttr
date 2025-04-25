@@ -17,6 +17,6 @@ jobs:
           cd build
           cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON
           make -j4
-          ./tests
+          ctest  --output-on-failure --verbose
           cd ..
           gcovr --filter='src/' --print-summary --sort-percentage
