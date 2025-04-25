@@ -15,8 +15,8 @@
 
 #pragma once
 
-#ifndef THROTTR_APP_HPP
-#define THROTTR_APP_HPP
+#ifndef THROTTR_VERSION_HPP
+#define THROTTR_VERSION_HPP
 
 #include <string_view>
 
@@ -34,4 +34,4 @@ namespace throttr {
     std::string_view get_version();
 }
 
-#endif // THROTTR_APP_HPP
+#endif // THROTTR_VERSION_HPP

@@ -13,6 +13,26 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-int main() {
-    return 0;
+#include <throttr/app.hpp>
+#include <boost/program_options/options_description.hpp>
+#include <boost/program_options/variables_map.hpp>
+#include <boost/program_options/parsers.hpp>
+
+int main(const int argc, const char* argv[]) {
+
+    boost::program_options::options_description _options("Options");
+
+    _options.add_options()
+        ("port", boost::program_options::value<short>()->default_value(8000), "Assigned port.")
+        ("threads", boost::program_options::value<int>()->default_value(1), "Assigned threads.");
+
+    boost::program_options::variables_map _vm;
+    store(parse_command_line(argc, argv, _options), _vm);
+
+    const auto _port = _vm["port"].as<short>();
+    const auto _threads = _vm["threads"].as<int>();
+
+    const auto _app = std::make_shared<throttr::app>(_port, _threads);
+
+    return _app->serve();
 }

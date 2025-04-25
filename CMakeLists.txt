@@ -6,7 +6,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 option(BUILD_TESTS "Build tests cases" ON)
 
-set(CMAKE_CXX_FLAGS_DEBUG "-g --coverage -fdump-ipa-inline")
+set(CMAKE_CXX_FLAGS "-Wall -Wextra")
+set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g --coverage -fprofile-arcs -ftest-coverage")
 
 find_package(
         Boost 1.87.0
@@ -55,4 +56,7 @@ if (BUILD_TESTS)
     gtest_discover_tests(tests)
 endif ()
 
-add_executable(throttr main.cpp)
+add_executable(throttr main.cpp ${SOURCES})
+target_link_libraries(throttr
+        ${Boost_LIBRARIES}
+)

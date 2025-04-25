@@ -13,11 +13,16 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include <throttr/version.hpp>
+#include <throttr/session.hpp>
 
 namespace throttr {
-    std::string_view get_version() {
-        return version;
+    session::session(boost::asio::ip::tcp::socket socket)
+          : socket_(std::move(socket))
+    {
+    }
+
+    void session::start()
+    {
+        do_read();
     }
 }
-
