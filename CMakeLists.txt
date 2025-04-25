@@ -6,6 +6,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 option(BUILD_TESTS "Build tests cases" ON)
 
+set(CMAKE_CXX_FLAGS_DEBUG "-g --coverage -fdump-ipa-inline")
+
 find_package(
         Boost 1.87.0
         COMPONENTS
