@@ -3,14 +3,14 @@
 
 using namespace throttr;
 
-auto build_request_buffer(
-    const uint8_t ip_version,
-    const std::vector<uint8_t> &ip_bytes,
-    const uint16_t port,
-    const std::string &url,
-    const uint8_t max_requests,
-    const uint32_t ttl_ms
-) -> std::vector<uint8_t> {
+std::vector<uint8_t> build_request_buffer(
+    uint8_t ip_version,
+    const std::vector<uint8_t>& ip_bytes,
+    uint16_t port,
+    const std::string& url,
+    uint8_t max_requests,
+    uint32_t ttl_ms
+) {
     std::vector<uint8_t> buffer;
     buffer.push_back(ip_version);
     buffer.insert(buffer.end(), ip_bytes.begin(), ip_bytes.end());
@@ -27,12 +27,6 @@ auto build_request_buffer(
 }
 
 TEST(ProtocolTest, RequestFromStringToBytesSymmetry) {
-    constexpr uint8_t raw_ipv4[] = {192, 168, 1, 100};
-    constexpr uint16_t port = 8080;
-    std::string url = "/api/user";
-    constexpr uint8_t max = 10;
-    constexpr uint32_t ttl = 60000;
-
     const auto buffer = build_request_buffer(4, {192, 168, 1, 100}, 8080, "/api/user", 10, 60000);
     const auto req = request::from_string(std::string_view(reinterpret_cast<const char*>(buffer.data()), buffer.size()));
     const auto serialized = req.to_bytes();
@@ -45,13 +39,7 @@ TEST(ProtocolTest, RequestFromStringToBytesSymmetry) {
 
 
 TEST(ProtocolTest, RequestIPv6Support) {
-    const std::array<uint8_t, 16> ipv6 = {0x20,0x01,0x0d,0xb8,0x85,0xa3,0x00,0x00,0x00,0x00,0x8a,0x2e,0x03,0x70,0x73,0x34};
-    constexpr uint16_t port = 443;
-    std::string url = "/ipv6/test";
-    constexpr uint8_t max = 7;
-    constexpr uint32_t ttl = 12345;
-
-    const auto buffer = build_request_buffer(4, {192, 168, 1, 100}, 8080, "/api/user", 10, 60000);
+    const auto buffer = build_request_buffer(6, {0x20,0x01,0x0d,0xb8,0x85,0xa3,0x00,0x00,0x00,0x00,0x8a,0x2e,0x03,0x70,0x73,0x34}, 443, "/api/ipv6", 7, 12345);
     const auto req = request::from_string(std::string_view(reinterpret_cast<const char*>(buffer.data()), buffer.size()));
     const auto serialized = req.to_bytes();
 
