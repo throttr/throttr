@@ -78,7 +78,7 @@ TEST(RequestViewTest, RejectsTooSmallBuffer) {
 TEST(RequestViewTest, RejectsMissingUrlPayload) {
     auto buffer = build_request_buffer(4, {127, 0, 0, 1}, 8080, 2, 5000, "/endpoint");
 
-    reinterpret_cast<uint8_t&>(buffer[sizeof(request_header) - 1]) = 100;
+    buffer[sizeof(request_header) - 1] = std::byte{100};
 
     ASSERT_THROW(request_view::from_buffer(buffer), std::runtime_error);
 }

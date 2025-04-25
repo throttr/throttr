@@ -25,7 +25,7 @@ namespace throttr {
 #pragma pack(push, 1)
     struct request_header {
         uint8_t ip_version_;
-        uint8_t ip_[16];
+        std::array<uint8_t, 16> ip_;
         uint16_t port_;
         uint8_t max_requests_;
         uint32_t ttl_;

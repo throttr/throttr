@@ -55,8 +55,7 @@ namespace throttr {
                 throw request_error("buffer too small for request");
             }
 
-            const auto *raw = buffer.data();
-            const auto *_header = std::launder(reinterpret_cast<const request_header *>(raw));
+            const auto *_header = reinterpret_cast<const request_header *>(buffer.data());
             if (buffer.size() < sizeof(request_header) + _header->size_) {
                 throw request_error("buffer too small for url payload");
             }
