@@ -1,0 +1,22 @@
+name: Build
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    container:
+      image:  ghcr.io/throttr/builder:1.87.0-debug
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON
+          make -j4
+          ctest
+          cd ..
+          gcovr --filter='src/' --print-summary --sort-percentage
