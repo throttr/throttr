@@ -3,6 +3,29 @@
 
 using namespace throttr;
 
+auto build_request_buffer(
+    const uint8_t ip_version,
+    const std::vector<uint8_t> &ip_bytes,
+    const uint16_t port,
+    const std::string &url,
+    const uint8_t max_requests,
+    const uint32_t ttl_ms
+) -> std::vector<uint8_t> {
+    std::vector<uint8_t> buffer;
+    buffer.push_back(ip_version);
+    buffer.insert(buffer.end(), ip_bytes.begin(), ip_bytes.end());
+    buffer.push_back(static_cast<uint8_t>(port >> 8));
+    buffer.push_back(static_cast<uint8_t>(port & 0xFF));
+    buffer.push_back(static_cast<uint8_t>(url.size()));
+    buffer.insert(buffer.end(), url.begin(), url.end());
+    buffer.push_back(max_requests);
+    buffer.push_back((ttl_ms >> 24) & 0xFF);
+    buffer.push_back((ttl_ms >> 16) & 0xFF);
+    buffer.push_back((ttl_ms >> 8) & 0xFF);
+    buffer.push_back(ttl_ms & 0xFF);
+    return buffer;
+}
+
 TEST(ProtocolTest, RequestFromStringToBytesSymmetry) {
     constexpr uint8_t raw_ipv4[] = {192, 168, 1, 100};
     constexpr uint16_t port = 8080;
@@ -10,21 +33,8 @@ TEST(ProtocolTest, RequestFromStringToBytesSymmetry) {
     constexpr uint8_t max = 10;
     constexpr uint32_t ttl = 60000;
 
-    std::vector<uint8_t> buffer;
-    buffer.push_back(4);
-    buffer.insert(buffer.end(), std::begin(raw_ipv4), std::end(raw_ipv4));
-    buffer.push_back(static_cast<uint8_t>(port >> 8));
-    buffer.push_back(static_cast<uint8_t>(port & 0xFF));
-    buffer.push_back(static_cast<uint8_t>(url.size()));
-    buffer.insert(buffer.end(), url.begin(), url.end());
-    buffer.push_back(max);
-    buffer.push_back((ttl >> 24) & 0xFF);
-    buffer.push_back((ttl >> 16) & 0xFF);
-    buffer.push_back((ttl >> 8) & 0xFF);
-    buffer.push_back(ttl & 0xFF);
-
+    const auto buffer = build_request_buffer(4, {192, 168, 1, 100}, 8080, "/api/user", 10, 60000);
     const auto req = request::from_string(std::string_view(reinterpret_cast<const char*>(buffer.data()), buffer.size()));
-
     const auto serialized = req.to_bytes();
 
     ASSERT_EQ(serialized.size(), buffer.size());
@@ -41,19 +51,7 @@ TEST(ProtocolTest, RequestIPv6Support) {
     constexpr uint8_t max = 7;
     constexpr uint32_t ttl = 12345;
 
-    std::vector<uint8_t> buffer;
-    buffer.push_back(6);
-    buffer.insert(buffer.end(), ipv6.begin(), ipv6.end());
-    buffer.push_back(static_cast<uint8_t>(port >> 8));
-    buffer.push_back(static_cast<uint8_t>(port & 0xFF));
-    buffer.push_back(static_cast<uint8_t>(url.size()));
-    buffer.insert(buffer.end(), url.begin(), url.end());
-    buffer.push_back(max);
-    buffer.push_back((ttl >> 24) & 0xFF);
-    buffer.push_back((ttl >> 16) & 0xFF);
-    buffer.push_back((ttl >> 8) & 0xFF);
-    buffer.push_back(ttl & 0xFF);
-
+    const auto buffer = build_request_buffer(4, {192, 168, 1, 100}, 8080, "/api/user", 10, 60000);
     const auto req = request::from_string(std::string_view(reinterpret_cast<const char*>(buffer.data()), buffer.size()));
     const auto serialized = req.to_bytes();
 
