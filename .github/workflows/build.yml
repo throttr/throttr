@@ -20,3 +20,8 @@ jobs:
           ctest
           cd ..
           gcovr --filter='src/' --print-summary --sort-percentage
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
