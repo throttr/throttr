@@ -79,7 +79,9 @@ namespace throttr {
             }
             req.max_requests = *ptr++;
 
-            if (ptr + 4 > end) throw std::runtime_error("missing TTL");
+            if (ptr + 4 > end) {
+                throw std::runtime_error("missing TTL");
+            }
             req.ttl_ms = (ptr[0] << 24) | (ptr[1] << 16) | (ptr[2] << 8) | ptr[3];
             ptr += 4;
 

@@ -154,3 +154,39 @@ TEST(ProtocolTest, RejectsTruncatedTTL) {
     };
     ASSERT_THROW(request::from_string(std::string_view(reinterpret_cast<const char*>(buffer.data()), buffer.size())), std::runtime_error);
 }
+
+TEST(RequestValidationTest, RejectsBufferTooSmall) {
+    constexpr std::vector<uint8_t> buffer = {};
+    ASSERT_THROW(throttr::request::from_string(
+        std::string_view(reinterpret_cast<const char*>(buffer.data()), buffer.size())),
+        std::runtime_error);
+}
+
+TEST(RequestValidationTest, RejectsInvalidIPv6Buffer) {
+    std::vector<uint8_t> buffer = {6};
+    buffer.resize(10, 0x00);
+    ASSERT_THROW(throttr::request::from_string(
+        std::string_view(reinterpret_cast<const char*>(buffer.data()), buffer.size())),
+        std::runtime_error);
+}
+
+TEST(RequestValidationTest, RejectsMissingUrlLength) {
+    const std::vector<uint8_t> buffer = {
+        4, 127, 0, 0, 1,
+        0x1F, 0x90
+    };
+    ASSERT_THROW(throttr::request::from_string(
+        std::string_view(reinterpret_cast<const char*>(buffer.data()), buffer.size())),
+        std::runtime_error);
+}
+
+TEST(RequestValidationTest, RejectsToBytesWhenIPNotInitialized) {
+    request req;
+
+    req.port = 8080;
+    req.url = "/test";
+    req.max_requests = 5;
+    req.ttl_ms = 10000;
+
+    ASSERT_THROW(req.to_bytes(), std::runtime_error);
+}
