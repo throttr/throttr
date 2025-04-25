@@ -27,7 +27,7 @@ protected:
     std::unique_ptr<std::thread> server_thread_;
     std::shared_ptr<throttr::app> app_;
     short port_ = 9000;
-    int threads_ = 12;
+    int threads_ = 1;
 
     void SetUp() override {
         LOG("EchoServerTestFixture::SetUp scope_in");
