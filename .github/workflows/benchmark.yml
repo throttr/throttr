@@ -1,0 +1,20 @@
+name: Benchmark
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    container:
+      image:  ghcr.io/throttr/builder:1.87.0-release
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON
+          make -j4
+          ctest  --output-on-failure --verbose
