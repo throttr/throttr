@@ -56,15 +56,15 @@ namespace throttr {
             }
 
             const auto *raw = buffer.data();
-            const auto *_header = std::launder(reinterpret_cast<const request_header*>(raw));
+            const auto *_header = std::launder(reinterpret_cast<const request_header *>(raw));
             if (buffer.size() < sizeof(request_header) + _header->size_) {
                 throw request_error("buffer too small for url payload");
             }
 
-            const auto _url = reinterpret_cast<const char *>(buffer.data() + sizeof(request_header));
+            const auto _url = buffer.subspan(sizeof(request_header), _header->size_);
             return request_view{
                 _header,
-                std::string_view(_url, _header->size_)
+                std::string_view(reinterpret_cast<const char *>(_url.data()), _url.size())
             };
         }
 
