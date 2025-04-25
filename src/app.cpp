@@ -14,7 +14,6 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include <throttr/app.hpp>
-#include <throttr/state.hpp>
 
 #include <thread>
 #include <vector>
@@ -25,8 +24,7 @@ namespace throttr {
         const int threads
     ) : ioc_(threads),
         port_(port),
-        threads_(threads),
-        state_(std::make_shared<state>()) {
+        threads_(threads) {
     }
 
     int app::serve() {
@@ -40,7 +38,7 @@ namespace throttr {
         _threads.reserve(threads_);
 
         for (auto _i = threads_; _i > 0; --_i)
-            _threads.emplace_back([&] { ioc_.run(); });
+            _threads.emplace_back([self = shared_from_this()] { self->ioc_.run(); });
 
         ioc_.run();
 

@@ -19,14 +19,14 @@
 #define THROTTR_APP_HPP
 
 #include <throttr/server.hpp>
+#include <throttr/state.hpp>
 
 namespace throttr {
-    class state;
-
     /**
      * App
      */
     class app : public std::enable_shared_from_this<app> {
+    public:
         /**
          * IO Context
          */
@@ -42,11 +42,10 @@ namespace throttr {
          */
         int threads_;
 
-    public:
         /**
          * State
          */
-        std::shared_ptr<state> state_;
+        std::shared_ptr<state> state_ = std::make_shared<state>();
 
         /**
          * Construct
