@@ -16,8 +16,6 @@
 #ifndef THROTTR_REQUEST_HEADER_HPP
 #define THROTTR_REQUEST_HEADER_HPP
 
-#include <cstdint>
-
 namespace throttr {
     /**
      * Request header
@@ -27,7 +25,7 @@ namespace throttr {
         uint8_t ip_version_;
         std::array<uint8_t, 16> ip_;
         uint16_t port_;
-        uint8_t max_requests_;
+        uint32_t max_requests_;
         uint32_t ttl_;
         uint8_t size_;
     };

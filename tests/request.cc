@@ -12,7 +12,7 @@ std::vector<std::byte> build_request_buffer(
     const uint8_t ip_version,
     const std::vector<uint8_t> &ip_bytes,
     const uint16_t port,
-    const uint8_t max_requests,
+    const uint32_t max_requests,
     const uint32_t ttl,
     const std::string_view url
 ) {
@@ -24,14 +24,17 @@ std::vector<std::byte> build_request_buffer(
     }
 
     buffer.push_back(static_cast<std::byte>(port & 0xFF));
-    buffer.push_back(static_cast<std::byte>((port >> 8) & 0xFF));
+    buffer.push_back(static_cast<std::byte>(port >> 8 & 0xFF));
 
-    buffer.push_back(static_cast<std::byte>(max_requests));
+    buffer.push_back(static_cast<std::byte>(max_requests & 0xFF));
+    buffer.push_back(static_cast<std::byte>(max_requests >> 8 & 0xFF));
+    buffer.push_back(static_cast<std::byte>(max_requests >> 16 & 0xFF));
+    buffer.push_back(static_cast<std::byte>(max_requests >> 24 & 0xFF));
 
     buffer.push_back(static_cast<std::byte>(ttl & 0xFF));
-    buffer.push_back(static_cast<std::byte>((ttl >> 8) & 0xFF));
-    buffer.push_back(static_cast<std::byte>((ttl >> 16) & 0xFF));
-    buffer.push_back(static_cast<std::byte>((ttl >> 24) & 0xFF));
+    buffer.push_back(static_cast<std::byte>(ttl >> 8 & 0xFF));
+    buffer.push_back(static_cast<std::byte>(ttl >> 16 & 0xFF));
+    buffer.push_back(static_cast<std::byte>(ttl >> 24 & 0xFF));
 
     buffer.push_back(static_cast<std::byte>(url.size()));
 
@@ -158,7 +161,7 @@ TEST(RequestViewBenchmark, MultiThreadedDecodePerformance) {
 
     constexpr size_t total_decodes = num_threads * 1'000'000;
 
-    const auto decode_rate = (total_decodes * 1000000000ULL) / elapsed;
+    const auto decode_rate = total_decodes * 1000000000ULL / elapsed;
 
     std::cout << "Decodes: " << total_decodes
             << " in " << elapsed << " ns, "
