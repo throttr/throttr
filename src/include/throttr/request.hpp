@@ -38,31 +38,45 @@ namespace throttr {
             auto ptr = reinterpret_cast<const uint8_t*>(buffer.data());
             const uint8_t* end = ptr + buffer.size();
 
-            if (ptr >= end) throw std::runtime_error("buffer too small");
+            if (ptr >= end) {
+                throw std::runtime_error("buffer too small");
+            }
 
             if (const uint8_t ip_version = *ptr++; ip_version == 4) {
-                if (ptr + 4 > end) throw std::runtime_error("invalid IPv4 buffer");
+                if (ptr + 4 > end) {
+                    throw std::runtime_error("invalid IPv4 buffer");
+                }
                 req.ip = std::span<const uint8_t, 4>(ptr, 4);
                 ptr += 4;
             } else if (ip_version == 6) {
-                if (ptr + 16 > end) throw std::runtime_error("invalid IPv6 buffer");
+                if (ptr + 16 > end) {
+                    throw std::runtime_error("invalid IPv6 buffer");
+                }
                 req.ip = std::span<const uint8_t, 16>(ptr, 16);
                 ptr += 16;
             } else {
                 throw std::runtime_error("unsupported IP version");
             }
 
-            if (ptr + 2 > end) throw std::runtime_error("missing port");
+            if (ptr + 2 > end) {
+                throw std::runtime_error("missing port");
+            }
             req.port = (ptr[0] << 8) | ptr[1];
             ptr += 2;
 
-            if (ptr >= end) throw std::runtime_error("missing URL length");
+            if (ptr >= end) {
+                throw std::runtime_error("missing URL length");
+            }
             const uint8_t url_len = *ptr++;
-            if (ptr + url_len > end) throw std::runtime_error("URL out of bounds");
+            if (ptr + url_len > end) {
+                throw std::runtime_error("URL out of bounds");
+            }
             req.url = std::string_view(reinterpret_cast<const char*>(ptr), url_len);
             ptr += url_len;
 
-            if (ptr >= end) throw std::runtime_error("missing max_requests");
+            if (ptr >= end) {
+                throw std::runtime_error("missing max_requests");
+            }
             req.max_requests = *ptr++;
 
             if (ptr + 4 > end) throw std::runtime_error("missing TTL");
