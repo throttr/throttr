@@ -37,20 +37,21 @@ namespace throttr {
         std::vector<std::jthread> _threads;
         _threads.reserve(threads_);
 
+        // LCOV_EXCL_START
         for (auto _i = threads_; _i > 0; --_i) {
-            std::puts("Launching thread ...");
             _threads.emplace_back([self = shared_from_this()] {
-                std::puts("Thread running ...");
                 self->ioc_.run();
             });
         }
+        // LCOV_EXCL_STOP
 
         ioc_.run();
 
+        // LCOV_EXCL_START
         for (auto &_thread: _threads) {
-            std::puts("Joining thread ...");
             _thread.join();
         }
+        // LCOV_EXCL_STOP
 
         return EXIT_SUCCESS;
     }
