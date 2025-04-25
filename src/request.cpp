@@ -17,7 +17,7 @@
 
 namespace throttr {
     struct request_error final : std::runtime_error {
-        explicit request_error(const std::string& msg) : std::runtime_error(msg) {}
+        using std::runtime_error::runtime_error;
     };
 
     request request::from_string(const std::string_view buffer) {
@@ -49,7 +49,9 @@ namespace throttr {
         if (ptr + 2 > end) {
             throw request_error("missing port");
         }
-        req.port = (ptr[0] << 8) | ptr[1];
+        auto b1 = static_cast<std::byte>(ptr[0]);
+        auto b2 = static_cast<std::byte>(ptr[1]);
+        req.port = static_cast<uint16_t>(b1) << 8 | static_cast<uint16_t>(b2);
         ptr += 2;
 
         if (ptr >= end) {
@@ -70,7 +72,18 @@ namespace throttr {
         if (ptr + 4 > end) {
             throw request_error("missing TTL");
         }
-        req.ttl_ms = (ptr[0] << 24) | (ptr[1] << 16) | (ptr[2] << 8) | ptr[3];
+
+        auto c0 = static_cast<std::byte>(ptr[0]);
+        auto c1 = static_cast<std::byte>(ptr[1]);
+        auto c2 = static_cast<std::byte>(ptr[2]);
+        auto c3 = static_cast<std::byte>(ptr[3]);
+
+        req.ttl_ms =
+            static_cast<uint32_t>(c0) << 24 |
+            static_cast<uint32_t>(c1) << 16 |
+            static_cast<uint32_t>(c2) << 8  |
+            static_cast<uint32_t>(c3);
+
         ptr += 4;
 
         return req;
