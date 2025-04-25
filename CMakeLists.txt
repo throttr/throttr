@@ -55,4 +55,7 @@ if (BUILD_TESTS)
     gtest_discover_tests(tests)
 endif ()
 
-add_executable(throttr main.cpp)
+add_executable(throttr main.cpp ${SOURCES})
+target_link_libraries(throttr
+        ${Boost_LIBRARIES}
+)

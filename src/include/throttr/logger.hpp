@@ -13,11 +13,11 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include <throttr/version.hpp>
+#pragma once
 
-namespace throttr {
-    std::string_view get_version() {
-        return version;
-    }
-}
+#ifndef THROTTR_LOGGER_HPP
+#define THROTTR_LOGGER_HPP
 
+#define LOG(x) std::cout << x << std::endl
+
+#endif // THROTTR_LOGGER_HPP

@@ -13,11 +13,25 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include <throttr/version.hpp>
+#pragma once
+
+#ifndef THROTTR_STATE_HPP
+#define THROTTR_STATE_HPP
+
+#include <memory>
+#include <atomic>
 
 namespace throttr {
-    std::string_view get_version() {
-        return version;
-    }
+    /**
+     * State
+     */
+    class state : public std::enable_shared_from_this<state> {
+    public:
+        /**
+         * Acceptor ready
+         */
+        std::atomic_bool acceptor_ready_;
+    };
 }
 
+#endif // THROTTR_STATE_HPP

@@ -1,0 +1,50 @@
+// Copyright (C) 2025 Ian Torres
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+#include <throttr/server.hpp>
+#include <throttr/session.hpp>
+#include <throttr/state.hpp>
+
+namespace throttr {
+    server::server(
+        boost::asio::io_context &io_context,
+        const short port,
+        const std::shared_ptr<state> &state
+    ) : acceptor_(
+            io_context,
+            boost::asio::ip::tcp::endpoint(
+                boost::asio::ip::tcp::v4(),
+                port
+            )
+        ),
+        socket_(
+            io_context
+        ) {
+        state->acceptor_ready_ = true;
+        do_accept();
+    }
+
+    void server::do_accept() {
+        acceptor_.async_accept(
+            socket_,
+            [this](const boost::system::error_code &error) {
+                if (!error) {
+                    std::make_shared<session>(std::move(socket_))->start();
+                }
+
+                do_accept();
+            });
+    }
+}
