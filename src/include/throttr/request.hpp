@@ -26,150 +26,49 @@
 
 namespace throttr {
     struct request_error final : std::runtime_error {
-        using std::runtime_error::runtime_error;
+        using runtime_error::runtime_error;
     };
 
     /**
      * Request
      */
-    struct request {
-        /**
-         * IP address
-         */
-        std::variant<std::monostate, std::span<const uint8_t, 4>, std::span<const uint8_t, 16> > ip;
+#pragma pack(push, 1)
+    struct request_header {
+        uint8_t ip_version_;
+        uint8_t ip_[16];
+        uint16_t port_;
+        uint8_t max_requests_;
+        uint32_t ttl_;
+        uint8_t size_;
+    };
+#pragma pack(pop)
 
-        /**
-         * Port
-         */
-        uint16_t port = 0;
+    struct request_view {
+        const request_header *header_ = nullptr;
+        std::string_view url_;
 
-        /**
-         * URL
-         */
-        std::string_view url;
-
-        /**
-         * Max requests
-         */
-        uint8_t max_requests = 0;
-
-        /**
-         * TTL
-         */
-        uint32_t ttl_ms = 0;
-
-        /**
-         * From string
-         *
-         * @param buffer
-         * @return request
-         */
-        static request from_string(std::string_view buffer) {
-            request req;
-
-            auto ptr = reinterpret_cast<const uint8_t *>(buffer.data());
-            const uint8_t *end = ptr + buffer.size();
-
-            if (ptr >= end) {
-                throw request_error("buffer too small");
+        static request_view from_buffer(const std::span<const uint8_t> &buffer) {
+            if (buffer.size() < sizeof(request_header)) {
+                throw std::runtime_error("buffer too small for request");
             }
 
-            if (const uint8_t ip_version = *ptr++; ip_version == 4) {
-                if (ptr + 4 > end) {
-                    throw request_error("invalid IPv4 buffer");
-                }
-                req.ip = std::span<const uint8_t, 4>(ptr, 4);
-                ptr += 4;
-            } else if (ip_version == 6) {
-                if (ptr + 16 > end) {
-                    throw request_error("invalid IPv6 buffer");
-                }
-                req.ip = std::span<const uint8_t, 16>(ptr, 16);
-                ptr += 16;
-            } else {
-                throw request_error("unsupported IP version");
+            const auto *_header = reinterpret_cast<const request_header *>(buffer.data());
+            if (buffer.size() < sizeof(request_header) + _header->size_) {
+                throw std::runtime_error("buffer too small for url payload");
             }
 
-            if (ptr + 2 > end) {
-                throw request_error("missing port");
-            }
-            const auto b1 = static_cast<std::byte>(ptr[0]);
-            const auto b2 = static_cast<std::byte>(ptr[1]);
-            req.port = static_cast<uint16_t>(to_integer<uint8_t>(b1)) << 8
-                       | static_cast<uint16_t>(to_integer<uint8_t>(b2));
-            ptr += 2;
-
-            if (ptr >= end) {
-                throw request_error("missing URL length");
-            }
-            const uint8_t url_len = *ptr++;
-            if (ptr + url_len > end) {
-                throw request_error("URL out of bounds");
-            }
-            req.url = std::string_view(reinterpret_cast<const char *>(ptr), url_len);
-            ptr += url_len;
-
-            if (ptr >= end) {
-                throw request_error("missing max_requests");
-            }
-            req.max_requests = *ptr++;
-
-            if (ptr + 4 > end) {
-                throw request_error("missing TTL");
-            }
-
-            const auto c0 = static_cast<std::byte>(ptr[0]);
-            const auto c1 = static_cast<std::byte>(ptr[1]);
-            const auto c2 = static_cast<std::byte>(ptr[2]);
-            const auto c3 = static_cast<std::byte>(ptr[3]);
-
-            req.ttl_ms =
-                    static_cast<uint32_t>(to_integer<uint8_t>(c0)) << 24 |
-                    static_cast<uint32_t>(to_integer<uint8_t>(c1)) << 16 |
-                    static_cast<uint32_t>(to_integer<uint8_t>(c2)) << 8 |
-                    static_cast<uint32_t>(to_integer<uint8_t>(c3));
-
-            ptr += 4;
-
-            return req;
+            const auto _url = reinterpret_cast<const char *>(buffer.data() + sizeof(request_header));
+            return request_view{
+                _header,
+                std::string_view(_url, _header->size_)
+            };
         }
 
-        /**
-         * To bytes
-         *
-         * @return vector<uint8_t>
-         */
-        [[nodiscard]] std::vector<uint8_t> to_bytes() const {
-            std::vector<uint8_t> out;
-
-            if (std::holds_alternative<std::span<const uint8_t, 4> >(ip)) {
-                out.push_back(4);
-                auto span = std::get<std::span<const uint8_t, 4> >(ip);
-                out.insert(out.end(), span.begin(), span.end());
-            } else if (std::holds_alternative<std::span<const uint8_t, 16> >(ip)) {
-                out.push_back(6);
-                auto span = std::get<std::span<const uint8_t, 16> >(ip);
-                out.insert(out.end(), span.begin(), span.end());
-            } else {
-                throw request_error("IP not initialized");
-            }
-
-            out.push_back(static_cast<uint8_t>(port >> 8));
-            out.push_back(static_cast<uint8_t>(port & 0xFF));
-
-            if (url.size() > 255)
-                throw request_error("URL too long");
-            out.push_back(static_cast<uint8_t>(url.size()));
-            out.insert(out.end(), url.begin(), url.end());
-
-            out.push_back(max_requests);
-
-            out.push_back(static_cast<uint8_t>((ttl_ms >> 24) & 0xFF));
-            out.push_back(static_cast<uint8_t>((ttl_ms >> 16) & 0xFF));
-            out.push_back(static_cast<uint8_t>((ttl_ms >> 8) & 0xFF));
-            out.push_back(static_cast<uint8_t>(ttl_ms & 0xFF));
-
-            return out;
+        [[nodiscard]] std::span<const uint8_t> to_buffer() const {
+            return {
+                reinterpret_cast<const uint8_t *>(header_),
+                sizeof(request_header) + url_.size()
+            };
         }
     };
 }
