@@ -39,13 +39,18 @@ namespace throttr {
 
         auto _i = threads_;
         while (_i-- > 0) {
-            _threads.emplace_back([self = shared_from_this()] { self->ioc_.run(); });
+            std::puts("Launching thread ...");
+            _threads.emplace_back([self = shared_from_this()] {
+                std::puts("Thread running ...");
+                self->ioc_.run();
+            });
         }
 
         ioc_.run();
 
         auto it = _threads.begin();
         while (it != _threads.end()) {
+            std::puts("Joining thread ...");
             it->join();
             ++it;
         }
