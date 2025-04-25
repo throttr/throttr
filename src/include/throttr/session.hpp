@@ -49,7 +49,7 @@ namespace throttr {
          */
         void do_read() {
             auto self(shared_from_this());
-            socket_.async_read_some(boost::asio::buffer(data_, max_length),
+            socket_.async_read_some(boost::asio::buffer(data_.data(), data_.size()),
                                     [this, self](const boost::system::error_code &error,
                                                  const std::size_t read_length) {
                                         boost::ignore_unused(self);
@@ -78,11 +78,20 @@ namespace throttr {
                                      });
         }
 
+        /**
+         * Socket
+         */
         boost::asio::ip::tcp::socket socket_;
 
-        enum { max_length = 1024 };
+        /**
+         * Max length
+         */
+        static constexpr std::size_t max_length = 1024;
 
-        char data_[max_length] = "\0";
+        /**
+         * Data
+         */
+        std::array<char, max_length> data_{};
     };
 }
 
