@@ -1,6 +1,8 @@
 #include <gtest/gtest.h>
 #include <throttr/request.hpp>
 #include <chrono>
+#include <thread>
+#include <vector>
 
 using namespace throttr;
 
@@ -101,7 +103,7 @@ TEST(RequestViewBenchmark, DecodePerformance) {
         4, {127, 0, 0, 1}, 8080, 5, 60000, "/api/benchmark"
     );
 
-    constexpr size_t iterations = 1000000;
+    constexpr size_t iterations = 1'000'000;
     const auto start = high_resolution_clock::now();
 
     for (size_t i = 0; i < iterations; ++i) {
@@ -114,4 +116,51 @@ TEST(RequestViewBenchmark, DecodePerformance) {
 
     std::cout << "iterations: " << iterations
               << " on " << duration.count() << " ms" << std::endl;
+}
+
+TEST(RequestViewBenchmark, MultiThreadedDecodePerformance) {
+    constexpr size_t num_threads = 2;
+    std::atomic<bool> start_flag{false};
+    std::atomic<size_t> completed_threads{0};
+
+    std::vector<std::thread> threads;
+    threads.reserve(num_threads);
+
+    for (size_t t = 0; t < num_threads; ++t) {
+        threads.emplace_back([&] {
+            const auto buffer = build_request_buffer(4, {127, 0, 0, 1}, 8080, 5, 60000, "/api/test");
+            const auto span = std::span(
+                buffer.data(), buffer.size()
+            );
+            constexpr size_t decodes_per_thread = 1'000'000;
+
+            while (!start_flag.load(std::memory_order_acquire)) {
+                std::this_thread::yield();
+            }
+
+            for (size_t i = 0; i < decodes_per_thread; ++i) {
+                request_view::from_buffer(span);
+            }
+            ++completed_threads;
+        });
+    }
+
+    const auto start = high_resolution_clock::now();
+    start_flag.store(true, std::memory_order_release);
+
+    while (completed_threads.load(std::memory_order_acquire) < num_threads) {
+        std::this_thread::yield();
+    }
+
+    const auto end = high_resolution_clock::now();
+    const auto elapsed = std::chrono::duration_cast<milliseconds>(end - start).count();
+
+    for (auto& thread : threads) {
+        thread.join();
+    }
+
+    constexpr size_t total_decodes = num_threads * 1'000'000;
+    std::cout << "Decodes: " << total_decodes
+              << " in " << elapsed << " ms, "
+              << (total_decodes * 1000 / elapsed) << " decode/s" << std::endl;
 }
