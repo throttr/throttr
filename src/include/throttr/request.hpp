@@ -25,12 +25,15 @@
 #include <vector>
 
 namespace throttr {
+    /**
+     * Request error
+     */
     struct request_error final : std::runtime_error {
-        using runtime_error::runtime_error;
+        using std::runtime_error::runtime_error;
     };
 
     /**
-     * Request
+     * Request header
      */
 #pragma pack(push, 1)
     struct request_header {
@@ -43,10 +46,26 @@ namespace throttr {
     };
 #pragma pack(pop)
 
+    /**
+     * Request view
+     */
     struct request_view {
+        /**
+         * Header
+         */
         const request_header *header_ = nullptr;
+
+        /**
+         * URL
+         */
         std::string_view url_;
 
+        /**
+         * From buffer
+         *
+         * @param buffer
+         * @return request_view
+         */
         static request_view from_buffer(const std::span<const uint8_t> &buffer) {
             if (buffer.size() < sizeof(request_header)) {
                 throw std::runtime_error("buffer too small for request");
@@ -64,6 +83,11 @@ namespace throttr {
             };
         }
 
+        /**
+         * To buffer
+         *
+         * @return span<const uint8_t>
+         */
         [[nodiscard]] std::span<const uint8_t> to_buffer() const {
             return {
                 reinterpret_cast<const uint8_t *>(header_),
