@@ -88,8 +88,6 @@ namespace throttr {
 
         ptr += 4;
 
-        boost::ignore_unused(ptr);
-
         return req;
     }
 
