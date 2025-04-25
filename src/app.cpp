@@ -37,14 +37,17 @@ namespace throttr {
         std::vector<std::jthread> _threads;
         _threads.reserve(threads_);
 
-        for (auto _i = threads_; _i > 0; --_i) {
+        auto _i = threads_;
+        while (_i-- > 0) {
             _threads.emplace_back([self = shared_from_this()] { self->ioc_.run(); });
         }
 
         ioc_.run();
 
-        for (auto &_thread: _threads) {
-            _thread.join();
+        auto it = _threads.begin();
+        while (it != _threads.end()) {
+            it->join();
+            ++it;
         }
 
         return EXIT_SUCCESS;
