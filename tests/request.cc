@@ -1,7 +1,10 @@
 #include <gtest/gtest.h>
 #include <throttr/request.hpp>
+#include <chrono>
 
 using namespace throttr;
+
+using namespace std::chrono;
 
 std::vector<std::byte> build_request_buffer(
     const uint8_t ip_version,
@@ -91,4 +94,24 @@ TEST(RequestViewTest, ToBufferMatchesOriginal) {
     auto reconstructed = view.to_buffer();
     ASSERT_EQ(reconstructed.size(), buffer.size());
     ASSERT_TRUE(std::equal(reconstructed.begin(), reconstructed.end(), buffer.begin()));
+}
+
+TEST(RequestViewBenchmark, DecodePerformance) {
+    auto buffer = build_request_buffer(
+        4, {127, 0, 0, 1}, 8080, 5, 60000, "/api/benchmark"
+    );
+
+    constexpr size_t iterations = 1000000;
+    const auto start = high_resolution_clock::now();
+
+    for (size_t i = 0; i < iterations; ++i) {
+        auto view = request_view::from_buffer(buffer);
+        EXPECT_EQ(view.header_->ip_version_, 4);
+    }
+
+    const auto end = high_resolution_clock::now();
+    const auto duration = duration_cast<milliseconds>(end - start);
+
+    std::cout << "iterations: " << iterations
+              << " on " << duration.count() << " ms" << std::endl;
 }
