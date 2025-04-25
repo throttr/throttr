@@ -101,3 +101,56 @@ TEST(ProtocolTest, RejectsTooLongURL) {
     req.ttl_ms = 1000;
     ASSERT_THROW(req.to_bytes(), std::runtime_error);
 }
+
+TEST(ProtocolTest, RejectsTruncatedIPv4Exactly) {
+    const std::vector<uint8_t> buffer = {
+        4, 192, 168, 0
+    };
+    ASSERT_THROW(request::from_string(std::string_view(reinterpret_cast<const char*>(buffer.data()), buffer.size())), std::runtime_error);
+}
+
+TEST(ProtocolTest, RejectsTruncatedPortExactly) {
+    const std::vector<uint8_t> buffer = {
+        4, 127, 0, 0, 1,
+    };
+    ASSERT_THROW(request::from_string(std::string_view(reinterpret_cast<const char*>(buffer.data()), buffer.size())), std::runtime_error);
+}
+
+TEST(ProtocolTest, RejectsTruncatedPortWithOneByte) {
+    const std::vector<uint8_t> buffer = {
+        4, 127, 0, 0, 1,
+        0x1F
+    };
+    ASSERT_THROW(request::from_string(std::string_view(reinterpret_cast<const char*>(buffer.data()), buffer.size())), std::runtime_error);
+}
+
+TEST(ProtocolTest, RejectsURLOutOfBounds) {
+    const std::vector<uint8_t> buffer = {
+        4, 127, 0, 0, 1,
+        0x1F, 0x90,
+        5,
+        'a', 'b'
+    };
+    ASSERT_THROW(request::from_string(std::string_view(reinterpret_cast<const char*>(buffer.data()), buffer.size())), std::runtime_error);
+}
+
+TEST(ProtocolTest, RejectsMissingMaxRequestsExactly) {
+    const std::vector<uint8_t> buffer = {
+        4, 127, 0, 0, 1,
+        0x1F, 0x90,
+        3,
+        'a', 'b', 'c'
+    };
+    ASSERT_THROW(request::from_string(std::string_view(reinterpret_cast<const char*>(buffer.data()), buffer.size())), std::runtime_error);
+}
+
+TEST(ProtocolTest, RejectsTruncatedTTL) {
+    const std::vector<uint8_t> buffer = {
+        4, 127, 0, 0, 1,
+        0x1F, 0x90,
+        3, 'a', 'b', 'c',
+        5,
+        0x00, 0x00
+    };
+    ASSERT_THROW(request::from_string(std::string_view(reinterpret_cast<const char*>(buffer.data()), buffer.size())), std::runtime_error);
+}
