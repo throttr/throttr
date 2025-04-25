@@ -16,13 +16,11 @@
 #ifndef THROTTR_REQUEST_HPP
 #define THROTTR_REQUEST_HPP
 
-#include <variant>
 #include <span>
 #include <string_view>
-#include <array>
-#include <cstdint>
 #include <stdexcept>
-#include <vector>
+
+#include <throttr/request_header.hpp>
 
 namespace throttr {
     /**
@@ -31,20 +29,6 @@ namespace throttr {
     struct request_error final : std::runtime_error {
         using std::runtime_error::runtime_error;
     };
-
-    /**
-     * Request header
-     */
-#pragma pack(push, 1)
-    struct request_header {
-        uint8_t ip_version_;
-        uint8_t ip_[16];
-        uint16_t port_;
-        uint8_t max_requests_;
-        uint32_t ttl_;
-        uint8_t size_;
-    };
-#pragma pack(pop)
 
     /**
      * Request view
@@ -71,7 +55,8 @@ namespace throttr {
                 throw request_error("buffer too small for request");
             }
 
-            const auto *_header = reinterpret_cast<const request_header *>(buffer.data());
+            const auto *raw = buffer.data();
+            const auto *_header = std::launder(reinterpret_cast<const request_header*>(raw));
             if (buffer.size() < sizeof(request_header) + _header->size_) {
                 throw request_error("buffer too small for url payload");
             }
