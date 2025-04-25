@@ -25,6 +25,9 @@
 #include <vector>
 
 namespace throttr {
+    /**
+     * Request
+     */
     struct request {
         /**
          * IP address
