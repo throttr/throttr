@@ -22,16 +22,9 @@ namespace throttr {
         boost::asio::io_context &io_context,
         const short port,
         const std::shared_ptr<state> &state
-    ) : acceptor_(
-            io_context,
-            boost::asio::ip::tcp::endpoint(
-                boost::asio::ip::tcp::v4(),
-                port
-            )
-        ),
-        socket_(
-            io_context
-        ) {
+    ) : acceptor_(io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
+        socket_(io_context)
+    {
         state->acceptor_ready_ = true;
         do_accept();
     }
