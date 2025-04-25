@@ -13,6 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+#include <boost/core/ignore_unused.hpp>
 #include <throttr/request.hpp>
 
 namespace throttr {
@@ -85,6 +86,8 @@ namespace throttr {
             static_cast<uint32_t>(c3);
 
         ptr += 4;
+
+        boost::ignore_unused(ptr);
 
         return req;
     }
