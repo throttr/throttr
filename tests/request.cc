@@ -158,7 +158,7 @@ TEST(RequestViewBenchmark, MultiThreadedDecodePerformance) {
 
     constexpr size_t total_decodes = num_threads * 1'000'000;
 
-    const auto decode_rate = (total_decodes * 1000000000ull) / elapsed;
+    const auto decode_rate = (total_decodes * 1000000000ULL) / elapsed;
 
     std::cout << "Decodes: " << total_decodes
             << " in " << elapsed << " ns, "
