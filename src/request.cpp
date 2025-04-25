@@ -24,8 +24,8 @@ namespace throttr {
     request request::from_string(const std::string_view buffer) {
         request req;
 
-        auto ptr = reinterpret_cast<const uint8_t*>(buffer.data());
-        const uint8_t* end = ptr + buffer.size();
+        auto ptr = reinterpret_cast<const uint8_t *>(buffer.data());
+        const uint8_t *end = ptr + buffer.size();
 
         if (ptr >= end) {
             throw request_error("buffer too small");
@@ -50,9 +50,10 @@ namespace throttr {
         if (ptr + 2 > end) {
             throw request_error("missing port");
         }
-        auto b1 = static_cast<std::byte>(ptr[0]);
-        auto b2 = static_cast<std::byte>(ptr[1]);
-        req.port = static_cast<uint16_t>(b1) << 8 | static_cast<uint16_t>(b2);
+        const auto b1 = static_cast<std::byte>(ptr[0]);
+        const auto b2 = static_cast<std::byte>(ptr[1]);
+        req.port = static_cast<uint16_t>(to_integer<uint8_t>(b1)) << 8
+                   | static_cast<uint16_t>(to_integer<uint8_t>(b2));
         ptr += 2;
 
         if (ptr >= end) {
@@ -62,7 +63,7 @@ namespace throttr {
         if (ptr + url_len > end) {
             throw request_error("URL out of bounds");
         }
-        req.url = std::string_view(reinterpret_cast<const char*>(ptr), url_len);
+        req.url = std::string_view(reinterpret_cast<const char *>(ptr), url_len);
         ptr += url_len;
 
         if (ptr >= end) {
@@ -74,16 +75,16 @@ namespace throttr {
             throw request_error("missing TTL");
         }
 
-        auto c0 = static_cast<std::byte>(ptr[0]);
-        auto c1 = static_cast<std::byte>(ptr[1]);
-        auto c2 = static_cast<std::byte>(ptr[2]);
-        auto c3 = static_cast<std::byte>(ptr[3]);
+        const auto c0 = static_cast<std::byte>(ptr[0]);
+        const auto c1 = static_cast<std::byte>(ptr[1]);
+        const auto c2 = static_cast<std::byte>(ptr[2]);
+        const auto c3 = static_cast<std::byte>(ptr[3]);
 
         req.ttl_ms =
-            static_cast<uint32_t>(c0) << 24 |
-            static_cast<uint32_t>(c1) << 16 |
-            static_cast<uint32_t>(c2) << 8  |
-            static_cast<uint32_t>(c3);
+                static_cast<uint32_t>(to_integer<uint8_t>(c0)) << 24 |
+                static_cast<uint32_t>(to_integer<uint8_t>(c1)) << 16 |
+                static_cast<uint32_t>(to_integer<uint8_t>(c2)) << 8 |
+                static_cast<uint32_t>(to_integer<uint8_t>(c3));
 
         ptr += 4;
 
@@ -95,13 +96,13 @@ namespace throttr {
     std::vector<uint8_t> request::to_bytes() const {
         std::vector<uint8_t> out;
 
-        if (std::holds_alternative<std::span<const uint8_t, 4>>(ip)) {
+        if (std::holds_alternative<std::span<const uint8_t, 4> >(ip)) {
             out.push_back(4);
-            auto span = std::get<std::span<const uint8_t, 4>>(ip);
+            auto span = std::get<std::span<const uint8_t, 4> >(ip);
             out.insert(out.end(), span.begin(), span.end());
-        } else if (std::holds_alternative<std::span<const uint8_t, 16>>(ip)) {
+        } else if (std::holds_alternative<std::span<const uint8_t, 16> >(ip)) {
             out.push_back(6);
-            auto span = std::get<std::span<const uint8_t, 16>>(ip);
+            auto span = std::get<std::span<const uint8_t, 16> >(ip);
             out.insert(out.end(), span.begin(), span.end());
         } else {
             throw request_error("IP not initialized");
