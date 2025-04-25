@@ -66,14 +66,14 @@ namespace throttr {
          * @param buffer
          * @return request_view
          */
-        static request_view from_buffer(const std::span<const uint8_t> &buffer) {
+        static request_view from_buffer(const std::span<const std::byte> &buffer) {
             if (buffer.size() < sizeof(request_header)) {
-                throw std::runtime_error("buffer too small for request");
+                throw request_error("buffer too small for request");
             }
 
             const auto *_header = reinterpret_cast<const request_header *>(buffer.data());
             if (buffer.size() < sizeof(request_header) + _header->size_) {
-                throw std::runtime_error("buffer too small for url payload");
+                throw request_error("buffer too small for url payload");
             }
 
             const auto _url = reinterpret_cast<const char *>(buffer.data() + sizeof(request_header));
@@ -88,9 +88,9 @@ namespace throttr {
          *
          * @return span<const uint8_t>
          */
-        [[nodiscard]] std::span<const uint8_t> to_buffer() const {
+        [[nodiscard]] std::span<const std::byte> to_buffer() const {
             return {
-                reinterpret_cast<const uint8_t *>(header_),
+                reinterpret_cast<const std::byte *>(header_),
                 sizeof(request_header) + url_.size()
             };
         }

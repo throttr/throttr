@@ -3,7 +3,7 @@
 
 using namespace throttr;
 
-std::vector<uint8_t> build_request_buffer(
+std::vector<std::byte> build_request_buffer(
     const uint8_t ip_version,
     const std::vector<uint8_t>& ip_bytes,
     const uint16_t port,
@@ -11,24 +11,29 @@ std::vector<uint8_t> build_request_buffer(
     const uint32_t ttl,
     const std::string_view url
 ) {
-    std::vector<uint8_t> buffer;
-    buffer.push_back(ip_version);
-    buffer.resize(buffer.size() + 16, 0);
-    std::copy(ip_bytes.begin(), ip_bytes.end(), buffer.begin() + 1);
+    std::vector<std::byte> buffer;
+    buffer.push_back(static_cast<std::byte>(ip_version));
+    buffer.resize(buffer.size() + 16, static_cast<std::byte>(0));
+    for (size_t i = 0; i < ip_bytes.size(); ++i) {
+        buffer[1 + i] = static_cast<std::byte>(ip_bytes[i]);
+    }
 
-    buffer.push_back(static_cast<uint8_t>(port & 0xFF));
-    buffer.push_back(static_cast<uint8_t>((port >> 8) & 0xFF));
+    buffer.push_back(static_cast<std::byte>(port & 0xFF));
+    buffer.push_back(static_cast<std::byte>((port >> 8) & 0xFF));
 
-    buffer.push_back(max_requests);
+    buffer.push_back(static_cast<std::byte>(max_requests));
 
-    buffer.push_back(static_cast<uint8_t>(ttl & 0xFF));
-    buffer.push_back(static_cast<uint8_t>((ttl >> 8) & 0xFF));
-    buffer.push_back(static_cast<uint8_t>((ttl >> 16) & 0xFF));
-    buffer.push_back(static_cast<uint8_t>((ttl >> 24) & 0xFF));
+    buffer.push_back(static_cast<std::byte>(ttl & 0xFF));
+    buffer.push_back(static_cast<std::byte>((ttl >> 8) & 0xFF));
+    buffer.push_back(static_cast<std::byte>((ttl >> 16) & 0xFF));
+    buffer.push_back(static_cast<std::byte>((ttl >> 24) & 0xFF));
 
-    buffer.push_back(static_cast<uint8_t>(url.size()));
+    buffer.push_back(static_cast<std::byte>(url.size()));
 
-    buffer.insert(buffer.end(), url.begin(), url.end());
+    for (char c : url) {
+        buffer.push_back(static_cast<std::byte>(c));
+    }
+
     return buffer;
 }
 
@@ -66,13 +71,14 @@ TEST(RequestViewTest, ParseIPv6) {
 }
 
 TEST(RequestViewTest, RejectsTooSmallBuffer) {
-    std::vector<uint8_t> buffer(5, 0);
+    std::vector buffer(5, static_cast<std::byte>(0));
     ASSERT_THROW(request_view::from_buffer(buffer), std::runtime_error);
 }
 
 TEST(RequestViewTest, RejectsMissingUrlPayload) {
     auto buffer = build_request_buffer(4, {127, 0, 0, 1}, 8080, 2, 5000, "/endpoint");
-    buffer[sizeof(request_header) - 1] = 100;
+
+    reinterpret_cast<uint8_t&>(buffer[sizeof(request_header) - 1]) = 100;
 
     ASSERT_THROW(request_view::from_buffer(buffer), std::runtime_error);
 }
