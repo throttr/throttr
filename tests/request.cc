@@ -10,7 +10,7 @@ using namespace std::chrono;
 
 std::vector<std::byte> build_request_buffer(
     const uint8_t ip_version,
-    const std::vector<uint8_t>& ip_bytes,
+    const std::vector<uint8_t> &ip_bytes,
     const uint16_t port,
     const uint8_t max_requests,
     const uint32_t ttl,
@@ -35,7 +35,7 @@ std::vector<std::byte> build_request_buffer(
 
     buffer.push_back(static_cast<std::byte>(url.size()));
 
-    for (char c : url) {
+    for (char c: url) {
         buffer.push_back(static_cast<std::byte>(c));
     }
 
@@ -59,7 +59,7 @@ TEST(RequestViewTest, ParseIPv4) {
 }
 
 TEST(RequestViewTest, ParseIPv6) {
-    const std::vector<uint8_t> ipv6 = {0x20,0x01,0x0d,0xb8,0x85,0xa3,0,0,0,0,0,0,0,0,0,1};
+    const std::vector<uint8_t> ipv6 = {0x20, 0x01, 0x0d, 0xb8, 0x85, 0xa3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
     auto buffer = build_request_buffer(6, ipv6, 443, 10, 120000, "/api/auth");
 
     const auto view = request_view::from_buffer(buffer);
@@ -115,7 +115,7 @@ TEST(RequestViewBenchmark, DecodePerformance) {
     const auto duration = duration_cast<milliseconds>(end - start);
 
     std::cout << "iterations: " << iterations
-              << " on " << duration.count() << " ms" << std::endl;
+            << " on " << duration.count() << " ms" << std::endl;
 }
 
 TEST(RequestViewBenchmark, MultiThreadedDecodePerformance) {
@@ -153,10 +153,14 @@ TEST(RequestViewBenchmark, MultiThreadedDecodePerformance) {
     }
 
     const auto end = high_resolution_clock::now();
-    const auto elapsed = std::chrono::duration_cast<milliseconds>(end - start).count();
+    const auto elapsed = std::chrono::duration_cast<nanoseconds>(end - start).count();
+
 
     constexpr size_t total_decodes = num_threads * 1'000'000;
+
+    const auto decode_rate = (total_decodes * 1000000000ull) / elapsed;
+
     std::cout << "Decodes: " << total_decodes
-              << " in " << elapsed << " ms, "
-              << (total_decodes * 1000 / elapsed) << " decode/s" << std::endl;
+            << " in " << elapsed << " ns, "
+            << decode_rate << " decode/s" << std::endl;
 }
