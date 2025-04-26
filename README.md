@@ -104,4 +104,4 @@ All operations are designed to be **fully asynchronous and lock-free** to maximi
 
 This software has been built by **Ian Torres** and released using [GNU Affero General Public License](./LICENSE).
 
-We can talk, send me something to [iantorres@outlook.com](mailto://iantorres@outlook.com).
+We can talk, send me something to [iantorres@outlook.com](mailto:iantorres@outlook.com).
