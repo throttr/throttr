@@ -4,7 +4,11 @@ FROM ghcr.io/throttr/builder:1.87.0-${TYPE}
 
 ARG TYPE
 
-COPY . .
+COPY src/ src/
+COPY tests/ tests/
+COPY CMakeLists.txt .
+COPY main.cpp .
+COPY LICENSE .
 
 EXPOSE 9000
 
@@ -21,5 +25,7 @@ RUN mkdir -p build && \
     cd .. && \
     rm -rf /srv/*
 
+RUN adduser --system --no-create-home --shell /bin/false gatekeeper
+USER gatekeeper
 
-CMD ["throttr", "--port=9000", "--threads=${THREADS}"]
+CMD ["sh", "-c", "throttr --port=9000 --threads=$THREADS"]
