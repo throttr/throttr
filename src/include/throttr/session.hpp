@@ -35,6 +35,7 @@ namespace throttr {
          * Constructor
          *
          * @param socket
+         * @param state
          */
         explicit session(
             boost::asio::ip::tcp::socket socket,

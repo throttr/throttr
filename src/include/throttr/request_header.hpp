@@ -22,11 +22,34 @@ namespace throttr {
      */
 #pragma pack(push, 1)
     struct request_header {
+        /**
+         * IP version
+         */
         uint8_t ip_version_;
+
+        /**
+         * IP address
+         */
         std::array<uint8_t, 16> ip_;
+
+        /**
+         * Port
+         */
         uint16_t port_;
+
+        /**
+         * Max requests
+         */
         uint32_t max_requests_;
+
+        /**
+         * TTL
+         */
         uint32_t ttl_;
+
+        /**
+         * URL size
+         */
         uint8_t size_;
     };
 #pragma pack(pop)
