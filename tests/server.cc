@@ -132,7 +132,7 @@ TEST_F(ServerTestFixture, HandlesSingleValidRequest) {
 
     ASSERT_EQ(_response.size(), 13);
 
-    const bool _can = static_cast<bool>(_response[0]);
+    const auto _can = static_cast<bool>(_response[0]);
 
     int _available_requests = 0;
     std::memcpy(&_available_requests, _response.data() + 1, sizeof(_available_requests));
