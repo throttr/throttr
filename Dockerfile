@@ -8,7 +8,6 @@ COPY src/ src/
 COPY tests/ tests/
 COPY CMakeLists.txt .
 COPY main.cpp .
-COPY LICENSE .
 
 EXPOSE 9000
 
@@ -23,8 +22,10 @@ RUN mkdir -p build && \
     mv throttr /usr/bin/throttr && \
     if [ "$TYPE" = "debug" ]; then mv tests /usr/bin/tests; fi && \
     cd /srv && \
-    rm -rf * && \
+    rm -rf ./* && \
     adduser --system --no-create-home --shell /bin/false gatekeeper
+
+COPY LICENSE .
 
 USER gatekeeper
 
