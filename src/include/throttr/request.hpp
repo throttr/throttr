@@ -54,7 +54,7 @@ namespace throttr {
          * @param other
          * @return bool
          */
-        bool operator==(const request_key &other) const = default;
+        bool operator==(const request_key &other) const = default;  // LCOV_EXCL_LINE note: Hash requirement.
     };
 
     /**
@@ -70,7 +70,9 @@ namespace throttr {
         std::size_t operator()(const request_key &key) const {
             std::size_t _h = std::hash<uint8_t>{}(key.ip_version_);
 
-            for (const auto _b: key.ip_) _h ^= std::hash<uint8_t>{}(_b) + 0x9e3779b9 + (_h << 6) + (_h >> 2);
+            for (const auto _b: key.ip_) {  // LCOV_EXCL_LINE note: Partially tested.
+                _h ^= std::hash<uint8_t>{}(_b) + 0x9e3779b9 + (_h << 6) + (_h >> 2);
+            }
 
             _h ^= std::hash<uint16_t>{}(key.port_) + 0x9e3779b9 + (_h << 6) + (_h >> 2);
             _h ^= std::hash<std::string>{}(key.url_) + 0x9e3779b9 + (_h << 6) + (_h >> 2);

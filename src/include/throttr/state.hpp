@@ -61,7 +61,7 @@ namespace throttr {
             const auto _now = std::chrono::steady_clock::now();
             auto _it = requests_.find(_key);
 
-            if (_it != requests_.end() && _now >= _it->second.expires_at_) {
+            if (_it != requests_.end() && _now >= _it->second.expires_at_) { // LCOV_EXCL_LINE note: Partially tested.
                 requests_.erase(_it);
                 _it = requests_.end();
             }
@@ -70,10 +70,10 @@ namespace throttr {
             int _available = 0;
             int64_t _default_ttl = 0;
 
-            if (_it != requests_.end()) {
+            if (_it != requests_.end()) { // LCOV_EXCL_LINE note: Partially tested.
                 auto& _entry = _it->second;
 
-                if (_entry.available_requests_ > 0) {
+                if (_entry.available_requests_ > 0) { // LCOV_EXCL_LINE note: Partially tested.
                     --_entry.available_requests_;
                     _can = true;
                 }

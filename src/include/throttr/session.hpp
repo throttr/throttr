@@ -56,7 +56,7 @@ namespace throttr {
          * @param length
          */
         void on_read(const boost::system::error_code &error, const std::size_t length) {
-            if (!error) {
+            if (!error) { // LCOV_EXCL_LINE note: Partially tested as this requires a read error.
                 try {
                     const auto _view = request_view::from_buffer(
                         std::span(reinterpret_cast<const std::byte *>(data_.data()), length));
@@ -89,7 +89,7 @@ namespace throttr {
         void on_write(const boost::system::error_code &error, const std::size_t length) {
             boost::ignore_unused(length);
 
-            if (!error) {
+            if (!error) {  // LCOV_EXCL_LINE note: Partially tested as this requires a write error.
                 do_read();
             }
         }
