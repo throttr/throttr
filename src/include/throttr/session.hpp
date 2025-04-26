@@ -22,6 +22,7 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/write.hpp>
 #include <boost/core/ignore_unused.hpp>
+#include <boost/beast/core/bind_handler.hpp>
 #include <throttr/request.hpp>
 #include <throttr/state.hpp>
 
@@ -39,7 +40,7 @@ namespace throttr {
          */
         explicit session(
             boost::asio::ip::tcp::socket socket,
-            const std::shared_ptr<state> & state
+            const std::shared_ptr<state> &state
         );
 
         /**
@@ -49,31 +50,48 @@ namespace throttr {
 
     private:
         /**
+         * On read
+         *
+         * @param error
+         * @param length
+         */
+        void on_read(const boost::system::error_code &error, const std::size_t length) {
+            if (!error) {
+                try {
+                    const auto _view = request_view::from_buffer(
+                        std::span(reinterpret_cast<const std::byte *>(data_.data()), length));
+
+                    const auto _response = state_->handle_request(_view);
+
+                    do_write(_response);
+                } catch (const request_error &e) {
+                    boost::ignore_unused(e);
+
+                    do_read();
+                }
+            }
+        }
+
+        /**
          * Do read
          */
         void do_read() {
-            auto _self(shared_from_this());
             socket_.async_read_some(boost::asio::buffer(data_.data(), data_.size()),
-                                    [this, _self](const boost::system::error_code &error,
-                                                 const std::size_t read_length) {
-                                        boost::ignore_unused(_self);
-                                        if (!error) {
-                                            try {
-                                                const auto _view = request_view::from_buffer(
-                                                    std::span(
-                                                        reinterpret_cast<const std::byte*>(data_.data()),
-                                                        read_length
-                                                    )
-                                                );
+                                    boost::beast::bind_front_handler(&session::on_read, shared_from_this()));
+        }
 
-                                                const auto _response = state_->handle_request(_view);
+        /**
+         * On write
+         *
+         * @param error
+         * @param length
+         */
+        void on_write(const boost::system::error_code &error, const std::size_t length) {
+            boost::ignore_unused(length);
 
-                                                do_write(_response);
-                                            } catch (const request_error& e) {
-                                                do_read();
-                                            }
-                                        }
-                                    });
+            if (!error) {
+                do_read();
+            }
         }
 
         /**
@@ -84,14 +102,7 @@ namespace throttr {
         void do_write(std::vector<std::byte> response) {
             auto _self(shared_from_this());
             boost::asio::async_write(socket_, boost::asio::buffer(response.data(), response.size()),
-                                     [this, _self](const boost::system::error_code &error,
-                                                  const std::size_t write_length) {
-                                         boost::ignore_unused(_self, write_length);
-
-                                         if (!error) {
-                                             do_read();
-                                         }
-                                     });
+                                     boost::beast::bind_front_handler(&session::on_write, shared_from_this()));
         }
 
         /**
