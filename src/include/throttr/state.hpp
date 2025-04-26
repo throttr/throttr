@@ -51,7 +51,7 @@ namespace throttr {
         std::vector<std::byte> handle_request(const request_view & view) {
             const auto* _header = view.header_;
 
-            const request_key key{
+            const request_key _key{
                 _header->ip_version_,
                 _header->ip_,
                 _header->port_,
@@ -59,7 +59,7 @@ namespace throttr {
             };
 
             const auto _now = std::chrono::steady_clock::now();
-            auto _it = requests_.find(key);
+            auto _it = requests_.find(_key);
 
             if (_it != requests_.end() && _now >= _it->second.expires_at_) {
                 requests_.erase(_it);
@@ -83,7 +83,7 @@ namespace throttr {
                 const int _stock = static_cast<int>(_header->max_requests_);
                 const int _ttl = static_cast<int>(_header->ttl_);
 
-                requests_[key] = request_entry{
+                requests_[_key] = request_entry{
                     _stock - 1,
                     _now + std::chrono::milliseconds(_ttl)
                 };

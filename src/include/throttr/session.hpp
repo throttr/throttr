@@ -107,12 +107,12 @@ namespace throttr {
         /**
          * Max length
          */
-        static constexpr std::size_t max_length = 1024;
+        static constexpr std::size_t max_length_ = 1024;
 
         /**
          * Data
          */
-        std::array<char, max_length> data_{};
+        std::array<char, max_length_> data_{};
     };
 }
 
