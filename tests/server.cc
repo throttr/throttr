@@ -28,7 +28,6 @@ class EchoServerTestFixture : public testing::Test {
     int threads_ = 1;
 
 protected:
-
     void SetUp() override {
         LOG("EchoServerTestFixture::SetUp scope_in");
         app_ = std::make_shared<throttr::app>(9000, threads_);
@@ -52,7 +51,6 @@ protected:
         app_->stop();
         LOG("EchoServerTestFixture::TearDown stopped");
 
-
         LOG("EchoServerTestFixture::TearDown joining");
         if (server_thread_ && server_thread_->joinable()) {
             server_thread_->join();
@@ -64,79 +62,78 @@ protected:
         LOG("EchoServerTestFixture::TearDown scope_out");
     }
 
-    [[nodiscard]] std::string send_and_receive(const std::string& message) const {
+    [[nodiscard]] static std::string send_and_receive(const std::string& message) {
         LOG("EchoServerTestFixture::send_and_receive scope_in");
-        boost::asio::io_context context;
-        tcp::resolver resolver(context);
+        boost::asio::io_context _io_context;
+        tcp::resolver _resolver(_io_context);
 
         LOG("EchoServerTestFixture::send_and_receive resolving");
-        auto endpoints = resolver.resolve("127.0.0.1", std::to_string(9000));
+        auto _endpoints = _resolver.resolve("127.0.0.1", std::to_string(9000));
         LOG("EchoServerTestFixture::send_and_receive resolved");
 
-        tcp::socket socket(context);
+        tcp::socket _socket(_io_context);
         LOG("EchoServerTestFixture::send_and_receive connecting");
-        boost::asio::connect(socket, endpoints);
+        boost::asio::connect(_socket, _endpoints);
         LOG("EchoServerTestFixture::send_and_receive connected");
 
-        boost::asio::write(socket, boost::asio::buffer(message));
+        boost::asio::write(_socket, boost::asio::buffer(message));
 
-        std::string reply(1024, '\0');
-        const size_t reply_length = socket.read_some(boost::asio::buffer(reply));
-        reply.resize(reply_length);
+        std::string _response(1024, '\0');
+        const size_t _response_length = _socket.read_some(boost::asio::buffer(_response));
+        _response.resize(_response_length);
 
         LOG("EchoServerTestFixture::send_and_receive scope_out");
-        return reply;
+        return _response;
     }
 };
 
 TEST_F(EchoServerTestFixture, EchoesSingleMessage) {
-        LOG("EchoServerTestFixture::EchoesSingleMessage scope_in");
-    const std::string msg = "Hola Throttr!";
-    const std::string response = send_and_receive(msg);
-    ASSERT_EQ(response, msg);
-        LOG("EchoServerTestFixture::EchoesSingleMessage scope_out");
+    LOG("EchoServerTestFixture::EchoesSingleMessage scope_in");
+    const std::string _message = "Hola Throttr!";
+    const std::string _response = send_and_receive(_message);
+    ASSERT_EQ(_response, _message);
+    LOG("EchoServerTestFixture::EchoesSingleMessage scope_out");
 }
 
 TEST_F(EchoServerTestFixture, EchoesMultipleMessages) {
     LOG("EchoServerTestFixture::EchoesMultipleMessages scope_in");
-    std::string msg = "Hola Throttr!";
-    std::string first = "Ping";
-    std::string second = "Pong";
+    std::string _first_message = "Ping";
+    std::string _second_message = "Pong";
 
-    boost::asio::io_context context;
-    tcp::resolver resolver(context);
+    boost::asio::io_context _io_context;
+    tcp::resolver _resolver(_io_context);
 
     LOG("EchoServerTestFixture::EchoesMultipleMessages resolving");
-    const auto endpoints = resolver.resolve("127.0.0.1", std::to_string(9000));
+    const auto _endpoints = _resolver.resolve("127.0.0.1", std::to_string(9000));
     LOG("EchoServerTestFixture::EchoesMultipleMessages resolved");
 
-    tcp::socket socket(context);
+    tcp::socket _socket(_io_context);
 
     LOG("EchoServerTestFixture::EchoesMultipleMessages connecting");
-    boost::asio::connect(socket, endpoints);
+    boost::asio::connect(_socket, _endpoints);
     LOG("EchoServerTestFixture::EchoesMultipleMessages connected");
 
-    LOG("EchoServerTestFixture::EchoesMultipleMessages writing 1 of 2");
-    boost::asio::write(socket, boost::asio::buffer(first));
-    LOG("EchoServerTestFixture::EchoesMultipleMessages wrote 1 of 2");
-    std::string buffer1(1024, '\0');
+    LOG("EchoServerTestFixture::EchoesMultipleMessages writing first message");
+    boost::asio::write(_socket, boost::asio::buffer(_first_message));
+    LOG("EchoServerTestFixture::EchoesMultipleMessages wrote first message");
 
-    LOG("EchoServerTestFixture::EchoesMultipleMessages reading 1 of 2");
-    const size_t len1 = socket.read_some(boost::asio::buffer(buffer1.data(), buffer1.size()));
-    buffer1.resize(len1);
-    ASSERT_EQ(buffer1, first);
-    LOG("EchoServerTestFixture::EchoesMultipleMessages read 2 of 2");
+    std::string _ping_response_buffer(1024, '\0');
+    LOG("EchoServerTestFixture::EchoesMultipleMessages reading first response");
+    const size_t _ping_response_length = _socket.read_some(boost::asio::buffer(_ping_response_buffer.data(), _ping_response_buffer.size()));
+    _ping_response_buffer.resize(_ping_response_length);
+    ASSERT_EQ(_ping_response_buffer, _first_message);
+    LOG("EchoServerTestFixture::EchoesMultipleMessages read first response");
 
-    LOG("EchoServerTestFixture::EchoesMultipleMessages writing 2 of 2");
-    boost::asio::write(socket, boost::asio::buffer(second));
-    LOG("EchoServerTestFixture::EchoesMultipleMessages wrote 2 of 2");
-    std::string buffer2(1024, '\0');
+    LOG("EchoServerTestFixture::EchoesMultipleMessages writing second message");
+    boost::asio::write(_socket, boost::asio::buffer(_second_message));
+    LOG("EchoServerTestFixture::EchoesMultipleMessages wrote second message");
 
-    LOG("EchoServerTestFixture::EchoesMultipleMessages reading 1 of 2");
-    const size_t len2 = socket.read_some(boost::asio::buffer(buffer2.data(), buffer2.size()));
-    buffer2.resize(len2);
-    LOG("EchoServerTestFixture::EchoesMultipleMessages read 2 of 2");
+    std::string _pong_response_buffer(1024, '\0');
+    LOG("EchoServerTestFixture::EchoesMultipleMessages reading second response");
+    const size_t _pong_response_length = _socket.read_some(boost::asio::buffer(_pong_response_buffer.data(), _pong_response_buffer.size()));
+    _pong_response_buffer.resize(_pong_response_length);
+    LOG("EchoServerTestFixture::EchoesMultipleMessages read second response");
 
-    ASSERT_EQ(buffer2, second);
+    ASSERT_EQ(_pong_response_buffer, _second_message);
     LOG("EchoServerTestFixture::EchoesMultipleMessages scope_out");
 }
