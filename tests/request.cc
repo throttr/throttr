@@ -271,8 +271,8 @@ TEST(RequestViewTest, RejectsInvalidIPVersion) {
 TEST(RequestViewTest, RejectsCorruptHeaderOverflowSize) {
     auto _buffer = build_request_buffer(4, {127, 0, 0, 1}, 8080, 5, 60000, "/short");
 
-    auto* _raw = reinterpret_cast<uint8_t*>(_buffer.data());
-    _raw[sizeof(request_header) - 1] = 250;
+    auto* _raw = _buffer.data();
+    _raw[sizeof(request_header) - 1] = static_cast<std::byte>(250);
 
     ASSERT_THROW(request_view::from_buffer(_buffer), std::runtime_error);
 }
