@@ -18,10 +18,49 @@
 #ifndef THROTTR_STATE_HPP
 #define THROTTR_STATE_HPP
 
+#include <throttr/request.hpp>
+
 #include <memory>
 #include <atomic>
+#include <vector>
+#include <chrono>
+#include <unordered_map>
 
 namespace throttr {
+    struct request_key {
+        uint8_t ip_version;
+        std::array<uint8_t, 16> ip;
+        uint16_t port;
+        std::string url;
+
+        bool operator==(const request_key& other) const {
+            return ip_version == other.ip_version &&
+           ip == other.ip &&
+           port == other.port &&
+           url == other.url;
+        };
+    };
+
+    struct request_key_hasher {
+        std::size_t operator()(const request_key& key) const {
+            std::size_t h = std::hash<uint8_t>{}(key.ip_version);
+
+            for (auto b : key.ip) {
+                h ^= std::hash<uint8_t>{}(b) + 0x9e3779b9 + (h << 6) + (h >> 2);
+            }
+
+            h ^= std::hash<uint16_t>{}(key.port) + 0x9e3779b9 + (h << 6) + (h >> 2);
+            h ^= std::hash<std::string>{}(key.url) + 0x9e3779b9 + (h << 6) + (h >> 2);
+
+            return h;
+        }
+    };
+
+    struct request_entry {
+        int available_requests = 0;
+        std::chrono::steady_clock::time_point expires_at;
+    };
+
     /**
      * State
      */
@@ -31,6 +70,16 @@ namespace throttr {
          * Acceptor ready
          */
         std::atomic_bool acceptor_ready_;
+
+        std::unordered_map<request_key, request_entry, request_key_hasher> requests_;
+
+        /**
+         * Handle request
+         *
+         * @param view
+         * @return vector<byte>
+         */
+        std::vector<std::byte> handle_request(const request_view & view);
     };
 }
 

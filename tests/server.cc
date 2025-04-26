@@ -22,118 +22,241 @@
 
 using boost::asio::ip::tcp;
 
-class EchoServerTestFixture : public testing::Test {
+static std::vector<std::byte> build_request_buffer(
+    const uint8_t ip_version,
+    const std::array<uint8_t, 16>& ip,
+    const uint16_t port,
+    const uint32_t max_requests,
+    const uint32_t ttl,
+    const std::string& url
+) {
+    std::vector<std::byte> buffer;
+    buffer.resize(sizeof(throttr::request_header) + url.size());
+
+    auto* header = reinterpret_cast<throttr::request_header*>(buffer.data());
+
+    header->ip_version_ = ip_version;
+    header->ip_ = ip;
+    header->port_ = port;
+    header->max_requests_ = max_requests;
+    header->ttl_ = ttl;
+    header->size_ = static_cast<uint8_t>(url.size());
+
+    std::memcpy(buffer.data() + sizeof(throttr::request_header), url.data(), url.size());
+
+    return buffer;
+}
+
+class ServerTestFixture : public testing::Test {
     std::unique_ptr<std::jthread> server_thread_;
     std::shared_ptr<throttr::app> app_;
     int threads_ = 1;
 
 protected:
     void SetUp() override {
-        LOG("EchoServerTestFixture::SetUp scope_in");
+        LOG("ServerTestFixture::SetUp scope_in");
         app_ = std::make_shared<throttr::app>(9000, threads_);
 
         server_thread_ = std::make_unique<std::jthread>([this]() {
-            LOG("EchoServerTestFixture::SetUp thread scope_in");
+            LOG("ServerTestFixture::SetUp thread scope_in");
             app_->serve();
-            LOG("EchoServerTestFixture::SetUp thread scope_out");
+            LOG("ServerTestFixture::SetUp thread scope_out");
         });
 
         while (!app_->state_->acceptor_ready_) {
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
-        LOG("EchoServerTestFixture::SetUp scope_out");
+        LOG("ServerTestFixture::SetUp scope_out");
     }
 
     void TearDown() override {
-        LOG("EchoServerTestFixture::TearDown scope_in");
+        LOG("ServerTestFixture::TearDown scope_in");
 
-        LOG("EchoServerTestFixture::TearDown stopping");
+        LOG("ServerTestFixture::TearDown stopping");
         app_->stop();
-        LOG("EchoServerTestFixture::TearDown stopped");
+        LOG("ServerTestFixture::TearDown stopped");
 
-        LOG("EchoServerTestFixture::TearDown joining");
+        LOG("ServerTestFixture::TearDown joining");
         if (server_thread_ && server_thread_->joinable()) {
             server_thread_->join();
-            LOG("EchoServerTestFixture::TearDown joined");
+            LOG("ServerTestFixture::TearDown joined");
         } else {
-            LOG("EchoServerTestFixture::TearDown not_joined");
+            LOG("ServerTestFixture::TearDown not_joined");
         }
 
-        LOG("EchoServerTestFixture::TearDown scope_out");
+        LOG("ServerTestFixture::TearDown scope_out");
     }
 
-    [[nodiscard]] static std::string send_and_receive(const std::string& message) {
-        LOG("EchoServerTestFixture::send_and_receive scope_in");
+    [[nodiscard]] static std::vector<std::byte> send_and_receive(const std::vector<std::byte>& message) {
+        LOG("ServerTestFixture::send_and_receive scope_in");
         boost::asio::io_context _io_context;
         tcp::resolver _resolver(_io_context);
 
-        LOG("EchoServerTestFixture::send_and_receive resolving");
-        auto _endpoints = _resolver.resolve("127.0.0.1", std::to_string(9000));
-        LOG("EchoServerTestFixture::send_and_receive resolved");
+        LOG("ServerTestFixture::send_and_receive resolving");
+        const auto _endpoints = _resolver.resolve("127.0.0.1", std::to_string(9000));
+        LOG("ServerTestFixture::send_and_receive resolved");
 
         tcp::socket _socket(_io_context);
-        LOG("EchoServerTestFixture::send_and_receive connecting");
+        LOG("ServerTestFixture::send_and_receive connecting");
         boost::asio::connect(_socket, _endpoints);
-        LOG("EchoServerTestFixture::send_and_receive connected");
+        LOG("ServerTestFixture::send_and_receive connected");
 
-        boost::asio::write(_socket, boost::asio::buffer(message));
+        boost::asio::write(_socket, boost::asio::buffer(message.data(), message.size()));
 
-        std::string _response(1024, '\0');
-        const size_t _response_length = _socket.read_some(boost::asio::buffer(_response));
-        _response.resize(_response_length);
+        std::vector<std::byte> _response(13);
+        boost::asio::read(_socket, boost::asio::buffer(_response.data(), _response.size()));
 
-        LOG("EchoServerTestFixture::send_and_receive scope_out");
+        LOG("ServerTestFixture::send_and_receive scope_out");
         return _response;
     }
 };
 
-TEST_F(EchoServerTestFixture, EchoesSingleMessage) {
-    LOG("EchoServerTestFixture::EchoesSingleMessage scope_in");
-    const std::string _message = "Hola Throttr!";
-    const std::string _response = send_and_receive(_message);
-    ASSERT_EQ(_response, _message);
-    LOG("EchoServerTestFixture::EchoesSingleMessage scope_out");
+TEST_F(ServerTestFixture, HandlesSingleValidRequest) {
+    LOG("ServerTestFixture::HandlesSingleValidRequest scope_in");
+
+    const auto buffer = build_request_buffer(
+        4,
+        {127, 0, 0, 1},
+        9000,
+        5,
+        10000,
+        "/test"
+    );
+
+    auto response = send_and_receive(buffer);
+
+    ASSERT_EQ(response.size(), 13);
+
+    const bool can = static_cast<bool>(response[0]);
+
+    int available_requests = 0;
+    std::memcpy(&available_requests, response.data() + 1, sizeof(available_requests));
+
+    int64_t ttl_ms = 0;
+    std::memcpy(&ttl_ms, response.data() + 1 + sizeof(available_requests), sizeof(ttl_ms));
+
+    ASSERT_TRUE(can);
+    ASSERT_EQ(available_requests, 4);
+    ASSERT_GT(ttl_ms, 0);
+
+    LOG("ServerTestFixture::HandlesSingleValidRequest scope_out");
 }
 
-TEST_F(EchoServerTestFixture, EchoesMultipleMessages) {
-    LOG("EchoServerTestFixture::EchoesMultipleMessages scope_in");
-    std::string _first_message = "Ping";
-    std::string _second_message = "Pong";
+TEST_F(ServerTestFixture, HandlesMultipleValidRequests) {
+    LOG("ServerTestFixture::HandlesMultipleValidRequests scope_in");
 
-    boost::asio::io_context _io_context;
-    tcp::resolver _resolver(_io_context);
+    auto buffer = build_request_buffer(
+        4,
+        {127, 0, 0, 1},
+        9000,
+        3,
+        5000,
+        "/multi"
+    );
 
-    LOG("EchoServerTestFixture::EchoesMultipleMessages resolving");
-    const auto _endpoints = _resolver.resolve("127.0.0.1", std::to_string(9000));
-    LOG("EchoServerTestFixture::EchoesMultipleMessages resolved");
+    auto response1 = send_and_receive(buffer);
+    ASSERT_EQ(response1.size(), 13);
+    ASSERT_TRUE(static_cast<bool>(response1[0]));
 
-    tcp::socket _socket(_io_context);
+    int available1 = 0;
+    std::memcpy(&available1, response1.data() + 1, sizeof(available1));
+    ASSERT_EQ(available1, 2);
 
-    LOG("EchoServerTestFixture::EchoesMultipleMessages connecting");
-    boost::asio::connect(_socket, _endpoints);
-    LOG("EchoServerTestFixture::EchoesMultipleMessages connected");
+    auto response2 = send_and_receive(buffer);
+    ASSERT_EQ(response2.size(), 13);
+    ASSERT_TRUE(static_cast<bool>(response2[0]));
 
-    LOG("EchoServerTestFixture::EchoesMultipleMessages writing first message");
-    boost::asio::write(_socket, boost::asio::buffer(_first_message));
-    LOG("EchoServerTestFixture::EchoesMultipleMessages wrote first message");
+    int available2 = 0;
+    std::memcpy(&available2, response2.data() + 1, sizeof(available2));
+    ASSERT_EQ(available2, 1);
 
-    std::string _ping_response_buffer(1024, '\0');
-    LOG("EchoServerTestFixture::EchoesMultipleMessages reading first response");
-    const size_t _ping_response_length = _socket.read_some(boost::asio::buffer(_ping_response_buffer.data(), _ping_response_buffer.size()));
-    _ping_response_buffer.resize(_ping_response_length);
-    ASSERT_EQ(_ping_response_buffer, _first_message);
-    LOG("EchoServerTestFixture::EchoesMultipleMessages read first response");
+    auto response3 = send_and_receive(buffer);
+    ASSERT_EQ(response3.size(), 13);
+    ASSERT_TRUE(static_cast<bool>(response3[0]));
 
-    LOG("EchoServerTestFixture::EchoesMultipleMessages writing second message");
-    boost::asio::write(_socket, boost::asio::buffer(_second_message));
-    LOG("EchoServerTestFixture::EchoesMultipleMessages wrote second message");
+    int available3 = 0;
+    std::memcpy(&available3, response3.data() + 1, sizeof(available3));
+    ASSERT_EQ(available3, 0);
 
-    std::string _pong_response_buffer(1024, '\0');
-    LOG("EchoServerTestFixture::EchoesMultipleMessages reading second response");
-    const size_t _pong_response_length = _socket.read_some(boost::asio::buffer(_pong_response_buffer.data(), _pong_response_buffer.size()));
-    _pong_response_buffer.resize(_pong_response_length);
-    LOG("EchoServerTestFixture::EchoesMultipleMessages read second response");
+    auto response4 = send_and_receive(buffer);
+    ASSERT_EQ(response4.size(), 13);
+    ASSERT_FALSE(static_cast<bool>(response4[0]));
 
-    ASSERT_EQ(_pong_response_buffer, _second_message);
-    LOG("EchoServerTestFixture::EchoesMultipleMessages scope_out");
+    int available4 = 0;
+    std::memcpy(&available4, response4.data() + 1, sizeof(available4));
+    ASSERT_EQ(available4, 0);
+
+    LOG("ServerTestFixture::HandlesMultipleValidRequests scope_out");
+}
+
+
+TEST_F(ServerTestFixture, TTLExpiration) {
+    LOG("ServerTestFixture::TTLExpiration scope_in");
+
+    const auto buffer = build_request_buffer(
+        4,
+        {127, 0, 0, 1},
+        9000,
+        10,
+        1000,
+        "/expire"
+    );
+
+    auto response1 = send_and_receive(buffer);
+    ASSERT_TRUE(static_cast<bool>(response1[0]));
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+
+    auto response2 = send_and_receive(buffer);
+
+    ASSERT_TRUE(static_cast<bool>(response2[0]));
+
+    int available = 0;
+    std::memcpy(&available, response2.data() + 1, sizeof(available));
+
+    int64_t ttl_ms = 0;
+    std::memcpy(&ttl_ms, response2.data() + 1 + sizeof(available), sizeof(ttl_ms));
+
+    ASSERT_EQ(available, 9);
+    ASSERT_GT(ttl_ms, 0);
+
+    LOG("ServerTestFixture::TTLExpiration scope_out");
+}
+
+TEST_F(ServerTestFixture, SeparateStocksForDifferentURLs) {
+    LOG("ServerTestFixture::SeparateStocksForDifferentURLs scope_in");
+
+    const auto buffer_a = build_request_buffer(
+        4,
+        {127, 0, 0, 1},
+        9000,
+        2,
+        5000,
+        "/a"
+    );
+
+    const auto buffer_b = build_request_buffer(
+        4,
+        {127, 0, 0, 1},
+        9000,
+        2,
+        5000,
+        "/b"
+    );
+
+    auto response_a1 = send_and_receive(buffer_a);
+    ASSERT_TRUE(static_cast<bool>(response_a1[0]));
+
+    auto response_b1 = send_and_receive(buffer_b);
+    ASSERT_TRUE(static_cast<bool>(response_b1[0]));
+
+    int available_a1 = 0;
+    std::memcpy(&available_a1, response_a1.data() + 1, sizeof(available_a1));
+    ASSERT_EQ(available_a1, 1);
+
+    int available_b1 = 0;
+    std::memcpy(&available_b1, response_b1.data() + 1, sizeof(available_b1));
+    ASSERT_EQ(available_b1, 1);
+
+    LOG("ServerTestFixture::SeparateStocksForDifferentURLs scope_out");
 }

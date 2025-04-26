@@ -16,8 +16,9 @@
 #include <throttr/session.hpp>
 
 namespace throttr {
-    session::session(boost::asio::ip::tcp::socket socket)
-          : socket_(std::move(socket))
+    session::session(boost::asio::ip::tcp::socket socket,
+            const std::shared_ptr<state> & state)
+          : socket_(std::move(socket)), state_(state)
     {
     }
 

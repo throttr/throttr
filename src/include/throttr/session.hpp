@@ -22,6 +22,8 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/write.hpp>
 #include <boost/core/ignore_unused.hpp>
+#include <throttr/request.hpp>
+#include <throttr/state.hpp>
 
 namespace throttr {
     /**
@@ -35,7 +37,8 @@ namespace throttr {
          * @param socket
          */
         explicit session(
-            boost::asio::ip::tcp::socket socket
+            boost::asio::ip::tcp::socket socket,
+            const std::shared_ptr<state> & state
         );
 
         /**
@@ -53,9 +56,21 @@ namespace throttr {
                                     [this, self](const boost::system::error_code &error,
                                                  const std::size_t read_length) {
                                         boost::ignore_unused(self);
-
                                         if (!error) {
-                                            do_write(read_length);
+                                            try {
+                                                const auto view = request_view::from_buffer(
+                                                    std::span(
+                                                        reinterpret_cast<const std::byte*>(data_.data()),
+                                                        read_length
+                                                    )
+                                                );
+
+                                                const auto response = state_->handle_request(view);
+
+                                                do_write(response);
+                                            } catch (const request_error& e) {
+                                                do_read();
+                                            }
                                         }
                                     });
         }
@@ -63,11 +78,11 @@ namespace throttr {
         /**
          * Do write
          *
-         * @param length
+         * @param response
          */
-        void do_write(const std::size_t length) {
+        void do_write(std::vector<std::byte> response) {
             auto self(shared_from_this());
-            boost::asio::async_write(socket_, boost::asio::buffer(data_, length),
+            boost::asio::async_write(socket_, boost::asio::buffer(response.data(), response.size()),
                                      [this, self](const boost::system::error_code &error,
                                                   const std::size_t write_length) {
                                          boost::ignore_unused(self, write_length);
@@ -82,6 +97,11 @@ namespace throttr {
          * Socket
          */
         boost::asio::ip::tcp::socket socket_;
+
+        /**
+         * State
+         */
+        std::shared_ptr<state> state_;
 
         /**
          * Max length
