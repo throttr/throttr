@@ -67,7 +67,7 @@ Each client sends a binary payload composed of:
 | `max_requests` | `uint32_t`                | 4 bytes  | Maximum number of requests allowed.               |
 | `ttl`          | `uint32_t`                | 4 bytes  | Time-to-live window in milliseconds.              |
 | `size`         | `uint8_t`                 | 1 byte   | Length of the URL payload.                        |
-| `url`          | `char[size_]`             | N bytes  | Target URL associated with the rate limit.        |
+| `url`          | `char[size]`             | N bytes  | Target URL associated with the rate limit.        |
 
 After the fixed-size header, the client sends the URL as a simple UTF-8 string of `size` bytes.
 
