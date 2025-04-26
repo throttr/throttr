@@ -69,7 +69,7 @@ Each client sends a binary payload composed of:
 | `size`         | `uint8_t`                 | 1 byte   | Length of the URL payload.                        |
 | `url`          | `char[size_]`             | N bytes  | Target URL associated with the rate limit.        |
 
-After the fixed-size header, the client sends the URL as a simple UTF-8 string of `size_` bytes.
+After the fixed-size header, the client sends the URL as a simple UTF-8 string of `size` bytes.
 
 ### Response Format
 
@@ -79,13 +79,13 @@ The server responds with a compact 13-byte binary structure:
 |:---------------------|:----------|:--------|:--------------------------------------------------------------|
 | `can`                | `uint8_t` | 1 byte  | 1 if the request is allowed, 0 otherwise.                     |
 | `available_requests` | `int32_t` | 4 bytes | Remaining number of allowed requests.                         |
-| `ttl_remaining`      | `int64_t` | 8 bytes | Time left before the current limit expires (in milliseconds). |
+| `ttl`                | `int64_t` | 8 bytes | Time left before the current limit expires (in milliseconds). |
 
 ### State Management
 
 - When a request is received, Throttr constructs a **unique key** based on the client's IP address, port, and URL.
 - It checks the internal state:
-    - If the key does not exist, it **creates a new record** using the `max_requests_` and `ttl_` provided.
+    - If the key does not exist, it **creates a new record** using the `max_requests` and `ttl` provided.
     - If the key exists:
         - If the TTL has expired, the old record is **deleted**, and a **new cycle** starts with the new parameters.
         - If the TTL is still valid, Throttr decrements the available requests and updates the remaining TTL.
