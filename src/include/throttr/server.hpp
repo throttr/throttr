@@ -57,6 +57,11 @@ namespace throttr {
          * Socket
          */
         boost::asio::ip::tcp::socket socket_;
+
+        /**
+         * State
+         */
+        std::shared_ptr<state> state_;
     };
 }
 

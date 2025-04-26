@@ -19,10 +19,83 @@
 #include <span>
 #include <string_view>
 #include <stdexcept>
+#include <chrono>
 
 #include <throttr/request_header.hpp>
 
 namespace throttr {
+    /**
+     * Request key
+     */
+    struct request_key {
+        /**
+         * IP version
+         */
+        uint8_t ip_version_;
+
+        /**
+         * IP address
+         */
+        std::array<uint8_t, 16> ip_;
+
+        /**
+         * Port
+         */
+        uint16_t port_;
+
+        /**
+         * URL
+         */
+        std::string url_;
+
+        /**
+         * Comparator
+         *
+         * @param other
+         * @return bool
+         */
+        bool operator==(const request_key &other) const = default;  // LCOV_EXCL_LINE note: Hash requirement.
+    };
+
+    /**
+     * Request key hasher
+     */
+    struct request_key_hasher {
+        /**
+         * Invoke
+         *
+         * @param key
+         * @return size_t
+         */
+        std::size_t operator()(const request_key &key) const {
+            std::size_t _h = std::hash<uint8_t>{}(key.ip_version_);
+
+            for (const auto _b: key.ip_) {  // LCOV_EXCL_LINE note: Partially tested.
+                _h ^= std::hash<uint8_t>{}(_b) + 0x9e3779b9 + (_h << 6) + (_h >> 2);
+            }
+
+            _h ^= std::hash<uint16_t>{}(key.port_) + 0x9e3779b9 + (_h << 6) + (_h >> 2);
+            _h ^= std::hash<std::string>{}(key.url_) + 0x9e3779b9 + (_h << 6) + (_h >> 2);
+
+            return _h;
+        }
+    };
+
+    /**
+     * Request entry
+     */
+    struct request_entry {
+        /**
+         * Available requests
+         */
+        int available_requests_ = 0;
+
+        /**
+         * Expires at
+         */
+        std::chrono::steady_clock::time_point expires_at_;
+    };
+
     /**
      * Request error
      */

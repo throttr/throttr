@@ -23,7 +23,8 @@ namespace throttr {
         const short port,
         const std::shared_ptr<state> &state
     ) : acceptor_(io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
-        socket_(io_context)
+        socket_(io_context),
+        state_(state)
     {
         state->acceptor_ready_ = true;
         do_accept();
@@ -34,7 +35,7 @@ namespace throttr {
             socket_,
             [this](const boost::system::error_code &error) {
                 if (!error) {
-                    std::make_shared<session>(std::move(socket_))->start();
+                    std::make_shared<session>(std::move(socket_), state_)->start();
                 }
 
                 do_accept();

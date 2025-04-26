@@ -22,6 +22,9 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/write.hpp>
 #include <boost/core/ignore_unused.hpp>
+#include <boost/beast/core/bind_handler.hpp>
+#include <throttr/request.hpp>
+#include <throttr/state.hpp>
 
 namespace throttr {
     /**
@@ -33,9 +36,11 @@ namespace throttr {
          * Constructor
          *
          * @param socket
+         * @param state
          */
         explicit session(
-            boost::asio::ip::tcp::socket socket
+            boost::asio::ip::tcp::socket socket,
+            const std::shared_ptr<state> &state
         );
 
         /**
@@ -45,37 +50,59 @@ namespace throttr {
 
     private:
         /**
+         * On read
+         *
+         * @param error
+         * @param length
+         */
+        void on_read(const boost::system::error_code &error, const std::size_t length) {
+            if (!error) { // LCOV_EXCL_LINE note: Partially tested as this requires a read error.
+                try {
+                    const auto _view = request_view::from_buffer(
+                        std::span(reinterpret_cast<const std::byte *>(data_.data()), length));
+
+                    const auto _response = state_->handle_request(_view);
+
+                    do_write(_response);
+                } catch (const request_error &e) {
+                    boost::ignore_unused(e);
+
+                    do_read();
+                }
+            }
+        }
+
+        /**
          * Do read
          */
         void do_read() {
-            auto self(shared_from_this());
             socket_.async_read_some(boost::asio::buffer(data_.data(), data_.size()),
-                                    [this, self](const boost::system::error_code &error,
-                                                 const std::size_t read_length) {
-                                        boost::ignore_unused(self);
+                                    boost::beast::bind_front_handler(&session::on_read, shared_from_this()));
+        }
 
-                                        if (!error) {
-                                            do_write(read_length);
-                                        }
-                                    });
+        /**
+         * On write
+         *
+         * @param error
+         * @param length
+         */
+        void on_write(const boost::system::error_code &error, const std::size_t length) {
+            boost::ignore_unused(length);
+
+            if (!error) {  // LCOV_EXCL_LINE note: Partially tested as this requires a write error.
+                do_read();
+            }
         }
 
         /**
          * Do write
          *
-         * @param length
+         * @param response
          */
-        void do_write(const std::size_t length) {
-            auto self(shared_from_this());
-            boost::asio::async_write(socket_, boost::asio::buffer(data_, length),
-                                     [this, self](const boost::system::error_code &error,
-                                                  const std::size_t write_length) {
-                                         boost::ignore_unused(self, write_length);
-
-                                         if (!error) {
-                                             do_read();
-                                         }
-                                     });
+        void do_write(std::vector<std::byte> response) {
+            auto _self(shared_from_this());
+            boost::asio::async_write(socket_, boost::asio::buffer(response.data(), response.size()),
+                                     boost::beast::bind_front_handler(&session::on_write, shared_from_this()));
         }
 
         /**
@@ -84,14 +111,19 @@ namespace throttr {
         boost::asio::ip::tcp::socket socket_;
 
         /**
+         * State
+         */
+        std::shared_ptr<state> state_;
+
+        /**
          * Max length
          */
-        static constexpr std::size_t max_length = 1024;
+        static constexpr std::size_t max_length_ = 1024;
 
         /**
          * Data
          */
-        std::array<char, max_length> data_{};
+        std::array<char, max_length_> data_{};
     };
 }
 
