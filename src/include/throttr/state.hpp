@@ -80,8 +80,8 @@ namespace throttr {
                 _available = _entry.available_requests_;
                 _default_ttl = std::chrono::duration_cast<std::chrono::milliseconds>(_entry.expires_at_ - _now).count();
             } else {
-                const int _stock = static_cast<int>(_header->max_requests_);
-                const int _ttl = static_cast<int>(_header->ttl_);
+                const auto _stock = static_cast<int>(_header->max_requests_);
+                const auto _ttl = static_cast<int>(_header->ttl_);
 
                 requests_[_key] = request_entry{
                     _stock - 1,

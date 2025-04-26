@@ -54,9 +54,7 @@ namespace throttr {
          * @param other
          * @return bool
          */
-        bool operator==(const request_key &other) const {
-            return ip_version_ == other.ip_version_ && ip_ == other.ip_ && port_ == other.port_ && url_ == other.url_;
-        }
+        bool operator==(const request_key &other) const = default;
     };
 
     /**

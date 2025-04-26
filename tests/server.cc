@@ -28,20 +28,20 @@ static std::vector<std::byte> build_request_buffer(
     const uint16_t port,
     const uint32_t max_requests,
     const uint32_t ttl,
-    const std::string& url
+    const std::string_view url
 ) {
     std::vector<std::byte> buffer;
     buffer.resize(sizeof(throttr::request_header) + url.size());
 
-    auto* header = reinterpret_cast<throttr::request_header*>(buffer.data());
+    throttr::request_header header{};
+    header.ip_version_ = ip_version;
+    header.ip_ = ip;
+    header.port_ = port;
+    header.max_requests_ = max_requests;
+    header.ttl_ = ttl;
+    header.size_ = static_cast<uint8_t>(url.size());
 
-    header->ip_version_ = ip_version;
-    header->ip_ = ip;
-    header->port_ = port;
-    header->max_requests_ = max_requests;
-    header->ttl_ = ttl;
-    header->size_ = static_cast<uint8_t>(url.size());
-
+    std::memcpy(buffer.data(), &header, sizeof(header));
     std::memcpy(buffer.data() + sizeof(throttr::request_header), url.data(), url.size());
 
     return buffer;
