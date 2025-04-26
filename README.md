@@ -100,6 +100,35 @@ All operations are designed to be **fully asynchronous and lock-free** to maximi
 - **Statelessness beyond TTL**: Once the TTL expires, the record is discarded.
 - **Deterministic behavior**: Every request deterministically maps to an allowed/denied outcome based solely on the protocol rules.
 
+### Running as Container
+
+You can pull the latest released image of `throttr` from GitHub Container Registry:
+
+```bash
+docker pull ghcr.io/throttr/throttr:${VERSION}-${TYPE}
+```
+
+> `${VERSION}` MUST BE the desired tag and `${TYPE}` SHOULD BE `debug` or `release`. 
+
+
+To run the container:
+
+```bash
+docker run -p 9000:9000 ghcr.io/throttr/throttr:1.0.0-release
+```
+
+Environment variables can also be passed to customize the behavior:
+
+```bash
+docker run -e THREADS=4 -p 9000:9000 ghcr.io/throttr/throttr:1.0.0-release
+```
+
+### Changelog
+
+#### v1.0.0
+
+- Minimum viable product released.
+
 ### License
 
 This software has been built by **Ian Torres** and released using [GNU Affero General Public License](./LICENSE).

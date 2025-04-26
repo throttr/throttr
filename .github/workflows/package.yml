@@ -1,9 +1,6 @@
 name: Package
 
-on:
-  push:
-    tags:
-      - '*'
+on: [push]
 
 env:
   VERSION: ${{ github.ref_name }}
@@ -34,7 +31,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           platforms: linux/amd64,linux/arm64
-          push: true
+          push: ${{ github.ref_type == 'tag' }}
           tags: ghcr.io/throttr/throttr:${{ env.VERSION }}-${{ matrix.type }}
           build-args: |
             TYPE=${{ matrix.type }}
