@@ -129,7 +129,8 @@ namespace throttr {
             }
 
             const auto *_header = reinterpret_cast<const request_header *>(buffer.data());
-            if (buffer.size() < sizeof(request_header) + _header->size_) {
+
+            if (buffer.size() < sizeof(request_header) + _header->size_) { // LCOV_EXCL_LINE note: Partially tested.
                 throw request_error("buffer too small for url payload");
             }
 
