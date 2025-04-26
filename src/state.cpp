@@ -19,57 +19,57 @@
 namespace throttr {
     std::vector<std::byte> state::handle_request(
         const request_view &view) {
-        const auto* header = view.header_;
+        const auto* _header = view.header_;
 
         const request_key key{
-            header->ip_version_,
-            header->ip_,
-            header->port_,
+            _header->ip_version_,
+            _header->ip_,
+            _header->port_,
             std::string(view.url_)
         };
 
-        const auto now = std::chrono::steady_clock::now();
-        auto it = requests_.find(key);
+        const auto _now = std::chrono::steady_clock::now();
+        auto _it = requests_.find(key);
 
-        if (it != requests_.end() && now >= it->second.expires_at) {
-            requests_.erase(it);
-            it = requests_.end();
+        if (_it != requests_.end() && _now >= _it->second.expires_at_) {
+            requests_.erase(_it);
+            _it = requests_.end();
         }
 
-        bool can = false;
-        int available = 0;
-        int64_t ttl_ms = 0;
+        bool _can = false;
+        int _available = 0;
+        int64_t _default_ttl = 0;
 
-        if (it != requests_.end()) {
-            auto& entry = it->second;
+        if (_it != requests_.end()) {
+            auto& _entry = _it->second;
 
-            if (entry.available_requests > 0) {
-                --entry.available_requests;
-                can = true;
+            if (_entry.available_requests_ > 0) {
+                --_entry.available_requests_;
+                _can = true;
             }
-            available = entry.available_requests;
-            ttl_ms = std::chrono::duration_cast<std::chrono::milliseconds>(entry.expires_at - now).count();
+            _available = _entry.available_requests_;
+            _default_ttl = std::chrono::duration_cast<std::chrono::milliseconds>(_entry.expires_at_ - _now).count();
         } else {
-            const int stock = static_cast<int>(header->max_requests_);
-            const int ttl = static_cast<int>(header->ttl_);
+            const int _stock = static_cast<int>(_header->max_requests_);
+            const int _ttl = static_cast<int>(_header->ttl_);
 
             requests_[key] = request_entry{
-                stock - 1,
-                now + std::chrono::milliseconds(ttl)
+                _stock - 1,
+                _now + std::chrono::milliseconds(_ttl)
             };
 
-            can = true;
-            available = stock - 1;
-            ttl_ms = ttl;
+            _can = true;
+            _available = _stock - 1;
+            _default_ttl = _ttl;
         }
 
-        std::vector<std::byte> response;
-        response.resize(1 + sizeof(int) + sizeof(int64_t));
+        std::vector<std::byte> _response;
+        _response.resize(1 + sizeof(int) + sizeof(int64_t));
 
-        response[0] = static_cast<std::byte>(can ? 1 : 0);
-        std::memcpy(response.data() + 1, &available, sizeof(available));
-        std::memcpy(response.data() + 1 + sizeof(int), &ttl_ms, sizeof(ttl_ms));
+        _response[0] = static_cast<std::byte>(_can ? 1 : 0);
+        std::memcpy(_response.data() + 1, &_available, sizeof(_available));
+        std::memcpy(_response.data() + 1 + sizeof(int), &_default_ttl, sizeof(_default_ttl));
 
-        return response;
+        return _response;
     }
 }

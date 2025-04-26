@@ -51,23 +51,23 @@ namespace throttr {
          * Do read
          */
         void do_read() {
-            auto self(shared_from_this());
+            auto _self(shared_from_this());
             socket_.async_read_some(boost::asio::buffer(data_.data(), data_.size()),
-                                    [this, self](const boost::system::error_code &error,
+                                    [this, _self](const boost::system::error_code &error,
                                                  const std::size_t read_length) {
-                                        boost::ignore_unused(self);
+                                        boost::ignore_unused(_self);
                                         if (!error) {
                                             try {
-                                                const auto view = request_view::from_buffer(
+                                                const auto _view = request_view::from_buffer(
                                                     std::span(
                                                         reinterpret_cast<const std::byte*>(data_.data()),
                                                         read_length
                                                     )
                                                 );
 
-                                                const auto response = state_->handle_request(view);
+                                                const auto _response = state_->handle_request(_view);
 
-                                                do_write(response);
+                                                do_write(_response);
                                             } catch (const request_error& e) {
                                                 do_read();
                                             }
@@ -81,11 +81,11 @@ namespace throttr {
          * @param response
          */
         void do_write(std::vector<std::byte> response) {
-            auto self(shared_from_this());
+            auto _self(shared_from_this());
             boost::asio::async_write(socket_, boost::asio::buffer(response.data(), response.size()),
-                                     [this, self](const boost::system::error_code &error,
+                                     [this, _self](const boost::system::error_code &error,
                                                   const std::size_t write_length) {
-                                         boost::ignore_unused(self, write_length);
+                                         boost::ignore_unused(_self, write_length);
 
                                          if (!error) {
                                              do_read();

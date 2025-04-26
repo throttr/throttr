@@ -114,7 +114,7 @@ protected:
 TEST_F(ServerTestFixture, HandlesSingleValidRequest) {
     LOG("ServerTestFixture::HandlesSingleValidRequest scope_in");
 
-    const auto buffer = build_request_buffer(
+    const auto _buffer = build_request_buffer(
         4,
         {127, 0, 0, 1},
         9000,
@@ -123,21 +123,21 @@ TEST_F(ServerTestFixture, HandlesSingleValidRequest) {
         "/test"
     );
 
-    auto response = send_and_receive(buffer);
+    auto _response = send_and_receive(_buffer);
 
-    ASSERT_EQ(response.size(), 13);
+    ASSERT_EQ(_response.size(), 13);
 
-    const bool can = static_cast<bool>(response[0]);
+    const bool _can = static_cast<bool>(_response[0]);
 
-    int available_requests = 0;
-    std::memcpy(&available_requests, response.data() + 1, sizeof(available_requests));
+    int _available_requests = 0;
+    std::memcpy(&_available_requests, _response.data() + 1, sizeof(_available_requests));
 
-    int64_t ttl_ms = 0;
-    std::memcpy(&ttl_ms, response.data() + 1 + sizeof(available_requests), sizeof(ttl_ms));
+    int64_t _ttl = 0;
+    std::memcpy(&_ttl, _response.data() + 1 + sizeof(_available_requests), sizeof(_ttl));
 
-    ASSERT_TRUE(can);
-    ASSERT_EQ(available_requests, 4);
-    ASSERT_GT(ttl_ms, 0);
+    ASSERT_TRUE(_can);
+    ASSERT_EQ(_available_requests, 4);
+    ASSERT_GT(_ttl, 0);
 
     LOG("ServerTestFixture::HandlesSingleValidRequest scope_out");
 }
@@ -145,7 +145,7 @@ TEST_F(ServerTestFixture, HandlesSingleValidRequest) {
 TEST_F(ServerTestFixture, HandlesMultipleValidRequests) {
     LOG("ServerTestFixture::HandlesMultipleValidRequests scope_in");
 
-    auto buffer = build_request_buffer(
+    auto _buffer = build_request_buffer(
         4,
         {127, 0, 0, 1},
         9000,
@@ -154,37 +154,37 @@ TEST_F(ServerTestFixture, HandlesMultipleValidRequests) {
         "/multi"
     );
 
-    auto response1 = send_and_receive(buffer);
-    ASSERT_EQ(response1.size(), 13);
-    ASSERT_TRUE(static_cast<bool>(response1[0]));
+    auto _response1 = send_and_receive(_buffer);
+    ASSERT_EQ(_response1.size(), 13);
+    ASSERT_TRUE(static_cast<bool>(_response1[0]));
 
-    int available1 = 0;
-    std::memcpy(&available1, response1.data() + 1, sizeof(available1));
-    ASSERT_EQ(available1, 2);
+    int _available1 = 0;
+    std::memcpy(&_available1, _response1.data() + 1, sizeof(_available1));
+    ASSERT_EQ(_available1, 2);
 
-    auto response2 = send_and_receive(buffer);
-    ASSERT_EQ(response2.size(), 13);
-    ASSERT_TRUE(static_cast<bool>(response2[0]));
+    auto _response2 = send_and_receive(_buffer);
+    ASSERT_EQ(_response2.size(), 13);
+    ASSERT_TRUE(static_cast<bool>(_response2[0]));
 
-    int available2 = 0;
-    std::memcpy(&available2, response2.data() + 1, sizeof(available2));
-    ASSERT_EQ(available2, 1);
+    int _available2 = 0;
+    std::memcpy(&_available2, _response2.data() + 1, sizeof(_available2));
+    ASSERT_EQ(_available2, 1);
 
-    auto response3 = send_and_receive(buffer);
-    ASSERT_EQ(response3.size(), 13);
-    ASSERT_TRUE(static_cast<bool>(response3[0]));
+    auto _response3 = send_and_receive(_buffer);
+    ASSERT_EQ(_response3.size(), 13);
+    ASSERT_TRUE(static_cast<bool>(_response3[0]));
 
-    int available3 = 0;
-    std::memcpy(&available3, response3.data() + 1, sizeof(available3));
-    ASSERT_EQ(available3, 0);
+    int _available3 = 0;
+    std::memcpy(&_available3, _response3.data() + 1, sizeof(_available3));
+    ASSERT_EQ(_available3, 0);
 
-    auto response4 = send_and_receive(buffer);
-    ASSERT_EQ(response4.size(), 13);
-    ASSERT_FALSE(static_cast<bool>(response4[0]));
+    auto _response4 = send_and_receive(_buffer);
+    ASSERT_EQ(_response4.size(), 13);
+    ASSERT_FALSE(static_cast<bool>(_response4[0]));
 
-    int available4 = 0;
-    std::memcpy(&available4, response4.data() + 1, sizeof(available4));
-    ASSERT_EQ(available4, 0);
+    int _available4 = 0;
+    std::memcpy(&_available4, _response4.data() + 1, sizeof(_available4));
+    ASSERT_EQ(_available4, 0);
 
     LOG("ServerTestFixture::HandlesMultipleValidRequests scope_out");
 }
@@ -193,7 +193,7 @@ TEST_F(ServerTestFixture, HandlesMultipleValidRequests) {
 TEST_F(ServerTestFixture, TTLExpiration) {
     LOG("ServerTestFixture::TTLExpiration scope_in");
 
-    const auto buffer = build_request_buffer(
+    const auto _buffer = build_request_buffer(
         4,
         {127, 0, 0, 1},
         9000,
@@ -202,23 +202,23 @@ TEST_F(ServerTestFixture, TTLExpiration) {
         "/expire"
     );
 
-    auto response1 = send_and_receive(buffer);
-    ASSERT_TRUE(static_cast<bool>(response1[0]));
+    auto _response1 = send_and_receive(_buffer);
+    ASSERT_TRUE(static_cast<bool>(_response1[0]));
 
     std::this_thread::sleep_for(std::chrono::milliseconds(1100));
 
-    auto response2 = send_and_receive(buffer);
+    auto _response2 = send_and_receive(_buffer);
 
-    ASSERT_TRUE(static_cast<bool>(response2[0]));
+    ASSERT_TRUE(static_cast<bool>(_response2[0]));
 
-    int available = 0;
-    std::memcpy(&available, response2.data() + 1, sizeof(available));
+    int _available = 0;
+    std::memcpy(&_available, _response2.data() + 1, sizeof(_available));
 
-    int64_t ttl_ms = 0;
-    std::memcpy(&ttl_ms, response2.data() + 1 + sizeof(available), sizeof(ttl_ms));
+    int64_t _ttl = 0;
+    std::memcpy(&_ttl, _response2.data() + 1 + sizeof(_available), sizeof(_ttl));
 
-    ASSERT_EQ(available, 9);
-    ASSERT_GT(ttl_ms, 0);
+    ASSERT_EQ(_available, 9);
+    ASSERT_GT(_ttl, 0);
 
     LOG("ServerTestFixture::TTLExpiration scope_out");
 }
@@ -226,7 +226,7 @@ TEST_F(ServerTestFixture, TTLExpiration) {
 TEST_F(ServerTestFixture, SeparateStocksForDifferentURLs) {
     LOG("ServerTestFixture::SeparateStocksForDifferentURLs scope_in");
 
-    const auto buffer_a = build_request_buffer(
+    const auto _buffer_a = build_request_buffer(
         4,
         {127, 0, 0, 1},
         9000,
@@ -235,7 +235,7 @@ TEST_F(ServerTestFixture, SeparateStocksForDifferentURLs) {
         "/a"
     );
 
-    const auto buffer_b = build_request_buffer(
+    const auto _buffer_b = build_request_buffer(
         4,
         {127, 0, 0, 1},
         9000,
@@ -244,19 +244,19 @@ TEST_F(ServerTestFixture, SeparateStocksForDifferentURLs) {
         "/b"
     );
 
-    auto response_a1 = send_and_receive(buffer_a);
-    ASSERT_TRUE(static_cast<bool>(response_a1[0]));
+    auto _response_a1 = send_and_receive(_buffer_a);
+    ASSERT_TRUE(static_cast<bool>(_response_a1[0]));
 
-    auto response_b1 = send_and_receive(buffer_b);
-    ASSERT_TRUE(static_cast<bool>(response_b1[0]));
+    auto _response_b1 = send_and_receive(_buffer_b);
+    ASSERT_TRUE(static_cast<bool>(_response_b1[0]));
 
-    int available_a1 = 0;
-    std::memcpy(&available_a1, response_a1.data() + 1, sizeof(available_a1));
-    ASSERT_EQ(available_a1, 1);
+    int _available_a1 = 0;
+    std::memcpy(&_available_a1, _response_a1.data() + 1, sizeof(_available_a1));
+    ASSERT_EQ(_available_a1, 1);
 
-    int available_b1 = 0;
-    std::memcpy(&available_b1, response_b1.data() + 1, sizeof(available_b1));
-    ASSERT_EQ(available_b1, 1);
+    int _available_b1 = 0;
+    std::memcpy(&_available_b1, _response_b1.data() + 1, sizeof(_available_b1));
+    ASSERT_EQ(_available_b1, 1);
 
     LOG("ServerTestFixture::SeparateStocksForDifferentURLs scope_out");
 }
