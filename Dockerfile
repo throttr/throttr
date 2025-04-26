@@ -2,6 +2,8 @@ ARG TYPE="release"
 
 FROM ghcr.io/throttr/builder:1.87.0-${TYPE}
 
+ARG TYPE
+
 COPY . .
 
 EXPOSE 9000
