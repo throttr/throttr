@@ -87,7 +87,7 @@ protected:
         LOG("ServerTestFixture::TearDown scope_out");
     }
 
-    [[nodiscard]] static std::vector<std::byte> send_and_receive(const std::vector<std::byte>& message) {
+    [[nodiscard]] static std::vector<std::byte> send_and_receive(const std::vector<std::byte>& message, bool receives = true) {
         LOG("ServerTestFixture::send_and_receive scope_in");
         boost::asio::io_context _io_context;
         tcp::resolver _resolver(_io_context);
@@ -103,10 +103,15 @@ protected:
 
         boost::asio::write(_socket, boost::asio::buffer(message.data(), message.size()));
 
-        std::vector<std::byte> _response(13);
-        boost::asio::read(_socket, boost::asio::buffer(_response.data(), _response.size()));
+
+        if (receives) {
+            std::vector<std::byte> _response(13);
+            boost::asio::read(_socket, boost::asio::buffer(_response.data(), _response.size()));
+            return _response;
+        }
 
         LOG("ServerTestFixture::send_and_receive scope_out");
+        std::vector<std::byte> _response(0);
         return _response;
     }
 };
@@ -259,4 +264,27 @@ TEST_F(ServerTestFixture, SeparateStocksForDifferentURLs) {
     ASSERT_EQ(_available_b1, 1);
 
     LOG("ServerTestFixture::SeparateStocksForDifferentURLs scope_out");
+}
+
+TEST_F(ServerTestFixture, HandlesCorruptRequestGracefully) {
+    LOG("ServerTestFixture::HandlesCorruptRequestGracefully scope_in");
+
+    const std::vector<std::byte> _corrupt_buffer(5);
+
+    const auto _response = send_and_receive(_corrupt_buffer, false);
+    ASSERT_TRUE(_response.empty() || _response.size() == 0);
+
+    const auto _buffer = build_request_buffer(
+        4,
+        {127, 0, 0, 1},
+        9000,
+        2,
+        5000,
+        "/b"
+    );
+
+    auto _response_a1 = send_and_receive(_buffer);
+    ASSERT_TRUE(static_cast<bool>(_response_a1[0]));
+
+    LOG("ServerTestFixture::HandlesCorruptRequestGracefully scope_out");
 }
