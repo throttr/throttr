@@ -1,49 +1,51 @@
-## Memory Layout Table
-
-```
-+---------------------+-----------------------------+
-| Field               | Size (bytes)                |
-+---------------------+-----------------------------+
-| request_type        | 1                           |
-| quota               | 8                           |
-| usage               | 8                           |
-| ttl_type            | 1                           |
-| ttl                 | 8                           |
-| consumer_id_size    | 1                           |
-| resource_id_size    | 1                           |
-| consumer_id         | consumer_id_size            |
-| resource_id         | resource_id_size            |
-+---------------------+-----------------------------+
-```
-
-## Memory Layout Binary Shape
-
-```
-Offset  Size (bytes)  Field
-0x00    1             request_type
-0x01    8             quota
-0x09    8             usage
-0x11    1             ttl_type
-0x12    8             ttl
-0x1A    1             consumer_id_size
-0x1B    1             resource_id_size
-0x1C    N             consumer_id (N = consumer_id_size)
-0x1C+N  M             resource_id (M = resource_id_size)
-```
-
-## Memory Layout using Mermaid
+## Request Insert Header
 
 ```mermaid
 flowchart TD
-    A[Request Header] --> B[request_type 1 byte]
-    A --> C[quota 8 bytes]
-    A --> D[usage 8 bytes]
-    A --> E[ttl_type 1 byte]
-    A --> F[ttl 8 bytes]
-    A --> G[consumer_id_size 1 byte]
-    A --> H[resource_id_size 1 byte]
+    A[request_insert_header]
+    A --> A1[request_type - 1 byte]
+    A --> A2[quota - 8 bytes]
+    A --> A3[usage - 8 bytes]
+    A --> A4[ttl_type - 1 byte]
+    A --> A5[ttl - 8 bytes]
+    A --> A6[consumer_id_size - 1 byte]
+    A --> A7[resource_id_size - 1 byte]
+    A6 --> B[Request Body]
+    A7 --> B[Request Body]
+```
 
-    H --> I[Request Body]
-    I --> J[Consumer ID consumer_id_size bytes]
-    I --> K[Resource ID resource_id_size bytes]
+## Request Query Header
+
+```mermaid
+flowchart TD
+    B[request_query_header]
+    B --> B1[request_type - 1 byte]
+    B --> B2[consumer_id_size - 1 byte]
+    B --> B3[resource_id_size - 1 byte]
+    B2 --> C[Request Body]
+    B3 --> C[Request Body]
+```
+
+## Request Update Header
+
+```mermaid
+flowchart TD
+    C[request_update_header]
+    C --> C1[request_type - 1 byte]
+    C --> C2[attribute - 1 byte]
+    C --> C3[change - 1 byte]
+    C --> C4[value - 8 bytes]
+    C --> C5[consumer_id_size - 1 byte]
+    C --> C6[resource_id_size - 1 byte]
+    C5 --> D[Request Body]
+    C6 --> D[Request Body]
+```
+
+## Request Body
+
+```mermaid
+flowchart TD
+    D[Request Body]
+    D --> D1[Consumer ID - consumer_id_size bytes]
+    D --> D2[Resource ID - resource_id_size bytes]
 ```
