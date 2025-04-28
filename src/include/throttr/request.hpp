@@ -22,8 +22,10 @@
 #include <chrono>
 #include <string>
 #include <cstring>
+#include <iostream>
 
 namespace throttr {
+
     /**
      * Request error
      */
@@ -47,6 +49,8 @@ namespace throttr {
 
 
 #pragma pack(push, 1)
+    constexpr std::size_t request_insert_header_size = 28;
+
     /**
      * Request insert header
      */
@@ -89,6 +93,8 @@ namespace throttr {
 #pragma pack(pop)
 
 #pragma pack(push, 1)
+    constexpr std::size_t request_query_header_size = 3;
+
     /**
      * Request query header
      */
@@ -136,19 +142,19 @@ namespace throttr {
          * @return request_insert
          */
         static request_insert from_buffer(const std::span<const std::byte> &buffer) {
-            if (buffer.size() < sizeof(request_insert_header)) {
+            if (buffer.size() < request_insert_header_size) {
                 throw request_error("buffer too small for request_insert");
             }
 
             const auto *_header = reinterpret_cast<const request_insert_header *>(buffer.data());
 
             if (const auto _expected = static_cast<std::size_t>(_header->consumer_id_size_) + _header->resource_id_size_
-                ; buffer.size() < sizeof(request_insert_header) + _expected) {
+                ; buffer.size() < request_insert_header_size + _expected) {
                 throw request_error("buffer too small for request_insert payload");
             }
 
-            const auto _consumer_id = buffer.subspan(sizeof(request_insert_header), _header->consumer_id_size_);
-            const auto _resource_id = buffer.subspan(sizeof(request_insert_header) + _header->consumer_id_size_,
+            const auto _consumer_id = buffer.subspan(request_insert_header_size, _header->consumer_id_size_);
+            const auto _resource_id = buffer.subspan(request_insert_header_size + _header->consumer_id_size_,
                                                      _header->resource_id_size_);
 
             return request_insert{
@@ -165,11 +171,11 @@ namespace throttr {
          */
         [[nodiscard]] std::vector<std::byte> to_buffer() const {
             std::vector<std::byte> _buffer;
-            _buffer.resize(sizeof(request_insert_header) + consumer_id_.size() + resource_id_.size());
+            _buffer.resize(request_insert_header_size + consumer_id_.size() + resource_id_.size());
 
-            std::memcpy(_buffer.data(), header_, sizeof(request_insert_header));
-            std::memcpy(_buffer.data() + sizeof(request_insert_header), consumer_id_.data(), consumer_id_.size());
-            std::memcpy(_buffer.data() + sizeof(request_insert_header) + consumer_id_.size(), resource_id_.data(),
+            std::memcpy(_buffer.data(), header_, request_insert_header_size);
+            std::memcpy(_buffer.data() + request_insert_header_size, consumer_id_.data(), consumer_id_.size());
+            std::memcpy(_buffer.data() + request_insert_header_size + consumer_id_.size(), resource_id_.data(),
                         resource_id_.size());
 
             return _buffer;
@@ -208,7 +214,7 @@ namespace throttr {
 
             const auto *_header = reinterpret_cast<const request_query_header *>(buffer.data());
 
-            if (const auto _expected = static_cast<std::size_t>(_header->consumer_id_size_) + _header->resource_id_size_
+            if (const auto _expected = _header->consumer_id_size_ + _header->resource_id_size_
                 ; buffer.size() < sizeof(request_query_header) + _expected) {
                 throw request_error("buffer too small for request_query payload");
             }
@@ -322,7 +328,7 @@ namespace throttr {
         const std::string_view resource_id = ""
     ) {
         std::vector<std::byte> _buffer;
-        _buffer.resize(sizeof(request_insert_header) + consumer_id.size() + resource_id.size());
+        _buffer.resize(request_insert_header_size + consumer_id.size() + resource_id.size());
 
         auto *_header = reinterpret_cast<request_insert_header *>(_buffer.data());
         _header->request_type_ = request_type::insert;
@@ -333,8 +339,8 @@ namespace throttr {
         _header->consumer_id_size_ = static_cast<uint8_t>(consumer_id.size());
         _header->resource_id_size_ = static_cast<uint8_t>(resource_id.size());
 
-        std::memcpy(_buffer.data() + sizeof(request_insert_header), consumer_id.data(), consumer_id.size());
-        std::memcpy(_buffer.data() + sizeof(request_insert_header) + consumer_id.size(), resource_id.data(),
+        std::memcpy(_buffer.data() + request_insert_header_size, consumer_id.data(), consumer_id.size());
+        std::memcpy(_buffer.data() + request_insert_header_size + consumer_id.size(), resource_id.data(),
                     resource_id.size());
 
         return _buffer;
