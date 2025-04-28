@@ -145,7 +145,7 @@ namespace throttr {
                 throw request_error("buffer too small for request_insert");
             }
 
-            const auto *_header = reinterpret_cast<const request_insert_header *>(buffer.data());
+            const auto *_header = reinterpret_cast<const request_insert_header *>(buffer.data()); // NOSONAR
 
             if (const auto _expected = static_cast<std::size_t>(_header->consumer_id_size_) + _header->resource_id_size_
                 ; buffer.size() < request_insert_header_size + _expected) {
@@ -158,8 +158,8 @@ namespace throttr {
 
             return request_insert{
                 _header,
-                std::string_view(reinterpret_cast<const char *>(_consumer_id.data()), _consumer_id.size()),
-                std::string_view(reinterpret_cast<const char *>(_resource_id.data()), _resource_id.size())
+                std::string_view(reinterpret_cast<const char *>(_consumer_id.data()), _consumer_id.size()), // NOSONAR
+                std::string_view(reinterpret_cast<const char *>(_resource_id.data()), _resource_id.size()) // NOSONAR
             };
         }
 
@@ -208,25 +208,25 @@ namespace throttr {
          * @return request_query
          */
         static request_query from_buffer(const std::span<const std::byte> &buffer) {
-            if (buffer.size() < sizeof(request_query_header)) {
+            if (buffer.size() < request_query_header_size) {
                 throw request_error("buffer too small for request_query");
             }
 
-            const auto *_header = reinterpret_cast<const request_query_header *>(buffer.data());
+            const auto *_header = reinterpret_cast<const request_query_header *>(buffer.data()); // NOSONAR
 
             if (const auto _expected = _header->consumer_id_size_ + _header->resource_id_size_
-                ; buffer.size() < sizeof(request_query_header) + _expected) {
+                ; buffer.size() < request_query_header_size + _expected) {
                 throw request_error("buffer too small for request_query payload");
             }
 
-            const auto _consumer_id = buffer.subspan(sizeof(request_query_header), _header->consumer_id_size_);
-            const auto _resource_id = buffer.subspan(sizeof(request_query_header) + _header->consumer_id_size_,
+            const auto _consumer_id = buffer.subspan(request_query_header_size, _header->consumer_id_size_);
+            const auto _resource_id = buffer.subspan(request_query_header_size + _header->consumer_id_size_,
                                                      _header->resource_id_size_);
 
             return request_query{
                 _header,
-                std::string_view(reinterpret_cast<const char *>(_consumer_id.data()), _consumer_id.size()),
-                std::string_view(reinterpret_cast<const char *>(_resource_id.data()), _resource_id.size())
+                std::string_view(reinterpret_cast<const char *>(_consumer_id.data()), _consumer_id.size()), // NOSONAR
+                std::string_view(reinterpret_cast<const char *>(_resource_id.data()), _resource_id.size()) // NOSONAR
             };
         }
 
@@ -238,11 +238,11 @@ namespace throttr {
         [[nodiscard]]
         std::vector<std::byte> to_buffer() const {
             std::vector<std::byte> _buffer;
-            _buffer.resize(sizeof(request_query_header) + consumer_id_.size() + resource_id_.size());
+            _buffer.resize(request_query_header_size + consumer_id_.size() + resource_id_.size());
 
-            std::memcpy(_buffer.data(), header_, sizeof(request_query_header));
-            std::memcpy(_buffer.data() + sizeof(request_query_header), consumer_id_.data(), consumer_id_.size());
-            std::memcpy(_buffer.data() + sizeof(request_query_header) + consumer_id_.size(), resource_id_.data(),
+            std::memcpy(_buffer.data(), header_, request_query_header_size);
+            std::memcpy(_buffer.data() + request_query_header_size, consumer_id_.data(), consumer_id_.size());
+            std::memcpy(_buffer.data() + request_query_header_size + consumer_id_.size(), resource_id_.data(),
                         resource_id_.size());
 
             return _buffer;
@@ -331,7 +331,7 @@ namespace throttr {
         std::vector<std::byte> _buffer;
         _buffer.resize(request_insert_header_size + consumer_id.size() + resource_id.size());
 
-        auto *_header = reinterpret_cast<request_insert_header *>(_buffer.data());
+        auto *_header = reinterpret_cast<request_insert_header *>(_buffer.data()); // NOSONAR
         _header->request_type_ = request_type::insert;
         _header->quota_ = quota;
         _header->usage_ = usage;
@@ -359,15 +359,15 @@ namespace throttr {
         const std::string_view resource_id = ""
     ) {
         std::vector<std::byte> _buffer;
-        _buffer.resize(sizeof(request_query_header) + consumer_id.size() + resource_id.size());
+        _buffer.resize(request_query_header_size + consumer_id.size() + resource_id.size());
 
-        auto *_header = reinterpret_cast<request_query_header *>(_buffer.data());
+        auto *_header = reinterpret_cast<request_query_header *>(_buffer.data()); // NOSONAR
         _header->request_type_ = request_type::query;
         _header->consumer_id_size_ = static_cast<uint8_t>(consumer_id.size());
         _header->resource_id_size_ = static_cast<uint8_t>(resource_id.size());
 
-        std::memcpy(_buffer.data() + sizeof(request_query_header), consumer_id.data(), consumer_id.size());
-        std::memcpy(_buffer.data() + sizeof(request_query_header) + consumer_id.size(), resource_id.data(),
+        std::memcpy(_buffer.data() + request_query_header_size, consumer_id.data(), consumer_id.size());
+        std::memcpy(_buffer.data() + request_query_header_size + consumer_id.size(), resource_id.data(),
                     resource_id.size());
 
         return _buffer;

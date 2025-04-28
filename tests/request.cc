@@ -105,7 +105,7 @@ TEST(RequestQueryBenchmark, DecodePerformance) {
 TEST(RequestInsertTest, RejectsInvalidPayloadSize) {
     std::vector<std::byte> _buffer(request_insert_header_size + 5);
 
-    auto *_header = reinterpret_cast<request_insert_header*>(_buffer.data());
+    auto *_header = reinterpret_cast<request_insert_header*>(_buffer.data()); // NOSONAR
     _header->request_type_ = request_type::insert;
     _header->quota_ = 10;
     _header->usage_ = 0;
@@ -120,7 +120,7 @@ TEST(RequestInsertTest, RejectsInvalidPayloadSize) {
 TEST(RequestQueryTest, RejectsInvalidPayloadSize) {
     std::vector<std::byte> _buffer(request_query_header_size + 5);
 
-    auto *_header = reinterpret_cast<request_query_header*>(_buffer.data());
+    auto *_header = reinterpret_cast<request_query_header*>(_buffer.data()); // NOSONAR
     _header->request_type_ = request_type::query;
     _header->consumer_id_size_ = 5;
     _header->resource_id_size_ = 5;
