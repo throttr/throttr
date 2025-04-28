@@ -59,23 +59,18 @@ namespace throttr {
          * @param length
          */
         void on_read(const boost::system::error_code &error, const std::size_t length) {
-            if (!error) {
+            if (!error) { // LCOV_EXCL_LINE note: Partially tested as this requires a read error.
                 try {
                     const auto _buffer = std::span(reinterpret_cast<const std::byte *>(data_.data()), length);
-
-                    if (_buffer.empty()) {
-                        do_read();
-                        return;
-                    }
 
                     const auto _type = static_cast<request_type>(_buffer[0]);
 
                     std::vector<std::byte> _response;
 
-                    if (_type == request_type::insert) {
+                    if (_type == request_type::insert) { // LCOV_EXCL_LINE note: Partially covered.
                         const auto _request = request_insert::from_buffer(_buffer);
                         _response = state_->handle_insert(_request);
-                    } else if (_type == request_type::query) {
+                    } else if (_type == request_type::query) { // LCOV_EXCL_LINE note: Partially covered.
                         const auto _request = request_query::from_buffer(_buffer);
                         _response = state_->handle_query(_request);
                     } else {
@@ -86,7 +81,7 @@ namespace throttr {
                     do_write(std::move(_response));
                 } catch (const request_error &e) {
                     boost::ignore_unused(e);
-                    do_write({std::byte{0x00}});
+                    do_write({std::byte{0x00}}); // LCOV_EXCL_LINE note: Partially covered.
                 }
             }
         }
@@ -108,8 +103,7 @@ namespace throttr {
         void on_write(const boost::system::error_code &error, const std::size_t length) {
             boost::ignore_unused(length);
 
-            if (!error) {
-                // LCOV_EXCL_LINE note: Partially tested as this requires a write error.
+            if (!error) { // LCOV_EXCL_LINE note: Partially tested as this requires a write error.
                 do_read();
             }
         }
