@@ -60,18 +60,33 @@ namespace throttr {
          */
         void on_read(const boost::system::error_code &error, const std::size_t length) {
             if (!error) {
-                // LCOV_EXCL_LINE note: Partially tested as this requires a read error.
                 try {
-                    const auto _view = request_view::from_buffer(
-                        std::span(reinterpret_cast<const std::byte *>(data_.data()), length));
+                    const auto _buffer = std::span(reinterpret_cast<const std::byte *>(data_.data()), length);
 
-                    const auto _response = state_->handle_request(_view);
+                    if (_buffer.empty()) {
+                        do_read();
+                        return;
+                    }
 
-                    do_write(_response);
+                    const auto _type = static_cast<request_type>(_buffer[0]);
+
+                    std::vector<std::byte> _response;
+
+                    if (_type == request_type::insert) {
+                        const auto _request = request_insert::from_buffer(_buffer);
+                        _response = state_->handle_insert(_request);
+                    } else if (_type == request_type::query) {
+                        const auto _request = request_query::from_buffer(_buffer);
+                        _response = state_->handle_query(_request);
+                    } else {
+                        do_write({std::byte{0x00}});
+                        return;
+                    }
+
+                    do_write(std::move(_response));
                 } catch (const request_error &e) {
                     boost::ignore_unused(e);
-
-                    do_read();
+                    do_write({std::byte{0x00}});
                 }
             }
         }
