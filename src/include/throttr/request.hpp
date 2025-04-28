@@ -58,8 +58,6 @@ namespace throttr {
         uint8_t size_;
     };
 #pragma pack(pop)
-}
-
 
 /**
  * Request key

@@ -41,12 +41,15 @@ namespace throttr {
         explicit session(
             boost::asio::ip::tcp::socket socket,
             const std::shared_ptr<state> &state
-        );
+        ) : socket_(std::move(socket)), state_(state) {
+        }
 
         /**
          * Start
          */
-        void start();
+        void start() {
+            do_read();
+        };
 
     private:
         /**
@@ -56,7 +59,8 @@ namespace throttr {
          * @param length
          */
         void on_read(const boost::system::error_code &error, const std::size_t length) {
-            if (!error) { // LCOV_EXCL_LINE note: Partially tested as this requires a read error.
+            if (!error) {
+                // LCOV_EXCL_LINE note: Partially tested as this requires a read error.
                 try {
                     const auto _view = request_view::from_buffer(
                         std::span(reinterpret_cast<const std::byte *>(data_.data()), length));
@@ -89,7 +93,8 @@ namespace throttr {
         void on_write(const boost::system::error_code &error, const std::size_t length) {
             boost::ignore_unused(length);
 
-            if (!error) {  // LCOV_EXCL_LINE note: Partially tested as this requires a write error.
+            if (!error) {
+                // LCOV_EXCL_LINE note: Partially tested as this requires a write error.
                 do_read();
             }
         }

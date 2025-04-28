@@ -18,7 +18,6 @@
 #ifndef THROTTR_SERVER_HPP
 #define THROTTR_SERVER_HPP
 
-#include <boost/asio/io_context.hpp>
 #include <boost/asio/ip/tcp.hpp>
 
 namespace throttr {
@@ -46,7 +45,7 @@ namespace throttr {
         /**
          * Do accept
          */
-        void do_accept();
+        void do_accept() ;
 
         /**
          * Acceptor
