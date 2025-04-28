@@ -272,6 +272,32 @@ namespace throttr {
             std::vector _response(1, std::byte{0x01});
             return _response;
         }
+
+        /**
+         * Handle purge
+         *
+         * @param request
+         * @return std::vector<std::byte>
+         */
+        std::vector<std::byte> handle_purge(const request_purge &request) {
+            const request_key _key{
+                std::string(request.consumer_id_),
+                std::string(request.resource_id_)
+            };
+
+            const auto _it = requests_.find(_key);
+
+            if (_it == requests_.end()) {
+                std::vector _error_response(1, std::byte{0x00});
+                return _error_response;
+            }
+
+            requests_.erase(_it);
+
+            std::vector _success_response(1, std::byte{0x01});
+            return _success_response;
+        }
+
     };
 }
 

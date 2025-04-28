@@ -37,7 +37,7 @@ namespace throttr {
          */
         server(
             boost::asio::io_context &io_context,
-            short port,
+            const short port,
             const std::shared_ptr<state> &state
             )  : acceptor_(io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
             socket_(io_context),

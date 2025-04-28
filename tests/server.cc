@@ -414,3 +414,30 @@ TEST_F(ServerTestFixture, UpdateDecreaseTTL) {
     auto _update_response = send_and_receive(_update, 1);
     ASSERT_EQ(static_cast<uint8_t>(_update_response[0]), 1);
 }
+
+TEST_F(ServerTestFixture, PurgeExistingEntry) {
+    const auto _insert = request_insert_builder(5, 1, ttl_types::milliseconds, 10000, "consumer_purge", "/resource_purge");
+    auto ignored_insert = send_and_receive(_insert);
+    boost::ignore_unused(ignored_insert);
+
+    const auto _purge = request_purge_builder("consumer_purge", "/resource_purge");
+    auto _purge_response = send_and_receive(_purge, 1);
+
+    ASSERT_EQ(_purge_response.size(), 1);
+    ASSERT_EQ(static_cast<uint8_t>(_purge_response[0]), 1);
+
+    const auto _query = request_query_builder("consumer_purge", "/resource_purge");
+    auto _query_response = send_and_receive(_query);
+
+    uint64_t _quota_remaining = 0;
+    std::memcpy(&_quota_remaining, _query_response.data() + 1, sizeof(_quota_remaining));
+    ASSERT_EQ(_quota_remaining, 0);
+}
+
+TEST_F(ServerTestFixture, PurgeNonExistentEntryReturnsError) {
+    const auto _purge = request_purge_builder("nonexistent_consumer", "/nonexistent_resource");
+    auto _purge_response = send_and_receive(_purge, 1);
+
+    ASSERT_EQ(_purge_response.size(), 1);
+    ASSERT_EQ(static_cast<uint8_t>(_purge_response[0]), 0);
+}

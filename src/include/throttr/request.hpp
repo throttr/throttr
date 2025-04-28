@@ -49,6 +49,11 @@ namespace throttr {
          * Update
          */
         update = 0x03,
+
+        /**
+         * Purge
+         */
+        purge = 0x04,
     };
 
     /**
@@ -211,6 +216,35 @@ namespace throttr {
          * Value
          */
         uint64_t value_;
+
+        /**
+         * Consumer ID size
+         */
+        uint8_t consumer_id_size_;
+
+        /**
+         * Resource ID size
+         */
+        uint8_t resource_id_size_;
+    };
+#pragma pack(pop)
+
+
+
+#pragma pack(push, 1)
+    /**
+     * Request purge header size
+     */
+    constexpr std::size_t request_purge_header_size = 3;
+
+    /**
+     * Request purge header
+     */
+    struct request_purge_header {
+        /**
+         * Request type
+         */
+        request_types request_type_;
 
         /**
          * Consumer ID size
@@ -425,6 +459,75 @@ namespace throttr {
         }
     };
 
+
+    /**
+     * Request purge
+     */
+    struct request_purge {
+        /**
+         * Header
+         */
+        const request_purge_header *header_ = nullptr;
+
+        /**
+         * Consumer ID
+         */
+        std::string_view consumer_id_;
+
+        /**
+         * Resource ID
+         */
+        std::string_view resource_id_;
+
+        /**
+         * From buffer
+         *
+         * @param buffer
+         * @return request_purge
+         */
+        static request_purge from_buffer(const std::span<const std::byte> &buffer) {
+            if (buffer.size() < request_purge_header_size) {
+                throw request_error("buffer too small for request_purge");
+            }
+
+            const auto *_header = reinterpret_cast<const request_purge_header *>(buffer.data()); // NOSONAR
+
+            if (const auto _expected = _header->consumer_id_size_ + _header->resource_id_size_
+                ; buffer.size() < request_purge_header_size + _expected) {
+                throw request_error("buffer too small for request_purge payload");
+            }
+
+            const auto _consumer_id = buffer.subspan(request_purge_header_size, _header->consumer_id_size_);
+            const auto _resource_id = buffer.subspan(request_purge_header_size + _header->consumer_id_size_,
+                                                     _header->resource_id_size_);
+
+            return request_purge{
+                _header,
+                std::string_view(reinterpret_cast<const char *>(_consumer_id.data()), _consumer_id.size()), // NOSONAR
+                std::string_view(reinterpret_cast<const char *>(_resource_id.data()), _resource_id.size()) // NOSONAR
+            };
+        }
+
+        /**
+         * To buffer
+         *
+         * @return std::vector<std::byte>
+         */
+        [[nodiscard]]
+        std::vector<std::byte> to_buffer() const {
+            std::vector<std::byte> _buffer;
+            _buffer.resize(request_purge_header_size + consumer_id_.size() + resource_id_.size());
+
+            std::memcpy(_buffer.data(), header_, request_purge_header_size);
+            std::memcpy(_buffer.data() + request_purge_header_size, consumer_id_.data(), consumer_id_.size());
+            std::memcpy(_buffer.data() + request_purge_header_size + consumer_id_.size(), resource_id_.data(),
+                        resource_id_.size());
+
+            return _buffer;
+        }
+    };
+
+
     /**
      * Request key
      */
@@ -544,6 +647,33 @@ namespace throttr {
 
         std::memcpy(_buffer.data() + request_query_header_size, consumer_id.data(), consumer_id.size());
         std::memcpy(_buffer.data() + request_query_header_size + consumer_id.size(), resource_id.data(),
+                    resource_id.size());
+
+        return _buffer;
+    }
+
+
+    /**
+     * Request purge builder
+     *
+     * @param consumer_id
+     * @param resource_id
+     * @return std::vector<std::byte>
+     */
+    inline std::vector<std::byte> request_purge_builder(
+        const std::string_view consumer_id = "",
+        const std::string_view resource_id = ""
+    ) {
+        std::vector<std::byte> _buffer;
+        _buffer.resize(request_purge_header_size + consumer_id.size() + resource_id.size());
+
+        auto *_header = reinterpret_cast<request_purge_header *>(_buffer.data()); // NOSONAR
+        _header->request_type_ = request_types::purge;
+        _header->consumer_id_size_ = static_cast<uint8_t>(consumer_id.size());
+        _header->resource_id_size_ = static_cast<uint8_t>(resource_id.size());
+
+        std::memcpy(_buffer.data() + request_purge_header_size, consumer_id.data(), consumer_id.size());
+        std::memcpy(_buffer.data() + request_purge_header_size + consumer_id.size(), resource_id.data(),
                     resource_id.size());
 
         return _buffer;

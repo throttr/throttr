@@ -164,6 +164,34 @@ TEST(RequestUpdateTest, RejectsInvalidPayloadSize) {
     ASSERT_THROW(request_update::from_buffer(_buffer), request_error);
 }
 
+TEST(RequestPurgeTest, ParseAndSerialize) {
+    auto _buffer = request_purge_builder("consumerPURGE", "/resourcePURGE");
+
+    const auto _request = request_purge::from_buffer(_buffer);
+    EXPECT_EQ(_request.consumer_id_, "consumerPURGE");
+    EXPECT_EQ(_request.resource_id_, "/resourcePURGE");
+
+    auto _reconstructed = _request.to_buffer();
+    ASSERT_EQ(_reconstructed.size(), _buffer.size());
+    ASSERT_TRUE(std::equal(_reconstructed.begin(), _reconstructed.end(), _buffer.begin()));
+}
+
+TEST(RequestPurgeTest, RejectsTooSmallBuffer) {
+    std::vector _buffer(2, static_cast<std::byte>(0));
+    ASSERT_THROW(request_purge::from_buffer(_buffer), request_error);
+}
+
+TEST(RequestPurgeTest, RejectsInvalidPayloadSize) {
+    std::vector<std::byte> _buffer(request_purge_header_size + 5);
+
+    auto *_header = reinterpret_cast<request_purge_header *>(_buffer.data()); // NOSONAR
+    _header->request_type_ = request_types::purge;
+    _header->consumer_id_size_ = 5;
+    _header->resource_id_size_ = 5;
+
+    ASSERT_THROW(request_purge::from_buffer(_buffer), request_error);
+}
+
 
 TEST(RequestKeyTest, EqualsIdenticalKeys) {
     const request_key _a{

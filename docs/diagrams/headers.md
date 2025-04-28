@@ -41,6 +41,18 @@ flowchart TD
     C6 --> D[Request Body]
 ```
 
+## Request Purge Header
+
+```mermaid
+flowchart TD
+    B[request_purge_header]
+    B --> B1[request_type - 1 byte]
+    B --> B2[consumer_id_size - 1 byte]
+    B --> B3[resource_id_size - 1 byte]
+    B2 --> C[Request Body]
+    B3 --> C[Request Body]
+```
+
 ## Request Body
 
 ```mermaid

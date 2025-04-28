@@ -127,8 +127,8 @@ docker run -e THREADS=4 -p 9000:9000 ghcr.io/throttr/throttr:2.0.0-release
 #### v2.0.0
 
 - Redesigned protocol with Consumer ID and Resource ID.
-- Added Update Requests.
-- Response is now 18 bytes (was 13).
+- Added Query, Update and Purge requests.
+- Response is now 18 bytes (was 13) and 1 byte for no payload requests.
 - 100% Unit Test Coverage.
 - Zero Sonar issues.
 

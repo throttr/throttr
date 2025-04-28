@@ -83,6 +83,13 @@ namespace throttr {
                             _response = state_->handle_update(_request);
                             break;
                         }
+
+                        case request_types::purge: { // LCOV_EXCL_LINE note: Partially covered.
+                            const auto _request = request_purge::from_buffer(_buffer);
+                            _response = state_->handle_purge(_request);
+                            break;
+                        }
+
                         default: [[unlikely]] {
                             do_write({std::byte{0x00}});
                             return;
