@@ -69,15 +69,15 @@ Upon receiving a request, **Throttr**:
 | `consumer_id`      | `char[N]`  | N bytes | Consumer identifier.               |
 | `resource_id`      | `char[M]`  | M bytes | Resource identifier.               |
 
-### Query Request Format
+### Query and Purge Request Format
 
-| Field              | Type      | Size    | Description            |
-|:-------------------|:----------|:--------|:-----------------------|
-| `request_type`     | `uint8_t` | 1 byte  | Always 0x02 for query. |
-| `consumer_id_size` | `uint8_t` | 1 byte  | Size of Consumer ID.   |
-| `resource_id_size` | `uint8_t` | 1 byte  | Size of Resource ID.   |
-| `consumer_id`      | `char[N]` | N bytes | Consumer identifier.   |
-| `resource_id`      | `char[M]` | M bytes | Resource identifier.   |
+| Field              | Type      | Size    | Description                       |
+|:-------------------|:----------|:--------|:----------------------------------|
+| `request_type`     | `uint8_t` | 1 byte  | 0x02 for query and 0x04 on purge. |
+| `consumer_id_size` | `uint8_t` | 1 byte  | Size of Consumer ID.              |
+| `resource_id_size` | `uint8_t` | 1 byte  | Size of Resource ID.              |
+| `consumer_id`      | `char[N]` | N bytes | Consumer identifier.              |
+| `resource_id`      | `char[M]` | M bytes | Resource identifier.              |
 
 ### Update Request Format
 
@@ -94,7 +94,7 @@ Upon receiving a request, **Throttr**:
 
 ### Response Format
 
-Server responds always with 18 bytes:
+Server responds always with 18 bytes for Insert and Query but 1 byte when you're Updating or Purging:
 
 | Field             | Type       | Size    | Description                                  |
 |:------------------|:-----------|:--------|:---------------------------------------------|
