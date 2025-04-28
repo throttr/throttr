@@ -1,4 +1,4 @@
-# Throttr
+# 🚀 Throttr
 
 <p align="center"><a href="https://throttr.cl" target="_blank"><img src="./throttr.png" alt="Throttr"></a></p>
 
@@ -22,7 +22,7 @@
 <a href="https://sonarcloud.io/project/overview?id=throttr_throttr"><img src="https://sonarcloud.io/api/project_badges/measure?project=throttr_throttr&metric=sqale_rating" alt="Maintainability"></a>
 </p>
 
-## What is?
+## ❓ What is 
 
 **Throttr** is a high-performance TCP server designed to manage and control request rates at the network level with minimal latency.
 
@@ -47,15 +47,30 @@ Upon receiving a request, **Throttr**:
 - Fully asynchronous (non-blocking).
 - Sovereign, with no external dependencies beyond Boost.Asio.
 
-## About Protocol
+## 📜 About Protocol
 
 **Throttr** defines a minimal, efficient binary protocol based on three main request types:
 
 - Insert Request
 - Query Request
+- Purge Request
 - Update Request
 
-### Insert Request Format
+# 📚 Concepts to Understand the Throttr Protocol
+
+- **Consumer**: An entity (user, client, device, session, or any identifier like UUID, hash, or IP) that is subject to traffic or quota control.
+- **Resource**: A target associated with a consumer. It can represent anything: an API endpoint, a file, a user ID, a service, or any abstract entity.
+- **Quota**: The maximum number of allowed operations (requests, actions, accesses) a consumer can perform on a resource during a valid TTL period.
+- **Usage**: The amount deducted from the available quota with each request. Usually `1`, but can represent batched or weighted operations.
+- **TTL (Time To Live)**: The lifetime duration (in nanoseconds, milliseconds, or seconds) during which a quota remains valid before it expires and resets.
+- **TTL Type**: Defines the unit used for the TTL: nanoseconds (`ns`), milliseconds (`ms`), or seconds (`s`).
+- **Expires At**: The absolute expiration timestamp, calculated from the TTL and the time of insertion or update.
+- **Request Insert**: Operation that creates or resets a quota and TTL for a specific consumer-resource pair.
+- **Request Query**: Operation that retrieves the current quota and TTL without modifying any data.
+- **Request Update**: Operation that patches, increases, or decreases the quota or TTL dynamically for a consumer-resource pair.
+- **Request Purge**: Operation that permanently deletes a consumer-resource pair from the state.
+- 
+### 📥 Insert Request Format
 
 | Field              | Type       | Size    | Description                        |
 |:-------------------|:-----------|:--------|:-----------------------------------|
@@ -69,7 +84,7 @@ Upon receiving a request, **Throttr**:
 | `consumer_id`      | `char[N]`  | N bytes | Consumer identifier.               |
 | `resource_id`      | `char[M]`  | M bytes | Resource identifier.               |
 
-### Query and Purge Request Format
+### 🔍 Query and 🧹 Purge Request Format
 
 | Field              | Type      | Size    | Description                       |
 |:-------------------|:----------|:--------|:----------------------------------|
@@ -79,7 +94,7 @@ Upon receiving a request, **Throttr**:
 | `consumer_id`      | `char[N]` | N bytes | Consumer identifier.              |
 | `resource_id`      | `char[M]` | M bytes | Resource identifier.              |
 
-### Update Request Format
+### ♻️ Update Request Format
 
 | Field              | Type       | Size    | Description                             |
 |:-------------------|:-----------|:--------|:----------------------------------------|
@@ -92,7 +107,7 @@ Upon receiving a request, **Throttr**:
 | `consumer_id`      | `char[N]`  | N bytes | Consumer identifier.                    |
 | `resource_id`      | `char[M]`  | M bytes | Resource identifier.                    |
 
-### Response Format
+### 📦 Response Format
 
 Server responds always with 18 bytes for Insert and Query:
 
@@ -104,7 +119,7 @@ Server responds always with 18 bytes for Insert and Query:
 
 Also, it will respond 1 byte (0 or 1) if the Purge or Update was success.
 
-## Running as Container
+## 🐳 Running as Container
 
 Pull the latest release:
 
@@ -124,7 +139,7 @@ Environment variables can also be passed to customize the behavior:
 docker run -e THREADS=4 -p 9000:9000 ghcr.io/throttr/throttr:2.0.0-release
 ```
 
-### Changelog
+### 📝 Changelog
 
 #### v2.0.0
 
@@ -138,7 +153,7 @@ docker run -e THREADS=4 -p 9000:9000 ghcr.io/throttr/throttr:2.0.0-release
 
 - Minimum viable product released.
 
-### License
+### ⚖️ License
 
 This software has been built by **Ian Torres** and released using [GNU Affero General Public License](./LICENSE).
 
