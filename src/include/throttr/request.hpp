@@ -21,13 +21,12 @@
 #include <stdexcept>
 #include <chrono>
 
-#include <throttr/request_header.hpp>
-
 namespace throttr {
     /**
-     * Request key
+     * Request header
      */
-    struct request_key {
+#pragma pack(push, 1)
+    struct request_header {
         /**
          * IP version
          */
@@ -44,115 +43,156 @@ namespace throttr {
         uint16_t port_;
 
         /**
-         * URL
+         * Max requests
          */
-        std::string url_;
+        uint32_t max_requests_;
 
         /**
-         * Comparator
-         *
-         * @param other
-         * @return bool
+         * TTL
          */
-        bool operator==(const request_key &other) const = default;  // LCOV_EXCL_LINE note: Hash requirement.
+        uint32_t ttl_;
+
+        /**
+         * URL size
+         */
+        uint8_t size_;
     };
+#pragma pack(pop)
+}
+
+
+/**
+ * Request key
+ */
+struct request_key {
+    /**
+     * IP version
+     */
+    uint8_t ip_version_;
 
     /**
-     * Request key hasher
+     * IP address
      */
-    struct request_key_hasher {
-        /**
-         * Invoke
-         *
-         * @param key
-         * @return size_t
-         */
-        std::size_t operator()(const request_key &key) const {
-            std::size_t _h = std::hash<uint8_t>{}(key.ip_version_);
-
-            for (const auto _b: key.ip_) {  // LCOV_EXCL_LINE note: Partially tested.
-                _h ^= std::hash<uint8_t>{}(_b) + 0x9e3779b9 + (_h << 6) + (_h >> 2);
-            }
-
-            _h ^= std::hash<uint16_t>{}(key.port_) + 0x9e3779b9 + (_h << 6) + (_h >> 2);
-            _h ^= std::hash<std::string>{}(key.url_) + 0x9e3779b9 + (_h << 6) + (_h >> 2);
-
-            return _h;
-        }
-    };
+    std::array<uint8_t, 16> ip_;
 
     /**
-     * Request entry
+     * Port
      */
-    struct request_entry {
-        /**
-         * Available requests
-         */
-        int available_requests_ = 0;
-
-        /**
-         * Expires at
-         */
-        std::chrono::steady_clock::time_point expires_at_;
-    };
+    uint16_t port_;
 
     /**
-     * Request error
+     * URL
      */
-    struct request_error final : std::runtime_error {
-        using std::runtime_error::runtime_error;
-    };
+    std::string url_;
 
     /**
-     * Request view
+     * Comparator
+     *
+     * @param other
+     * @return bool
      */
-    struct request_view {
-        /**
-         * Header
-         */
-        const request_header *header_ = nullptr;
+    bool operator==(const request_key &other) const = default; // LCOV_EXCL_LINE note: Hash requirement.
+};
 
-        /**
-         * URL
-         */
-        std::string_view url_;
+/**
+ * Request key hasher
+ */
+struct request_key_hasher {
+    /**
+     * Invoke
+     *
+     * @param key
+     * @return size_t
+     */
+    std::size_t operator()(const request_key &key) const {
+        std::size_t _h = std::hash<uint8_t>{}(key.ip_version_);
 
-        /**
-         * From buffer
-         *
-         * @param buffer
-         * @return request_view
-         */
-        static request_view from_buffer(const std::span<const std::byte> &buffer) {
-            if (buffer.size() < sizeof(request_header)) {
-                throw request_error("buffer too small for request");
-            }
-
-            const auto *_header = reinterpret_cast<const request_header *>(buffer.data());
-
-            if (buffer.size() < sizeof(request_header) + _header->size_) { // LCOV_EXCL_LINE note: Partially tested.
-                throw request_error("buffer too small for url payload");
-            }
-
-            const auto _url = buffer.subspan(sizeof(request_header), _header->size_);
-            return request_view{
-                _header,
-                std::string_view(reinterpret_cast<const char *>(_url.data()), _url.size())
-            };
+        for (const auto _b: key.ip_) {
+            // LCOV_EXCL_LINE note: Partially tested.
+            _h ^= std::hash<uint8_t>{}(_b) + 0x9e3779b9 + (_h << 6) + (_h >> 2);
         }
 
-        /**
-         * To buffer
-         *
-         * @return span<const uint8_t>
-         */
-        [[nodiscard]] std::span<const std::byte> to_buffer() const {
-            return {
-                reinterpret_cast<const std::byte *>(header_),
-                sizeof(request_header) + url_.size()
-            };
+        _h ^= std::hash<uint16_t>{}(key.port_) + 0x9e3779b9 + (_h << 6) + (_h >> 2);
+        _h ^= std::hash<std::string>{}(key.url_) + 0x9e3779b9 + (_h << 6) + (_h >> 2);
+
+        return _h;
+    }
+};
+
+/**
+ * Request entry
+ */
+struct request_entry {
+    /**
+     * Available requests
+     */
+    int available_requests_ = 0;
+
+    /**
+     * Expires at
+     */
+    std::chrono::steady_clock::time_point expires_at_;
+};
+
+/**
+ * Request error
+ */
+struct request_error final : std::runtime_error {
+    using std::runtime_error::runtime_error;
+};
+
+/**
+ * Request view
+ */
+struct request_view {
+    /**
+     * Header
+     */
+    const request_header *header_ = nullptr;
+
+    /**
+     * URL
+     */
+    std::string_view url_;
+
+    /**
+     * From buffer
+     *
+     * @param buffer
+     * @return request_view
+     */
+    static request_view from_buffer(const std::span<const std::byte> &buffer) {
+        if (buffer.size() < sizeof(request_header)) {
+            throw request_error("buffer too small for request");
         }
-    };
+
+        const auto *_header = reinterpret_cast<const request_header *>(buffer.data());
+
+        if (buffer.size() < sizeof(request_header) + _header->size_) {
+            // LCOV_EXCL_LINE note: Partially tested.
+            throw request_error("buffer too small for url payload");
+        }
+
+        const auto _url = buffer.subspan(sizeof(request_header), _header->size_);
+        return request_view{
+            _header,
+            std::string_view(reinterpret_cast<const char *>(_url.data()), _url.size())
+        };
+    }
+
+    /**
+     * To buffer
+     *
+     * @return span<const uint8_t>
+     */
+    [[nodiscard]] std::span<const std::byte> to_buffer() const {
+        return {
+            reinterpret_cast<const std::byte *>(header_),
+            sizeof(request_header) + url_.size()
+        };
+    }
+};
+
 }
 
 #endif // THROTTR_REQUEST_HPP
