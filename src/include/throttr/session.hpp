@@ -41,12 +41,15 @@ namespace throttr {
         explicit session(
             boost::asio::ip::tcp::socket socket,
             const std::shared_ptr<state> &state
-        );
+        ) : socket_(std::move(socket)), state_(state) {
+        }
 
         /**
          * Start
          */
-        void start();
+        void start() {
+            do_read();
+        }
 
     private:
         /**
@@ -58,16 +61,45 @@ namespace throttr {
         void on_read(const boost::system::error_code &error, const std::size_t length) {
             if (!error) { // LCOV_EXCL_LINE note: Partially tested as this requires a read error.
                 try {
-                    const auto _view = request_view::from_buffer(
-                        std::span(reinterpret_cast<const std::byte *>(data_.data()), length));
+                    const auto _buffer = std::span(reinterpret_cast<const std::byte *>(data_.data()), length);
 
-                    const auto _response = state_->handle_request(_view);
+                    const auto _type = static_cast<request_types>(_buffer[0]);
 
-                    do_write(_response);
+                    std::vector<std::byte> _response;
+
+                    switch (_type) {
+                        case request_types::insert: { // LCOV_EXCL_LINE note: Partially covered.
+                            const auto _request = request_insert::from_buffer(_buffer);
+                            _response = state_->handle_insert(_request);
+                            break;
+                        }
+                        case request_types::query: { // LCOV_EXCL_LINE note: Partially covered.
+                            const auto _request = request_query::from_buffer(_buffer);
+                            _response = state_->handle_query(_request);
+                            break;
+                        }
+                        case request_types::update: { // LCOV_EXCL_LINE note: Partially covered.
+                            const auto _request = request_update::from_buffer(_buffer);
+                            _response = state_->handle_update(_request);
+                            break;
+                        }
+
+                        case request_types::purge: { // LCOV_EXCL_LINE note: Partially covered.
+                            const auto _request = request_purge::from_buffer(_buffer);
+                            _response = state_->handle_purge(_request);
+                            break;
+                        }
+
+                        default: [[unlikely]] {
+                            do_write({std::byte{0x00}});
+                            return;
+                        }
+                    }
+
+                    do_write(std::move(_response));
                 } catch (const request_error &e) {
                     boost::ignore_unused(e);
-
-                    do_read();
+                    do_write({std::byte{0x00}}); // LCOV_EXCL_LINE note: Partially covered.
                 }
             }
         }
@@ -89,7 +121,7 @@ namespace throttr {
         void on_write(const boost::system::error_code &error, const std::size_t length) {
             boost::ignore_unused(length);
 
-            if (!error) {  // LCOV_EXCL_LINE note: Partially tested as this requires a write error.
+            if (!error) { // LCOV_EXCL_LINE note: Partially tested as this requires a write error.
                 do_read();
             }
         }

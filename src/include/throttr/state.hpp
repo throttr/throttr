@@ -43,65 +43,261 @@ namespace throttr {
         std::unordered_map<request_key, request_entry, request_key_hasher> requests_;
 
         /**
-         * Handle request
+         * Calculate TTL remaining
          *
-         * @param view
-         * @return vector<byte>
+         * @param expires_at
+         * @param ttl
+         * @return int64_t
          */
-        std::vector<std::byte> handle_request(const request_view & view) {
-            const auto* _header = view.header_;
+        static int64_t calculate_ttl_remaining(
+            const std::chrono::steady_clock::time_point &expires_at,
+            const ttl_types ttl
+        ) {
+            const auto _now = std::chrono::steady_clock::now();
 
+            if (expires_at <= _now) { // LCOV_EXCL_LINE note: Partially covered.
+                return 0;
+            }
+
+            const auto _diff = expires_at - _now;
+
+            if (ttl == ttl_types::nanoseconds) { // LCOV_EXCL_LINE note: Partially covered.
+                return duration_cast<std::chrono::nanoseconds>(_diff).count();
+            }
+
+            if (ttl == ttl_types::milliseconds) { // LCOV_EXCL_LINE note: Partially covered.
+                return duration_cast<std::chrono::milliseconds>(_diff).count();
+            }
+
+            return duration_cast<std::chrono::seconds>(_diff).count();
+        }
+
+        /**
+         * Calculate expiration point
+         *
+         * @param now
+         * @param ttl_type
+         * @param ttl
+         * @return std::chrono::steady_clock::time_point
+         */
+        static std::chrono::steady_clock::time_point calculate_expiration_point(
+            const std::chrono::steady_clock::time_point &now,
+            const ttl_types ttl_type,
+            const uint64_t ttl
+        ) {
+            if (ttl_type == ttl_types::nanoseconds) {
+                return now + std::chrono::nanoseconds(ttl);
+            }
+
+            if (ttl_type == ttl_types::milliseconds) { // LCOV_EXCL_LINE note: Partially covered.
+                return now + std::chrono::milliseconds(ttl);
+            }
+
+            return now + std::chrono::seconds(ttl);
+        }
+
+
+        /**
+         * Handle insert
+         *
+         * @param request
+         * @return std::vector<std::byte>
+         */
+        std::vector<std::byte> handle_insert(const request_insert &request) {
             const request_key _key{
-                _header->ip_version_,
-                _header->ip_,
-                _header->port_,
-                std::string(view.url_)
+                std::string(request.consumer_id_),
+                std::string(request.resource_id_)
             };
 
             const auto _now = std::chrono::steady_clock::now();
             auto _it = requests_.find(_key);
 
-            if (_it != requests_.end() && _now >= _it->second.expires_at_) { // LCOV_EXCL_LINE note: Partially tested.
+            if (_it != requests_.end() && _now >= _it->second.expires_at_) { // LCOV_EXCL_LINE note: Partially covered.
                 requests_.erase(_it);
                 _it = requests_.end();
             }
 
             bool _can = false;
-            int _available = 0;
-            int64_t _default_ttl = 0;
+            uint64_t _quota_remaining = 0;
+            ttl_types _ttl_type = request.header_->ttl_type_;
+            int64_t _ttl_remaining = 0;
 
-            if (_it != requests_.end()) { // LCOV_EXCL_LINE note: Partially tested.
-                auto& _entry = _it->second;
-
-                if (_entry.available_requests_ > 0) { // LCOV_EXCL_LINE note: Partially tested.
-                    --_entry.available_requests_;
+            if (_it != requests_.end()) { // LCOV_EXCL_LINE note: Partially covered.
+                auto &_entry = _it->second;
+                if (_entry.quota_ >= request.header_->usage_) { // LCOV_EXCL_LINE note: Partially covered.
+                    _entry.quota_ -= request.header_->usage_;
                     _can = true;
                 }
-                _available = _entry.available_requests_;
-                _default_ttl = std::chrono::duration_cast<std::chrono::milliseconds>(_entry.expires_at_ - _now).count();
+                _quota_remaining = _entry.quota_;
+                _ttl_remaining = calculate_ttl_remaining(_entry.expires_at_, _ttl_type);
             } else {
-                const auto _stock = static_cast<int>(_header->max_requests_);
-                const auto _ttl = static_cast<int>(_header->ttl_);
-
+                const auto _expires_at = calculate_expiration_point(_now, _ttl_type, request.header_->ttl_);
                 requests_[_key] = request_entry{
-                    _stock - 1,
-                    _now + std::chrono::milliseconds(_ttl)
+                    request.header_->quota_ - request.header_->usage_,
+                    _ttl_type,
+                    _expires_at
                 };
-
                 _can = true;
-                _available = _stock - 1;
-                _default_ttl = _ttl;
+                _quota_remaining = request.header_->quota_ - request.header_->usage_;
+                _ttl_remaining = calculate_ttl_remaining(_expires_at, _ttl_type);
             }
 
             std::vector<std::byte> _response;
-            _response.resize(1 + sizeof(int) + sizeof(int64_t));
+            _response.resize(1 + sizeof(uint64_t) + 1 + sizeof(int64_t));
 
             _response[0] = static_cast<std::byte>(_can ? 1 : 0);
-            std::memcpy(_response.data() + 1, &_available, sizeof(_available));
-            std::memcpy(_response.data() + 1 + sizeof(int), &_default_ttl, sizeof(_default_ttl));
+            std::memcpy(_response.data() + 1, &_quota_remaining, sizeof(_quota_remaining));
+            _response[1 + sizeof(uint64_t)] = static_cast<std::byte>(_ttl_type);
+            std::memcpy(_response.data() + 1 + sizeof(uint64_t) + 1, &_ttl_remaining, sizeof(_ttl_remaining));
 
             return _response;
         }
+
+        /**
+         * Handle query
+         *
+         * @param request
+         * @return std::vector<std::byte>
+         */
+        std::vector<std::byte> handle_query(const request_query &request) {
+            const request_key _key{
+                std::string(request.consumer_id_),
+                std::string(request.resource_id_)
+            };
+
+            const auto _now = std::chrono::steady_clock::now();
+            auto _it = requests_.find(_key);
+
+            bool _can = false;
+            uint64_t _quota_remaining = 0;
+            auto _ttl_type = ttl_types::milliseconds;
+            int64_t _ttl_remaining = 0;
+
+            if (_it != requests_.end() && _now < _it->second.expires_at_) { // LCOV_EXCL_LINE note: Partially covered.
+                _can = true;
+                _quota_remaining = _it->second.quota_;
+                _ttl_type = _it->second.ttl_type_;
+                _ttl_remaining = calculate_ttl_remaining(_it->second.expires_at_, _ttl_type);
+            }
+
+            std::vector<std::byte> _response;
+            _response.resize(1 + sizeof(uint64_t) + 1 + sizeof(int64_t));
+
+            _response[0] = static_cast<std::byte>(_can ? 1 : 0);
+            std::memcpy(_response.data() + 1, &_quota_remaining, sizeof(_quota_remaining));
+            _response[1 + sizeof(uint64_t)] = static_cast<std::byte>(_ttl_type);
+            std::memcpy(_response.data() + 1 + sizeof(uint64_t) + 1, &_ttl_remaining, sizeof(_ttl_remaining));
+
+            return _response;
+        }
+
+        /**
+         * Handle update
+         *
+         * @param request
+         * @return std::vector<std::byte>
+         */
+        std::vector<std::byte> handle_update(const request_update &request) {
+            const request_key _key{
+                std::string(request.consumer_id_),
+                std::string(request.resource_id_)
+            };
+
+            const auto _now = std::chrono::steady_clock::now();
+            const auto _it = requests_.find(_key);
+
+            if (_it == requests_.end()) { // LCOV_EXCL_LINE note: Partially covered.
+                std::vector _error_response(1, std::byte{0x00});
+                return _error_response;
+            }
+
+            auto &_entry = _it->second;
+
+            using enum change_types;
+            using enum ttl_types;
+
+            switch (request.header_->attribute_) {
+                case attribute_types::quota:
+
+                    switch (request.header_->change_) {
+                        case patch:
+                            _entry.quota_ = request.header_->value_;
+                            break;
+                        case increase:
+                            _entry.quota_ += request.header_->value_;
+                            break;
+                        case decrease:
+                            if (_entry.quota_ >= request.header_->value_) { // LCOV_EXCL_LINE note: Partially covered.
+                                _entry.quota_ -= request.header_->value_;
+                            } else {
+                                _entry.quota_ = 0;
+                            }
+                            break;
+                    }
+
+                    break;
+                case attribute_types::ttl:
+
+                    std::chrono::nanoseconds _duration;
+
+                    switch (_entry.ttl_type_) {
+                        case seconds:
+                            _duration = std::chrono::seconds(request.header_->value_);
+                            break;
+                        case milliseconds:
+                            _duration = std::chrono::milliseconds(request.header_->value_);
+                            break;
+                        case nanoseconds:
+                        default:
+                            _duration = std::chrono::nanoseconds(request.header_->value_);
+                            break;
+                    }
+
+
+                    switch (request.header_->change_) {
+                        case patch:
+                            _entry.expires_at_ = _now + _duration;
+                            break;
+                        case increase:
+                            _entry.expires_at_ += _duration;
+                            break;
+                        case decrease:
+                            _entry.expires_at_ -= _duration;
+                            break;
+                    }
+
+                    break;
+            }
+
+            std::vector _response(1, std::byte{0x01});
+            return _response;
+        }
+
+        /**
+         * Handle purge
+         *
+         * @param request
+         * @return std::vector<std::byte>
+         */
+        std::vector<std::byte> handle_purge(const request_purge &request) {
+            const request_key _key{
+                std::string(request.consumer_id_),
+                std::string(request.resource_id_)
+            };
+
+            const auto _it = requests_.find(_key);
+
+            if (_it == requests_.end()) { // LCOV_EXCL_LINE note: Partially covered.
+                std::vector _error_response(1, std::byte{0x00});
+                return _error_response;
+            }
+
+            requests_.erase(_it);
+
+            std::vector _success_response(1, std::byte{0x01});
+            return _success_response;
+        }
+
     };
 }
 

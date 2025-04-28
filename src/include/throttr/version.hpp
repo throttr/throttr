@@ -22,16 +22,13 @@
 
 namespace throttr {
     /**
-     * Version
-     */
-    constexpr std::string_view version = "1.0.0";
-
-    /**
      * Get version
      *
      * @return string_view
      */
-    std::string_view get_version();
+    inline std::string_view get_version() {
+        return "2.0.0";
+    }
 }
 
 #endif // THROTTR_VERSION_HPP

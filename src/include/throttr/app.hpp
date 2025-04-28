@@ -21,6 +21,9 @@
 #include <throttr/server.hpp>
 #include <throttr/state.hpp>
 
+#include <thread>
+#include <vector>
+
 namespace throttr {
     /**
      * App
@@ -54,23 +57,55 @@ namespace throttr {
          * @param threads
          */
         explicit app(
-            short port,
-            int threads
-        );
+            const short port,
+            const int threads
+            ) : ioc_(threads),
+            port_(port),
+            threads_(threads) {
+        };
 
         /**
          * Serve
          *
          * @return int
          */
-        int serve();
+        int serve(){
+            server _server(
+                ioc_,
+                port_,
+                state_
+            );
+
+            std::vector<std::jthread> _threads;
+            _threads.reserve(threads_);
+
+            // LCOV_EXCL_START
+            for (auto _i = threads_; _i > 0; --_i) {
+                _threads.emplace_back([self = shared_from_this()] {
+                    self->ioc_.run();
+                });
+            }
+            // LCOV_EXCL_STOP
+
+            ioc_.run();
+
+            // LCOV_EXCL_START
+            for (auto &_thread: _threads) {
+                _thread.join();
+            }
+            // LCOV_EXCL_STOP
+
+            return EXIT_SUCCESS;
+        }
 
         /**
          * Stop
          *
          * @return void
          */
-        void stop();
+        void stop() {
+            ioc_.stop();
+        }
     };
 }
 

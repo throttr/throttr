@@ -24,23 +24,21 @@
 
 ## What is?
 
-**Throttr** is a high-performance TCP server designed to manage and control request rates at the network level.
+**Throttr** is a high-performance TCP server designed to manage and control request rates at the network level with minimal latency.
 
 It implements a custom binary protocol where each client specifies:
 
-Their IP address and port.
-
-- The maximum number of allowed requests.
-- The time window (TTL) to consume them.
-- The URL associated with the rate limit.
+- Their Consumer ID.
+- Their Resource ID.
+- The maximum allowed quota.
+- The time window (TTL) and type (ns/ms/s).
+- The action: Insert, Query or Update.
 
 Upon receiving a request, **Throttr**:
 
-- Parses the binary payload efficiently, avoiding unnecessary memory copies.
-- Tracks the available request quota and time-to-live per (IP, port, URL) combination.
-- Responds with a compact binary structure indicating whether the request is allowed, how many requests are left, and the remaining TTL in milliseconds.
-
-If the TTL expires, **Throttr** automatically resets the state, treating the next request as a fresh, independent cycle.
+- Parses the binary payload efficiently, zero-copy.
+- Manages quotas and expirations.
+- Responds compactly whether the operation succeeded and the current state.
 
 **Throttr** is engineered to be:
 
@@ -49,81 +47,90 @@ If the TTL expires, **Throttr** automatically resets the state, treating the nex
 - Fully asynchronous (non-blocking).
 - Sovereign, with no external dependencies beyond Boost.Asio.
 
-It is intended for those who need absolute control over traffic flows, without relying on heavyweight frameworks or third-party infrastructures.
-
 ## About Protocol
 
-**Throttr** defines a minimal, efficient binary protocol for communication between clients and the server.
+**Throttr** defines a minimal, efficient binary protocol based on three main request types:
 
-### Request Format
+- Insert Request
+- Query Request
+- Update Request
 
-Each client sends a binary payload composed of:
+### Insert Request Format
 
-| Field          | Type                      | Size     | Description                                       |
-|:---------------|:--------------------------|:---------|:--------------------------------------------------|
-| `ip_version`   | `uint8_t`                 | 1 byte   | IP version (4 for IPv4, 6 for IPv6).              |
-| `ip`           | `std::array<uint8_t, 16>` | 16 bytes | IP address (IPv4 is stored in the first 4 bytes). |
-| `port`         | `uint16_t`                | 2 bytes  | Client port in network byte order.                |
-| `max_requests` | `uint32_t`                | 4 bytes  | Maximum number of requests allowed.               |
-| `ttl`          | `uint32_t`                | 4 bytes  | Time-to-live window in milliseconds.              |
-| `size`         | `uint8_t`                 | 1 byte   | Length of the URL payload.                        |
-| `url`          | `char[size]`             | N bytes  | Target URL associated with the rate limit.        |
+| Field              | Type       | Size    | Description                        |
+|:-------------------|:-----------|:--------|:-----------------------------------|
+| `request_type`     | `uint8_t`  | 1 byte  | Always 0x01 for insert.            |
+| `quota`            | `uint64_t` | 8 bytes | Maximum number of allowed actions. |
+| `usage`            | `uint64_t` | 8 bytes | Initial usage.                     |
+| `ttl_type`         | `uint8_t`  | 1 byte  | 0 = ns, 1 = ms, 2 = s.             |
+| `ttl`              | `uint64_t` | 8 bytes | Time to live value.                |
+| `consumer_id_size` | `uint8_t`  | 1 byte  | Size of Consumer ID.               |
+| `resource_id_size` | `uint8_t`  | 1 byte  | Size of Resource ID.               |
+| `consumer_id`      | `char[N]`  | N bytes | Consumer identifier.               |
+| `resource_id`      | `char[M]`  | M bytes | Resource identifier.               |
 
-After the fixed-size header, the client sends the URL as a simple UTF-8 string of `size` bytes.
+### Query Request Format
+
+| Field              | Type      | Size    | Description            |
+|:-------------------|:----------|:--------|:-----------------------|
+| `request_type`     | `uint8_t` | 1 byte  | Always 0x02 for query. |
+| `consumer_id_size` | `uint8_t` | 1 byte  | Size of Consumer ID.   |
+| `resource_id_size` | `uint8_t` | 1 byte  | Size of Resource ID.   |
+| `consumer_id`      | `char[N]` | N bytes | Consumer identifier.   |
+| `resource_id`      | `char[M]` | M bytes | Resource identifier.   |
+
+### Update Request Format
+
+| Field              | Type       | Size    | Description                             |
+|:-------------------|:-----------|:--------|:----------------------------------------|
+| `request_type`     | `uint8_t`  | 1 byte  | Always 0x03 for update.                 |
+| `attribute`        | `uint8_t`  | 1 byte  | 0 = quota, 1 = ttl.                     |
+| `change`           | `uint8_t`  | 1 byte  | 0 = patch, 1 = increase, 2 = decrease.  |
+| `value`            | `uint64_t` | 8 bytes | Value to apply according to the change. |
+| `consumer_id_size` | `uint8_t`  | 1 byte  | Size of Consumer ID.                    |
+| `resource_id_size` | `uint8_t`  | 1 byte  | Size of Resource ID.                    |
+| `consumer_id`      | `char[N]`  | N bytes | Consumer identifier.                    |
+| `resource_id`      | `char[M]`  | M bytes | Resource identifier.                    |
 
 ### Response Format
 
-The server responds with a compact 13-byte binary structure:
+Server responds always with 18 bytes:
 
-| Field                | Type      | Size    | Description                                                   |
-|:---------------------|:----------|:--------|:--------------------------------------------------------------|
-| `can`                | `uint8_t` | 1 byte  | 1 if the request is allowed, 0 otherwise.                     |
-| `available_requests` | `int32_t` | 4 bytes | Remaining number of allowed requests.                         |
-| `ttl`                | `int64_t` | 8 bytes | Time left before the current limit expires (in milliseconds). |
+| Field             | Type       | Size    | Description                                  |
+|:------------------|:-----------|:--------|:---------------------------------------------|
+| `can`             | `uint8_t`  | 1 byte  | 1 if successful, 0 otherwise.                |
+| `quota_remaining` | `uint64_t` | 8 bytes | Remaining available quota.                   |
+| `ttl_remaining`   | `int64_t`  | 8 bytes | Remaining TTL (ns/ms/s according to config). |
 
-### State Management
+## Running as Container
 
-- When a request is received, Throttr constructs a **unique key** based on the client's IP address, port, and URL.
-- It checks the internal state:
-    - If the key does not exist, it **creates a new record** using the `max_requests` and `ttl` provided.
-    - If the key exists:
-        - If the TTL has expired, the old record is **deleted**, and a **new cycle** starts with the new parameters.
-        - If the TTL is still valid, Throttr decrements the available requests and updates the remaining TTL.
-- If there are no available requests left or the TTL has expired, the response indicates that the request is **not allowed**.
-
-All operations are designed to be **fully asynchronous and lock-free** to maximize throughput and minimize latency.
-
-### Design Goals
-
-- **Zero-copy parsing**: Avoid unnecessary memory allocations.
-- **Minimal wire protocol**: Small, fixed headers and simple payloads.
-- **Statelessness beyond TTL**: Once the TTL expires, the record is discarded.
-- **Deterministic behavior**: Every request deterministically maps to an allowed/denied outcome based solely on the protocol rules.
-
-### Running as Container
-
-You can pull the latest released image of `throttr` from GitHub Container Registry:
+Pull the latest release:
 
 ```bash
-docker pull ghcr.io/throttr/throttr:${VERSION}-${TYPE}
+docker pull ghcr.io/throttr/throttr:2.0.0-release
 ```
 
-> `${VERSION}` MUST BE the desired tag and `${TYPE}` SHOULD BE `debug` or `release`. 
-
-
-To run the container:
+Run it
 
 ```bash
-docker run -p 9000:9000 ghcr.io/throttr/throttr:1.0.0-release
+docker run -p 9000:9000 ghcr.io/throttr/throttr:2.0.0-release
 ```
 
 Environment variables can also be passed to customize the behavior:
 
 ```bash
-docker run -e THREADS=4 -p 9000:9000 ghcr.io/throttr/throttr:1.0.0-release
+docker run -e THREADS=4 -p 9000:9000 ghcr.io/throttr/throttr:2.0.0-release
 ```
 
 ### Changelog
+
+#### v2.0.0
+
+- Redesigned protocol with Consumer ID and Resource ID.
+- Added Query, Update and Purge requests.
+- Response is now 18 bytes (was 13) and 1 byte for no payload requests.
+- 100% Unit Test Coverage.
+- Zero Sonar issues.
 
 #### v1.0.0
 
