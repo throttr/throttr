@@ -22,7 +22,6 @@
 #include <chrono>
 #include <string>
 #include <cstring>
-#include <iostream>
 
 namespace throttr {
 
@@ -169,7 +168,8 @@ namespace throttr {
          *
          * @return std::vector<std::byte>
          */
-        [[nodiscard]] std::vector<std::byte> to_buffer() const {
+        [[nodiscard]]
+        std::vector<std::byte> to_buffer() const {
             std::vector<std::byte> _buffer;
             _buffer.resize(request_insert_header_size + consumer_id_.size() + resource_id_.size());
 
@@ -235,7 +235,8 @@ namespace throttr {
          *
          * @return std::vector<std::byte>
          */
-        [[nodiscard]] std::vector<std::byte> to_buffer() const {
+        [[nodiscard]]
+        std::vector<std::byte> to_buffer() const {
             std::vector<std::byte> _buffer;
             _buffer.resize(sizeof(request_query_header) + consumer_id_.size() + resource_id_.size());
 

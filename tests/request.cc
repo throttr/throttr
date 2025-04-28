@@ -127,3 +127,59 @@ TEST(RequestQueryTest, RejectsInvalidPayloadSize) {
 
     ASSERT_THROW(request_query::from_buffer(_buffer), request_error);
 }
+
+TEST(RequestKeyTest, EqualsIdenticalKeys) {
+    const request_key _a{
+        "consumer1",
+        "/resource1"
+    };
+
+    const request_key _b{
+        "consumer1",
+        "/resource1"
+    };
+
+    EXPECT_TRUE(_a == _b);
+}
+
+TEST(RequestKeyTest, NotEqualsDifferentConsumerID) {
+    const request_key _a{
+        "consumer1",
+        "/resource1"
+    };
+
+    const request_key _b{
+        "consumer2",
+        "/resource1"
+    };
+
+    EXPECT_FALSE(_a == _b);
+}
+
+TEST(RequestKeyTest, NotEqualsDifferentResourceID) {
+    const request_key _a{
+        "consumer1",
+        "/resource1"
+    };
+
+    const request_key _b{
+        "consumer1",
+        "/resource2"
+    };
+
+    EXPECT_FALSE(_a == _b);
+}
+
+TEST(RequestKeyTest, NotEqualsDifferentBothFields) {
+    const request_key _a{
+        "consumer1",
+        "/resource1"
+    };
+
+    const request_key _b{
+        "consumer2",
+        "/resource2"
+    };
+
+    EXPECT_FALSE(_a == _b);
+}
