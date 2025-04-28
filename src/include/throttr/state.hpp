@@ -213,18 +213,20 @@ namespace throttr {
 
             auto &_entry = _it->second;
 
+            using enum change_types;
+            using enum ttl_types;
 
             switch (request.header_->attribute_) {
                 case attribute_types::quota:
 
                     switch (request.header_->change_) {
-                        case change_types::patch:
+                        case patch:
                             _entry.quota_ = request.header_->value_;
                             break;
-                        case change_types::increase:
+                        case increase:
                             _entry.quota_ += request.header_->value_;
                             break;
-                        case change_types::decrease:
+                        case decrease:
                             if (_entry.quota_ >= request.header_->value_) { // LCOV_EXCL_LINE note: Partially covered.
                                 _entry.quota_ -= request.header_->value_;
                             } else {
@@ -239,13 +241,13 @@ namespace throttr {
                     std::chrono::nanoseconds _duration;
 
                     switch (_entry.ttl_type_) {
-                        case ttl_types::seconds:
+                        case seconds:
                             _duration = std::chrono::seconds(request.header_->value_);
                             break;
-                        case ttl_types::milliseconds:
+                        case milliseconds:
                             _duration = std::chrono::milliseconds(request.header_->value_);
                             break;
-                        case ttl_types::nanoseconds:
+                        case nanoseconds:
                         default:
                             _duration = std::chrono::nanoseconds(request.header_->value_);
                             break;
@@ -253,13 +255,13 @@ namespace throttr {
 
 
                     switch (request.header_->change_) {
-                        case change_types::patch:
+                        case patch:
                             _entry.expires_at_ = _now + _duration;
                             break;
-                        case change_types::increase:
+                        case increase:
                             _entry.expires_at_ += _duration;
                             break;
-                        case change_types::decrease:
+                        case decrease:
                             _entry.expires_at_ -= _duration;
                             break;
                     }
