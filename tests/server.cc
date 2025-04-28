@@ -18,7 +18,6 @@
 #include <thread>
 #include <throttr/app.hpp>
 #include <throttr/state.hpp>
-#include <throttr/logger.hpp>
 
 using boost::asio::ip::tcp;
 using namespace throttr;
@@ -177,4 +176,74 @@ TEST_F(ServerTestFixture, HandlesCorruptRequestGracefully) {
     const auto _response = send_and_receive_corrupt(_corrupt_buffer);
     ASSERT_EQ(_response.size(), 1);
     ASSERT_EQ(static_cast<uint8_t>(_response[0]), 0);
+}
+
+
+TEST_F(ServerTestFixture, QueryBeforeInsertReturnsZeroQuota) {
+    const auto _buffer = request_query_builder("consumer_query", "/resource_query");
+
+    auto _response = send_and_receive(_buffer);
+
+    ASSERT_EQ(_response.size(), 18);
+    ASSERT_EQ(static_cast<uint8_t>(_response[0]), 0); // No encontrado
+
+    uint64_t _quota_remaining = 0;
+    std::memcpy(&_quota_remaining, _response.data() + 1, sizeof(_quota_remaining));
+    ASSERT_EQ(_quota_remaining, 0);
+}
+
+TEST_F(ServerTestFixture, QueryAfterInsertReturnsCorrectQuota) {
+    {
+        boost::asio::io_context _io_context;
+        tcp::resolver _resolver(_io_context);
+        const auto _endpoints = _resolver.resolve("127.0.0.1", std::to_string(1337));
+
+        tcp::socket _socket(_io_context);
+        boost::asio::connect(_socket, _endpoints);
+
+        auto _insert = request_insert_builder(10, 0, 1, 10000, "consumer_query2", "/resource_query2");
+        boost::asio::write(_socket, boost::asio::buffer(_insert.data(), _insert.size()));
+
+        std::vector<std::byte> _response(18);
+        boost::asio::read(_socket, boost::asio::buffer(_response.data(), _response.size()));
+    }
+
+    const auto _query = request_query_builder("consumer_query2", "/resource_query2");
+    auto _response = send_and_receive(_query);
+
+    ASSERT_EQ(_response.size(), 18);
+    ASSERT_EQ(static_cast<uint8_t>(_response[0]), 1);
+
+    uint64_t _quota_remaining = 0;
+    std::memcpy(&_quota_remaining, _response.data() + 1, sizeof(_quota_remaining));
+    ASSERT_EQ(_quota_remaining, 10);
+}
+
+TEST_F(ServerTestFixture, QueryExpiredReturnsZeroQuota) {
+    {
+        boost::asio::io_context _io_context;
+        tcp::resolver _resolver(_io_context);
+        const auto _endpoints = _resolver.resolve("127.0.0.1", std::to_string(1337));
+
+        tcp::socket _socket(_io_context);
+        boost::asio::connect(_socket, _endpoints);
+
+        auto _insert = request_insert_builder(5, 0, 1, 500, "consumer_query3", "/resource_query3");
+        boost::asio::write(_socket, boost::asio::buffer(_insert.data(), _insert.size()));
+
+        std::vector<std::byte> _response(18);
+        boost::asio::read(_socket, boost::asio::buffer(_response.data(), _response.size()));
+    }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(600));
+
+    const auto _query = request_query_builder("consumer_query3", "/resource_query3");
+    auto _response = send_and_receive(_query);
+
+    ASSERT_EQ(_response.size(), 18);
+    ASSERT_EQ(static_cast<uint8_t>(_response[0]), 0);
+
+    uint64_t _quota_remaining = 0;
+    std::memcpy(&_quota_remaining, _response.data() + 1, sizeof(_quota_remaining));
+    ASSERT_EQ(_quota_remaining, 0);
 }

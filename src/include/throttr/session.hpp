@@ -49,7 +49,7 @@ namespace throttr {
          */
         void start() {
             do_read();
-        };
+        }
 
     private:
         /**

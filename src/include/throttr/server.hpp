@@ -19,10 +19,10 @@
 #define THROTTR_SERVER_HPP
 
 #include <boost/asio/ip/tcp.hpp>
+#include <throttr/state.hpp>
+#include <throttr/session.hpp>
 
 namespace throttr {
-    class state;
-
     /**
      * Server
      */
@@ -39,13 +39,29 @@ namespace throttr {
             boost::asio::io_context &io_context,
             short port,
             const std::shared_ptr<state> &state
-        );
+            )  : acceptor_(io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
+            socket_(io_context),
+            state_(state)
+        {
+            state->acceptor_ready_ = true;
+            do_accept();
+        };
 
     private:
         /**
          * Do accept
          */
-        void do_accept() ;
+        void do_accept() {
+            acceptor_.async_accept(
+                socket_,
+                [this](const boost::system::error_code &error) {
+                    if (!error) {
+                        std::make_shared<session>(std::move(socket_), state_)->start();
+                    }
+
+                    do_accept();
+                });
+        }
 
         /**
          * Acceptor
