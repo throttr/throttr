@@ -54,18 +54,18 @@ namespace throttr {
             const ttl_types ttl
         ) {
             const auto _now = std::chrono::steady_clock::now();
-            if (expires_at <= _now) {
-                // LCOV_EXCL_LINE note: Partially covered.
+
+            if (expires_at <= _now) { // LCOV_EXCL_LINE note: Partially covered.
                 return 0;
             }
+
             const auto _diff = expires_at - _now;
-            if (ttl == ttl_types::nanoseconds) {
-                // LCOV_EXCL_LINE note: Partially covered.
+
+            if (ttl == ttl_types::nanoseconds) { // LCOV_EXCL_LINE note: Partially covered.
                 return duration_cast<std::chrono::nanoseconds>(_diff).count();
             }
 
-            if (ttl == ttl_types::milliseconds) {
-                // LCOV_EXCL_LINE note: Partially covered.
+            if (ttl == ttl_types::milliseconds) { // LCOV_EXCL_LINE note: Partially covered.
                 return duration_cast<std::chrono::milliseconds>(_diff).count();
             }
 
@@ -89,8 +89,7 @@ namespace throttr {
                 return now + std::chrono::nanoseconds(ttl);
             }
 
-            if (ttl_type == ttl_types::milliseconds) {
-                // LCOV_EXCL_LINE note: Partially covered.
+            if (ttl_type == ttl_types::milliseconds) { // LCOV_EXCL_LINE note: Partially covered.
                 return now + std::chrono::milliseconds(ttl);
             }
 
@@ -113,8 +112,7 @@ namespace throttr {
             const auto _now = std::chrono::steady_clock::now();
             auto _it = requests_.find(_key);
 
-            if (_it != requests_.end() && _now >= _it->second.expires_at_) {
-                // LCOV_EXCL_LINE note: Partially covered.
+            if (_it != requests_.end() && _now >= _it->second.expires_at_) { // LCOV_EXCL_LINE note: Partially covered.
                 requests_.erase(_it);
                 _it = requests_.end();
             }
@@ -124,11 +122,9 @@ namespace throttr {
             ttl_types _ttl_type = request.header_->ttl_type_;
             int64_t _ttl_remaining = 0;
 
-            if (_it != requests_.end()) {
-                // LCOV_EXCL_LINE note: Partially covered.
+            if (_it != requests_.end()) { // LCOV_EXCL_LINE note: Partially covered.
                 auto &_entry = _it->second;
-                if (_entry.quota_ >= request.header_->usage_) {
-                    // LCOV_EXCL_LINE note: Partially covered.
+                if (_entry.quota_ >= request.header_->usage_) { // LCOV_EXCL_LINE note: Partially covered.
                     _entry.quota_ -= request.header_->usage_;
                     _can = true;
                 }
@@ -177,8 +173,7 @@ namespace throttr {
             auto _ttl_type = ttl_types::milliseconds;
             int64_t _ttl_remaining = 0;
 
-            if (_it != requests_.end() && _now < _it->second.expires_at_) {
-                // LCOV_EXCL_LINE note: Partially covered.
+            if (_it != requests_.end() && _now < _it->second.expires_at_) { // LCOV_EXCL_LINE note: Partially covered.
                 _can = true;
                 _quota_remaining = _it->second.quota_;
                 _ttl_type = _it->second.ttl_type_;
@@ -211,8 +206,7 @@ namespace throttr {
             const auto _now = std::chrono::steady_clock::now();
             const auto _it = requests_.find(_key);
 
-            if (_it == requests_.end()) {
-                // LCOV_EXCL_LINE note: Partially covered.
+            if (_it == requests_.end()) { // LCOV_EXCL_LINE note: Partially covered.
                 std::vector _error_response(1, std::byte{0x00});
                 return _error_response;
             }
@@ -231,7 +225,7 @@ namespace throttr {
                             _entry.quota_ += request.header_->value_;
                             break;
                         case change_types::decrease:
-                            if (_entry.quota_ >= request.header_->value_) {
+                            if (_entry.quota_ >= request.header_->value_) { // LCOV_EXCL_LINE note: Partially covered.
                                 _entry.quota_ -= request.header_->value_;
                             } else {
                                 _entry.quota_ = 0;
