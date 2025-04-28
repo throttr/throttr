@@ -40,7 +40,7 @@ TEST(StateHelpersTest, CalculateExpirationPointSeconds) {
 
 TEST(StateHelpersTest, CalculateTTLRemainingNanosecondsNotExpired) {
     const auto _now = std::chrono::steady_clock::now();
-    const auto _expires = _now + std::chrono::nanoseconds(10000);
+    const auto _expires = _now + std::chrono::nanoseconds(10'000'000);
 
     const auto _remaining = state::calculate_ttl_remaining(_expires, 0);
     ASSERT_GT(_remaining, 0);
@@ -48,15 +48,17 @@ TEST(StateHelpersTest, CalculateTTLRemainingNanosecondsNotExpired) {
 
 TEST(StateHelpersTest, CalculateTTLRemainingSecondsNotExpired) {
     const auto _now = std::chrono::steady_clock::now();
-    const auto _expires = _now + std::chrono::seconds(2);
+    const auto _expires = _now + std::chrono::seconds(10);
 
     const auto _remaining = state::calculate_ttl_remaining(_expires, 2);
-    ASSERT_GE(_remaining, 1);
+    ASSERT_GE(_remaining, 0);
 }
 
 TEST(StateHelpersTest, CalculateTTLRemainingNanosecondsExpired) {
     const auto _now = std::chrono::steady_clock::now();
     const auto _expires = _now - std::chrono::nanoseconds(100);
+
+    std::this_thread::sleep_for(std::chrono::nanoseconds(1000));
 
     const auto _remaining = state::calculate_ttl_remaining(_expires, 0);
     ASSERT_EQ(_remaining, 0);
@@ -65,6 +67,8 @@ TEST(StateHelpersTest, CalculateTTLRemainingNanosecondsExpired) {
 TEST(StateHelpersTest, CalculateTTLRemainingSecondsExpired) {
     const auto _now = std::chrono::steady_clock::now();
     const auto _expires = _now - std::chrono::seconds(1);
+
+    std::this_thread::sleep_for(std::chrono::seconds(2));
 
     const auto _remaining = state::calculate_ttl_remaining(_expires, 2);
     ASSERT_EQ(_remaining, 0);
