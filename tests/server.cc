@@ -85,7 +85,7 @@ protected:
 
 TEST_F(ServerTestFixture, HandlesSingleValidRequest) {
     const auto _buffer = request_insert_builder(
-        5, 1, 1, 10000, "consumer1", "/resource1"
+        5, 1, ttl_types::milliseconds, 10000, "consumer1", "/resource1"
     );
 
     auto _response = send_and_receive(_buffer);
@@ -100,7 +100,7 @@ TEST_F(ServerTestFixture, HandlesSingleValidRequest) {
 
 TEST_F(ServerTestFixture, HandlesMultipleValidRequests) {
     const auto _buffer = request_insert_builder(
-        3, 1, 1, 5000, "consumer2", "/resource2"
+        3, 1, ttl_types::milliseconds, 5000, "consumer2", "/resource2"
     );
 
     auto _response1 = send_and_receive(_buffer);
@@ -130,7 +130,7 @@ TEST_F(ServerTestFixture, HandlesMultipleValidRequests) {
 
 TEST_F(ServerTestFixture, TTLExpiration) {
     const auto _buffer = request_insert_builder(
-        10, 1, 1, 1000, "consumer3", "/expire"
+        10, 1, ttl_types::milliseconds, 1000, "consumer3", "/expire"
     );
 
     auto _response1 = send_and_receive(_buffer);
@@ -148,11 +148,11 @@ TEST_F(ServerTestFixture, TTLExpiration) {
 
 TEST_F(ServerTestFixture, SeparateStocksForDifferentIDs) {
     const auto _buffer_a = request_insert_builder(
-        2, 1, 1, 5000, "consumerA", "/resourceA"
+        2, 1, ttl_types::milliseconds, 5000, "consumerA", "/resourceA"
     );
 
     const auto _buffer_b = request_insert_builder(
-        2, 1, 1, 5000, "consumerB", "/resourceB"
+        2, 1, ttl_types::milliseconds, 5000, "consumerB", "/resourceB"
     );
 
     auto _response_a1 = send_and_receive(_buffer_a);
@@ -185,7 +185,7 @@ TEST_F(ServerTestFixture, QueryBeforeInsertReturnsZeroQuota) {
     auto _response = send_and_receive(_buffer);
 
     ASSERT_EQ(_response.size(), 18);
-    ASSERT_EQ(static_cast<uint8_t>(_response[0]), 0); // No encontrado
+    ASSERT_EQ(static_cast<uint8_t>(_response[0]), 0);
 
     uint64_t _quota_remaining = 0;
     std::memcpy(&_quota_remaining, _response.data() + 1, sizeof(_quota_remaining));
@@ -201,7 +201,7 @@ TEST_F(ServerTestFixture, QueryAfterInsertReturnsCorrectQuota) {
         tcp::socket _socket(_io_context);
         boost::asio::connect(_socket, _endpoints);
 
-        auto _insert = request_insert_builder(10, 0, 1, 10000, "consumer_query2", "/resource_query2");
+        auto _insert = request_insert_builder(10, 0, ttl_types::milliseconds, 10000, "consumer_query2", "/resource_query2");
         boost::asio::write(_socket, boost::asio::buffer(_insert.data(), _insert.size()));
 
         std::vector<std::byte> _response(18);
@@ -228,7 +228,7 @@ TEST_F(ServerTestFixture, QueryExpiredReturnsZeroQuota) {
         tcp::socket _socket(_io_context);
         boost::asio::connect(_socket, _endpoints);
 
-        auto _insert = request_insert_builder(5, 0, 1, 500, "consumer_query3", "/resource_query3");
+        auto _insert = request_insert_builder(5, 0, ttl_types::milliseconds, 500, "consumer_query3", "/resource_query3");
         boost::asio::write(_socket, boost::asio::buffer(_insert.data(), _insert.size()));
 
         std::vector<std::byte> _response(18);

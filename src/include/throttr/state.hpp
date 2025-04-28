@@ -49,17 +49,17 @@ namespace throttr {
          * @param ttl_type
          * @return int64_t
          */
-        static int64_t calculate_ttl_remaining(const std::chrono::steady_clock::time_point &expires_at, uint8_t ttl_type) {
+        static int64_t calculate_ttl_remaining(const std::chrono::steady_clock::time_point &expires_at, ttl_types ttl_type) {
             const auto _now = std::chrono::steady_clock::now();
             if (expires_at <= _now) { // LCOV_EXCL_LINE note: Partially covered.
                 return 0;
             }
             const auto _diff = expires_at - _now;
-            if (ttl_type == 0) {  // LCOV_EXCL_LINE note: Partially covered.
+            if (ttl_type == ttl_types::nanoseconds) {  // LCOV_EXCL_LINE note: Partially covered.
                 return duration_cast<std::chrono::nanoseconds>(_diff).count();
             }
 
-            if (ttl_type == 1) {  // LCOV_EXCL_LINE note: Partially covered.
+            if (ttl_type == ttl_types::milliseconds) {  // LCOV_EXCL_LINE note: Partially covered.
                 return duration_cast<std::chrono::milliseconds>(_diff).count();
             }
 
@@ -69,25 +69,25 @@ namespace throttr {
         /**
          * Calculate expiration point
          *
-         * @param _now
+         * @param now
          * @param ttl_type
          * @param ttl
          * @return std::chrono::steady_clock::time_point
          */
         static std::chrono::steady_clock::time_point calculate_expiration_point(
-            const std::chrono::steady_clock::time_point &_now,
-            const uint8_t ttl_type,
+            const std::chrono::steady_clock::time_point &now,
+            const ttl_types ttl_type,
             const uint64_t ttl
         ) {
-            if (ttl_type == 0) {
-                return _now + std::chrono::nanoseconds(ttl);
+            if (ttl_type == ttl_types::nanoseconds) {
+                return now + std::chrono::nanoseconds(ttl);
             }
 
-            if (ttl_type == 1) {  // LCOV_EXCL_LINE note: Partially covered.
-                return _now + std::chrono::milliseconds(ttl);
+            if (ttl_type == ttl_types::milliseconds) {  // LCOV_EXCL_LINE note: Partially covered.
+                return now + std::chrono::milliseconds(ttl);
             }
 
-            return _now + std::chrono::seconds(ttl);
+            return now + std::chrono::seconds(ttl);
         }
 
 
@@ -113,7 +113,7 @@ namespace throttr {
 
             bool _can = false;
             uint64_t _quota_remaining = 0;
-            uint8_t _ttl_type = request.header_->ttl_type_;
+            ttl_types _ttl_type = request.header_->ttl_type_;
             int64_t _ttl_remaining = 0;
 
             if (_it != requests_.end()) {  // LCOV_EXCL_LINE note: Partially covered.
@@ -164,7 +164,7 @@ namespace throttr {
 
             bool _can = false;
             uint64_t _quota_remaining = 0;
-            uint8_t _ttl_type = 0;
+            auto _ttl_type = ttl_types::milliseconds;
             int64_t _ttl_remaining = 0;
 
             if (_it != requests_.end() && _now < _it->second.expires_at_) {  // LCOV_EXCL_LINE note: Partially covered.

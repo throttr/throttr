@@ -35,19 +35,48 @@ namespace throttr {
     /**
      * Request type
      */
-    enum class request_type : uint8_t {
+    enum class request_types : uint8_t {
         /**
          * Insert
          */
         insert = 0x01,
+
         /**
          * Query
          */
-        query = 0x02
+        query = 0x02,
+
+        /**
+         * Update
+         */
+        update = 0x03,
+    };
+
+    /**
+     * TTL type
+     */
+    enum class ttl_types : uint8_t {
+        /**
+         * Nanoseconds
+         */
+        nanoseconds = 0x00,
+
+        /**
+         * Milliseconds
+         */
+        milliseconds = 0x01,
+
+        /**
+         * Seconds
+         */
+        seconds = 0x02,
     };
 
 
 #pragma pack(push, 1)
+    /**
+     * Request insert header size
+     */
     constexpr std::size_t request_insert_header_size = 28;
 
     /**
@@ -57,7 +86,7 @@ namespace throttr {
         /**
          * Request type
          */
-        request_type request_type_;
+        request_types request_type_;
 
         /**
          * Quota
@@ -72,7 +101,7 @@ namespace throttr {
         /**
          * TTL type
          */
-        uint8_t ttl_type_;
+        ttl_types ttl_type_;
 
         /**
          * TTL
@@ -92,6 +121,9 @@ namespace throttr {
 #pragma pack(pop)
 
 #pragma pack(push, 1)
+    /**
+     * Request query header size
+     */
     constexpr std::size_t request_query_header_size = 3;
 
     /**
@@ -101,7 +133,50 @@ namespace throttr {
         /**
          * Request type
          */
-        request_type request_type_;
+        request_types request_type_;
+
+        /**
+         * Consumer ID size
+         */
+        uint8_t consumer_id_size_;
+
+        /**
+         * Resource ID size
+         */
+        uint8_t resource_id_size_;
+    };
+#pragma pack(pop)
+
+
+#pragma pack(push, 1)
+    /**
+     * Request update header size
+     */
+    constexpr std::size_t request_update_header_size = 13;
+
+    /**
+     * Request update header
+     */
+    struct request_update_header {
+        /**
+         * Request type
+         */
+        request_types request_type_;
+
+        /**
+         * Attribute
+         */
+        uint8_t attribute_; // 0 = Quota, 1 = TTL
+
+        /**
+         * Change
+         */
+        uint8_t change_; // 0 = Patch, 1 = Increase, 2 = Decrease
+
+        /**
+         * Value
+         */
+        uint64_t value_;
 
         /**
          * Consumer ID size
@@ -301,7 +376,7 @@ namespace throttr {
         /**
          * TTL type
          */
-        uint8_t ttl_type_ = 0;
+        ttl_types ttl_type_ = ttl_types::nanoseconds;
 
         /**
          * Expires at
@@ -323,7 +398,7 @@ namespace throttr {
     inline std::vector<std::byte> request_insert_builder(
         const uint64_t quota = 0,
         const uint64_t usage = 0,
-        const uint8_t ttl_type = 0,
+        const ttl_types ttl_type = ttl_types::milliseconds,
         const uint64_t ttl = 0,
         const std::string_view consumer_id = "",
         const std::string_view resource_id = ""
@@ -332,7 +407,7 @@ namespace throttr {
         _buffer.resize(request_insert_header_size + consumer_id.size() + resource_id.size());
 
         auto *_header = reinterpret_cast<request_insert_header *>(_buffer.data()); // NOSONAR
-        _header->request_type_ = request_type::insert;
+        _header->request_type_ = request_types::insert;
         _header->quota_ = quota;
         _header->usage_ = usage;
         _header->ttl_type_ = ttl_type;
@@ -362,7 +437,7 @@ namespace throttr {
         _buffer.resize(request_query_header_size + consumer_id.size() + resource_id.size());
 
         auto *_header = reinterpret_cast<request_query_header *>(_buffer.data()); // NOSONAR
-        _header->request_type_ = request_type::query;
+        _header->request_type_ = request_types::query;
         _header->consumer_id_size_ = static_cast<uint8_t>(consumer_id.size());
         _header->resource_id_size_ = static_cast<uint8_t>(resource_id.size());
 

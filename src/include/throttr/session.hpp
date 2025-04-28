@@ -63,14 +63,14 @@ namespace throttr {
                 try {
                     const auto _buffer = std::span(reinterpret_cast<const std::byte *>(data_.data()), length);
 
-                    const auto _type = static_cast<request_type>(_buffer[0]);
+                    const auto _type = static_cast<request_types>(_buffer[0]);
 
                     std::vector<std::byte> _response;
 
-                    if (_type == request_type::insert) { // LCOV_EXCL_LINE note: Partially covered.
+                    if (_type == request_types::insert) { // LCOV_EXCL_LINE note: Partially covered.
                         const auto _request = request_insert::from_buffer(_buffer);
                         _response = state_->handle_insert(_request);
-                    } else if (_type == request_type::query) { // LCOV_EXCL_LINE note: Partially covered.
+                    } else if (_type == request_types::query) { // LCOV_EXCL_LINE note: Partially covered.
                         const auto _request = request_query::from_buffer(_buffer);
                         _response = state_->handle_query(_request);
                     } else {

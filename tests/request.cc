@@ -24,13 +24,13 @@ using namespace std::chrono;
 
 TEST(RequestInsertTest, ParseAndSerialize) {
     auto _buffer = request_insert_builder(
-        5000, 5, 1, 60000, "consumer123", "/api/resource"
+        5000, 5, ttl_types::milliseconds, 60000, "consumer123", "/api/resource"
     );
 
     const auto _request = request_insert::from_buffer(_buffer);
     EXPECT_EQ(_request.header_->quota_, 5000);
     EXPECT_EQ(_request.header_->usage_, 5);
-    EXPECT_EQ(_request.header_->ttl_type_, 1);
+    EXPECT_EQ(_request.header_->ttl_type_, ttl_types::milliseconds);
     EXPECT_EQ(_request.header_->ttl_, 60000);
     EXPECT_EQ(_request.consumer_id_, "consumer123");
     EXPECT_EQ(_request.resource_id_, "/api/resource");
@@ -64,14 +64,14 @@ TEST(RequestQueryTest, RejectsTooSmallBuffer) {
 
 TEST(RequestInsertBenchmark, DecodePerformance) {
     auto _buffer = request_insert_builder(
-        5000, 5, 1, 60000, "consumer123", "/api/benchmark"
+        5000, 5, ttl_types::milliseconds, 60000, "consumer123", "/api/benchmark"
     );
 
     constexpr size_t _iterations = 1'000'000;
     const auto _start = high_resolution_clock::now();
 
     for (size_t _i = 0; _i < _iterations; ++_i) {
-        auto _view = request_insert::from_buffer(_buffer);
+        const auto _view = request_insert::from_buffer(_buffer);
         EXPECT_EQ(_view.header_->quota_, 5000);
     }
 
@@ -106,10 +106,10 @@ TEST(RequestInsertTest, RejectsInvalidPayloadSize) {
     std::vector<std::byte> _buffer(request_insert_header_size + 5);
 
     auto *_header = reinterpret_cast<request_insert_header*>(_buffer.data()); // NOSONAR
-    _header->request_type_ = request_type::insert;
+    _header->request_type_ = request_types::insert;
     _header->quota_ = 10;
     _header->usage_ = 0;
-    _header->ttl_type_ = 1;
+    _header->ttl_type_ = ttl_types::milliseconds;
     _header->ttl_ = 10000;
     _header->consumer_id_size_ = 5;
     _header->resource_id_size_ = 5;
@@ -121,7 +121,7 @@ TEST(RequestQueryTest, RejectsInvalidPayloadSize) {
     std::vector<std::byte> _buffer(request_query_header_size + 5);
 
     auto *_header = reinterpret_cast<request_query_header*>(_buffer.data()); // NOSONAR
-    _header->request_type_ = request_type::query;
+    _header->request_type_ = request_types::query;
     _header->consumer_id_size_ = 5;
     _header->resource_id_size_ = 5;
 
