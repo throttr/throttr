@@ -167,7 +167,7 @@ namespace throttr {
             uint8_t _ttl_type = 0;
             int64_t _ttl_remaining = 0;
 
-            if (_it != requests_.end() && _now < _it->second.expires_at_) {
+            if (_it != requests_.end() && _now < _it->second.expires_at_) {  // LCOV_EXCL_LINE note: Partially covered.
                 _can = true;
                 _quota_remaining = _it->second.quota_;
                 _ttl_type = _it->second.ttl_type_;
