@@ -287,7 +287,7 @@ namespace throttr {
 
             const auto _it = requests_.find(_key);
 
-            if (_it == requests_.end()) {
+            if (_it == requests_.end()) { // LCOV_EXCL_LINE note: Partially covered.
                 std::vector _error_response(1, std::byte{0x00});
                 return _error_response;
             }
