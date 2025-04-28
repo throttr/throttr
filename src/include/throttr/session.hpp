@@ -67,15 +67,26 @@ namespace throttr {
 
                     std::vector<std::byte> _response;
 
-                    if (_type == request_types::insert) { // LCOV_EXCL_LINE note: Partially covered.
-                        const auto _request = request_insert::from_buffer(_buffer);
-                        _response = state_->handle_insert(_request);
-                    } else if (_type == request_types::query) { // LCOV_EXCL_LINE note: Partially covered.
-                        const auto _request = request_query::from_buffer(_buffer);
-                        _response = state_->handle_query(_request);
-                    } else {
-                        do_write({std::byte{0x00}});
-                        return;
+                    switch (_type) {
+                        case request_types::insert: { // LCOV_EXCL_LINE note: Partially covered.
+                            const auto _request = request_insert::from_buffer(_buffer);
+                            _response = state_->handle_insert(_request);
+                            break;
+                        }
+                        case request_types::query: { // LCOV_EXCL_LINE note: Partially covered.
+                            const auto _request = request_query::from_buffer(_buffer);
+                            _response = state_->handle_query(_request);
+                            break;
+                        }
+                        case request_types::update: { // LCOV_EXCL_LINE note: Partially covered.
+                            const auto _request = request_update::from_buffer(_buffer);
+                            _response = state_->handle_update(_request);
+                            break;
+                        }
+                        default: [[unlikely]] {
+                            do_write({std::byte{0x00}});
+                            return;
+                        }
                     }
 
                     do_write(std::move(_response));

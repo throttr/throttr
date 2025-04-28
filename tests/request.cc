@@ -128,6 +128,43 @@ TEST(RequestQueryTest, RejectsInvalidPayloadSize) {
     ASSERT_THROW(request_query::from_buffer(_buffer), request_error);
 }
 
+TEST(RequestUpdateTest, ParseAndSerialize) {
+    auto _buffer = request_update_builder(
+        attribute_types::quota, change_types::patch, 5000, "consumerX", "/resourceX"
+    );
+
+    const auto _request = request_update::from_buffer(_buffer);
+    EXPECT_EQ(_request.header_->attribute_, attribute_types::quota);
+    EXPECT_EQ(_request.header_->change_, change_types::patch);
+    EXPECT_EQ(_request.header_->value_, 5000);
+    EXPECT_EQ(_request.consumer_id_, "consumerX");
+    EXPECT_EQ(_request.resource_id_, "/resourceX");
+
+    auto _reconstructed = _request.to_buffer();
+    ASSERT_EQ(_reconstructed.size(), _buffer.size());
+    ASSERT_TRUE(std::equal(_reconstructed.begin(), _reconstructed.end(), _buffer.begin()));
+}
+
+TEST(RequestUpdateTest, RejectsTooSmallBuffer) {
+    std::vector _buffer(5, static_cast<std::byte>(0));
+    ASSERT_THROW(request_update::from_buffer(_buffer), request_error);
+}
+
+TEST(RequestUpdateTest, RejectsInvalidPayloadSize) {
+    std::vector<std::byte> _buffer(request_update_header_size + 5);
+
+    auto *_header = reinterpret_cast<request_update_header *>(_buffer.data()); // NOSONAR
+    _header->request_type_ = request_types::update;
+    _header->attribute_ = attribute_types::quota;
+    _header->change_ = change_types::patch;
+    _header->value_ = 5000;
+    _header->consumer_id_size_ = 5;
+    _header->resource_id_size_ = 5;
+
+    ASSERT_THROW(request_update::from_buffer(_buffer), request_error);
+}
+
+
 TEST(RequestKeyTest, EqualsIdenticalKeys) {
     const request_key _a{
         "consumer1",

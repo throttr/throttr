@@ -24,7 +24,6 @@
 #include <cstring>
 
 namespace throttr {
-
     /**
      * Request error
      */
@@ -33,7 +32,7 @@ namespace throttr {
     };
 
     /**
-     * Request type
+     * Request types
      */
     enum class request_types : uint8_t {
         /**
@@ -53,7 +52,7 @@ namespace throttr {
     };
 
     /**
-     * TTL type
+     * TTL types
      */
     enum class ttl_types : uint8_t {
         /**
@@ -70,6 +69,41 @@ namespace throttr {
          * Seconds
          */
         seconds = 0x02,
+    };
+
+    /**
+     * Attribute type
+     */
+    enum class attribute_types : uint8_t {
+        /**
+         * Quota
+         */
+        quota = 0x00,
+
+        /**
+         * TTL
+         */
+        ttl = 0x01,
+    };
+
+    /**
+     * Change types
+     */
+    enum class change_types : uint8_t {
+        /**
+         * Patch
+         */
+        patch = 0x00,
+
+        /**
+         * Increase
+         */
+        increase = 0x01,
+
+        /**
+         * Decrease
+         */
+        decrease = 0x02,
     };
 
 
@@ -166,12 +200,12 @@ namespace throttr {
         /**
          * Attribute
          */
-        uint8_t attribute_; // 0 = Quota, 1 = TTL
+        attribute_types attribute_;
 
         /**
          * Change
          */
-        uint8_t change_; // 0 = Patch, 1 = Increase, 2 = Decrease
+        change_types change_;
 
         /**
          * Value
@@ -325,6 +359,73 @@ namespace throttr {
     };
 
     /**
+     * Request update
+     */
+    struct request_update {
+        /**
+         * Header
+         */
+        const request_update_header *header_ = nullptr;
+
+        /**
+         * Consumer ID
+         */
+        std::string_view consumer_id_;
+
+        /**
+         * Resource ID
+         */
+        std::string_view resource_id_;
+
+        /**
+         * From buffer
+         *
+         * @param buffer
+         * @return request_update
+         */
+        static request_update from_buffer(const std::span<const std::byte> &buffer) {
+            if (buffer.size() < request_update_header_size) {
+                throw request_error("buffer too small for request_update");
+            }
+
+            const auto *_header = reinterpret_cast<const request_update_header *>(buffer.data()); // NOSONAR
+
+            if (const auto _expected = static_cast<std::size_t>(_header->consumer_id_size_) + _header->resource_id_size_
+                ; buffer.size() < request_update_header_size + _expected) {
+                throw request_error("buffer too small for request_update payload");
+            }
+
+            const auto _consumer_id = buffer.subspan(request_update_header_size, _header->consumer_id_size_);
+            const auto _resource_id = buffer.subspan(request_update_header_size + _header->consumer_id_size_,
+                                                     _header->resource_id_size_);
+
+            return request_update{
+                _header,
+                std::string_view(reinterpret_cast<const char *>(_consumer_id.data()), _consumer_id.size()), // NOSONAR
+                std::string_view(reinterpret_cast<const char *>(_resource_id.data()), _resource_id.size()) // NOSONAR
+            };
+        }
+
+        /**
+         * To buffer
+         *
+         * @return std::vector<std::byte>
+         */
+        [[nodiscard]]
+        std::vector<std::byte> to_buffer() const {
+            std::vector<std::byte> _buffer;
+            _buffer.resize(request_update_header_size + consumer_id_.size() + resource_id_.size());
+
+            std::memcpy(_buffer.data(), header_, request_update_header_size);
+            std::memcpy(_buffer.data() + request_update_header_size, consumer_id_.data(), consumer_id_.size());
+            std::memcpy(_buffer.data() + request_update_header_size + consumer_id_.size(), resource_id_.data(),
+                        resource_id_.size());
+
+            return _buffer;
+        }
+    };
+
+    /**
      * Request key
      */
     struct request_key {
@@ -443,6 +544,41 @@ namespace throttr {
 
         std::memcpy(_buffer.data() + request_query_header_size, consumer_id.data(), consumer_id.size());
         std::memcpy(_buffer.data() + request_query_header_size + consumer_id.size(), resource_id.data(),
+                    resource_id.size());
+
+        return _buffer;
+    }
+
+    /**
+     * Request update builder
+     *
+     * @param attribute
+     * @param change
+     * @param value
+     * @param consumer_id
+     * @param resource_id
+     * @return std::vector<std::byte>
+     */
+    inline std::vector<std::byte> request_update_builder(
+        const attribute_types attribute = attribute_types::quota,
+        const change_types change = change_types::patch,
+        const uint64_t value = 0,
+        const std::string_view consumer_id = "",
+        const std::string_view resource_id = ""
+    ) {
+        std::vector<std::byte> _buffer;
+        _buffer.resize(request_update_header_size + consumer_id.size() + resource_id.size());
+
+        auto *_header = reinterpret_cast<request_update_header *>(_buffer.data()); // NOSONAR
+        _header->request_type_ = request_types::update;
+        _header->attribute_ = attribute;
+        _header->change_ = change;
+        _header->value_ = value;
+        _header->consumer_id_size_ = static_cast<uint8_t>(consumer_id.size());
+        _header->resource_id_size_ = static_cast<uint8_t>(resource_id.size());
+
+        std::memcpy(_buffer.data() + request_update_header_size, consumer_id.data(), consumer_id.size());
+        std::memcpy(_buffer.data() + request_update_header_size + consumer_id.size(), resource_id.data(),
                     resource_id.size());
 
         return _buffer;

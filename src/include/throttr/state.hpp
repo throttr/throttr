@@ -46,20 +46,23 @@ namespace throttr {
          * Calculate TTL remaining
          *
          * @param expires_at
-         * @param ttl_type
+         * @param ttl
          * @return int64_t
          */
-        static int64_t calculate_ttl_remaining(const std::chrono::steady_clock::time_point &expires_at, ttl_types ttl_type) {
+        static int64_t calculate_ttl_remaining(
+            const std::chrono::steady_clock::time_point &expires_at,
+            const ttl_types ttl
+        ) {
             const auto _now = std::chrono::steady_clock::now();
             if (expires_at <= _now) { // LCOV_EXCL_LINE note: Partially covered.
                 return 0;
             }
             const auto _diff = expires_at - _now;
-            if (ttl_type == ttl_types::nanoseconds) {  // LCOV_EXCL_LINE note: Partially covered.
+            if (ttl == ttl_types::nanoseconds) { // LCOV_EXCL_LINE note: Partially covered.
                 return duration_cast<std::chrono::nanoseconds>(_diff).count();
             }
 
-            if (ttl_type == ttl_types::milliseconds) {  // LCOV_EXCL_LINE note: Partially covered.
+            if (ttl == ttl_types::milliseconds) {  // LCOV_EXCL_LINE note: Partially covered.
                 return duration_cast<std::chrono::milliseconds>(_diff).count();
             }
 
@@ -83,7 +86,7 @@ namespace throttr {
                 return now + std::chrono::nanoseconds(ttl);
             }
 
-            if (ttl_type == ttl_types::milliseconds) {  // LCOV_EXCL_LINE note: Partially covered.
+            if (ttl_type == ttl_types::milliseconds) { // LCOV_EXCL_LINE note: Partially covered.
                 return now + std::chrono::milliseconds(ttl);
             }
 
@@ -182,6 +185,74 @@ namespace throttr {
             _response[1 + sizeof(uint64_t)] = static_cast<std::byte>(_ttl_type);
             std::memcpy(_response.data() + 1 + sizeof(uint64_t) + 1, &_ttl_remaining, sizeof(_ttl_remaining));
 
+            return _response;
+        }
+
+        /**
+         * Handle update
+         *
+         * @param request
+         * @return std::vector<std::byte>
+         */
+        std::vector<std::byte> handle_update(const request_update &request) {
+            const request_key _key{
+                std::string(request.consumer_id_),
+                std::string(request.resource_id_)
+            };
+
+            const auto _now = std::chrono::steady_clock::now();
+            const auto _it = requests_.find(_key);
+
+            if (_it == requests_.end()) {
+                std::vector _error_response(1, std::byte{0x00});
+                return _error_response;
+            }
+
+            auto &_entry = _it->second;
+
+            if (request.header_->attribute_ == attribute_types::quota) {
+                if (request.header_->change_ == change_types::patch) {
+                    _entry.quota_ = request.header_->value_;
+                } else if (request.header_->change_ == change_types::increase) {
+                    _entry.quota_ += request.header_->value_;
+                } else if (request.header_->change_ == change_types::decrease) {
+                    if (_entry.quota_ >= request.header_->value_) {
+                        _entry.quota_ -= request.header_->value_;
+                    } else {
+                        _entry.quota_ = 0;
+                    }
+                }
+            } else if (request.header_->attribute_ == attribute_types::ttl) {
+                std::chrono::nanoseconds _duration;
+
+                switch (_entry.ttl_type_) {
+                    case ttl_types::seconds:
+                        _duration = std::chrono::seconds(request.header_->value_);
+                        break;
+                    case ttl_types::milliseconds:
+                        _duration = std::chrono::milliseconds(request.header_->value_);
+                        break;
+                    case ttl_types::nanoseconds:
+                    default:
+                        _duration = std::chrono::nanoseconds(request.header_->value_);
+                        break;
+                }
+
+
+                switch (request.header_->change_) {
+                    case change_types::patch:
+                    _entry.expires_at_ = _now + _duration;
+                        break;
+                    case change_types::increase:
+                    _entry.expires_at_ += _duration;
+                        break;
+                    case change_types::decrease:
+                    _entry.expires_at_ -= _duration;
+                        break;
+                }
+            }
+
+            std::vector _response(1, std::byte{0x01});
             return _response;
         }
     };

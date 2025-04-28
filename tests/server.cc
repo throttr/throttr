@@ -48,7 +48,7 @@ protected:
         }
     }
 
-    [[nodiscard]] static std::vector<std::byte> send_and_receive(const std::vector<std::byte>& message) {
+    [[nodiscard]] static std::vector<std::byte> send_and_receive(const std::vector<std::byte>& message, int length = 18) {
         boost::asio::io_context _io_context;
         tcp::resolver _resolver(_io_context);
 
@@ -59,7 +59,7 @@ protected:
 
         boost::asio::write(_socket, boost::asio::buffer(message.data(), message.size()));
 
-        std::vector<std::byte> _response(18);
+        std::vector<std::byte> _response(length);
         boost::asio::read(_socket, boost::asio::buffer(_response.data(), _response.size()));
 
         return _response;
@@ -246,4 +246,171 @@ TEST_F(ServerTestFixture, QueryExpiredReturnsZeroQuota) {
     uint64_t _quota_remaining = 0;
     std::memcpy(&_quota_remaining, _response.data() + 1, sizeof(_quota_remaining));
     ASSERT_EQ(_quota_remaining, 0);
+}
+
+TEST_F(ServerTestFixture, UpdatePatchQuota) {
+    std::puts("INIT");
+    const auto _insert = request_insert_builder(5, 0, ttl_types::milliseconds, 10000, "consumer_patch", "/resource_patch");
+
+    std::puts("SENDING INSERT");
+    auto ignored = send_and_receive(_insert);
+    boost::ignore_unused(ignored);
+
+    std::puts("INSERT SENT");
+
+    std::puts("BUILDING UPDATE REQUEST");
+    const auto _update = request_update_builder(
+        attribute_types::quota, change_types::patch, 20, "consumer_patch", "/resource_patch"
+    );
+    std::puts("UPDATE REQUEST BUILT");
+
+    std::puts("SENDING UPDATE REQUEST");
+    auto _update_response = send_and_receive(_update, 1);
+    std::puts("UPDATE REQUEST SENT");
+
+    ASSERT_EQ(static_cast<uint8_t>(_update_response[0]), 1);
+
+    const auto _query = request_query_builder("consumer_patch", "/resource_patch");
+    auto _query_response = send_and_receive(_query);
+
+    uint64_t _quota_remaining = 0;
+    std::memcpy(&_quota_remaining, _query_response.data() + 1, sizeof(_quota_remaining));
+    ASSERT_EQ(_quota_remaining, 20);
+}
+
+TEST_F(ServerTestFixture, UpdateIncreaseQuota) {
+    const auto _insert = request_insert_builder(5, 0, ttl_types::milliseconds, 10000, "consumer_increase", "/resource_increase");
+    auto ignored = send_and_receive(_insert);
+    boost::ignore_unused(ignored);
+
+    const auto _update = request_update_builder(
+        attribute_types::quota, change_types::increase, 10, "consumer_increase", "/resource_increase"
+    );
+
+    auto _update_response = send_and_receive(_update, 1);
+    ASSERT_EQ(static_cast<uint8_t>(_update_response[0]), 1);
+
+    const auto _query = request_query_builder("consumer_increase", "/resource_increase");
+    auto _query_response = send_and_receive(_query);
+
+    uint64_t _quota_remaining = 0;
+    std::memcpy(&_quota_remaining, _query_response.data() + 1, sizeof(_quota_remaining));
+    ASSERT_EQ(_quota_remaining, 15);
+}
+
+TEST_F(ServerTestFixture, UpdateDecreaseQuota) {
+    const auto _insert = request_insert_builder(10, 0, ttl_types::milliseconds, 10000, "consumer_decrease", "/resource_decrease");
+    auto ignored = send_and_receive(_insert);
+    boost::ignore_unused(ignored);
+
+    const auto _update = request_update_builder(
+        attribute_types::quota, change_types::decrease, 4, "consumer_decrease", "/resource_decrease"
+    );
+
+    auto _update_response = send_and_receive(_update, 1);
+    ASSERT_EQ(static_cast<uint8_t>(_update_response[0]), 1);
+
+    const auto _query = request_query_builder("consumer_decrease", "/resource_decrease");
+    auto _query_response = send_and_receive(_query);
+
+    uint64_t _quota_remaining = 0;
+    std::memcpy(&_quota_remaining, _query_response.data() + 1, sizeof(_quota_remaining));
+    ASSERT_EQ(_quota_remaining, 6);
+}
+
+TEST_F(ServerTestFixture, UpdatePatchTTL) {
+    const auto _insert = request_insert_builder(10, 0, ttl_types::milliseconds, 5000, "consumer_patchttl", "/resource_patchttl");
+    auto ignored = send_and_receive(_insert);
+    boost::ignore_unused(ignored);
+
+    const auto _update = request_update_builder(
+        attribute_types::ttl, change_types::patch, 10000, "consumer_patchttl", "/resource_patchttl"
+    );
+
+    auto _update_response = send_and_receive(_update, 1);
+    ASSERT_EQ(static_cast<uint8_t>(_update_response[0]), 1);
+
+    const auto _query = request_query_builder("consumer_patchttl", "/resource_patchttl");
+    auto _query_response = send_and_receive(_query);
+
+    ASSERT_EQ(static_cast<uint8_t>(_query_response[0]), 1);
+
+    uint64_t _quota_remaining = 0;
+    std::memcpy(&_quota_remaining, _query_response.data() + 1, sizeof(_quota_remaining));
+    ASSERT_EQ(_quota_remaining, 10);
+}
+
+TEST_F(ServerTestFixture, UpdateNonExistentKeyReturnsError) {
+    const auto _update = request_update_builder(
+        attribute_types::quota, change_types::patch, 100, "nonexistent_consumer", "/nonexistent_resource"
+    );
+
+    auto _update_response = send_and_receive(_update, 1);
+    ASSERT_EQ(static_cast<uint8_t>(_update_response[0]), 0);
+}
+
+TEST_F(ServerTestFixture, UpdateDecreaseQuotaBeyondZero) {
+    const auto _insert = request_insert_builder(5, 0, ttl_types::milliseconds, 10000, "consumer_beyond", "/resource_beyond");
+    auto ignored_1 = send_and_receive(_insert);
+
+    const auto _update = request_update_builder(
+        attribute_types::quota, change_types::decrease, 10, "consumer_beyond", "/resource_beyond"
+    );
+    auto ignored_2 = send_and_receive(_update, 1);
+    boost::ignore_unused(ignored_1, ignored_2);
+
+    const auto _query = request_query_builder("consumer_beyond", "/resource_beyond");
+    const auto _query_response = send_and_receive(_query);
+
+    uint64_t _quota_remaining = 0;
+    std::memcpy(&_quota_remaining, _query_response.data() + 1, sizeof(_quota_remaining));
+    ASSERT_EQ(_quota_remaining, 0);
+}
+
+TEST_F(ServerTestFixture, UpdatePatchTTLSeconds) {
+    const auto _insert = request_insert_builder(10, 0, ttl_types::seconds, 5, "consumer_sec", "/resource_sec");
+    auto ignored = send_and_receive(_insert);
+    boost::ignore_unused(ignored);
+
+    const auto _update = request_update_builder(
+        attribute_types::ttl, change_types::patch, 10, "consumer_sec", "/resource_sec"
+    );
+    auto _update_response = send_and_receive(_update, 1);
+    ASSERT_EQ(static_cast<uint8_t>(_update_response[0]), 1);
+}
+
+TEST_F(ServerTestFixture, UpdatePatchTTLNanoseconds) {
+    const auto _insert = request_insert_builder(10, 0, ttl_types::nanoseconds, 5000, "consumer_ns", "/resource_ns");
+    auto ignored = send_and_receive(_insert);
+    boost::ignore_unused(ignored);
+
+    const auto _update = request_update_builder(
+        attribute_types::ttl, change_types::patch, 10000, "consumer_ns", "/resource_ns"
+    );
+    auto _update_response = send_and_receive(_update, 1);
+    ASSERT_EQ(static_cast<uint8_t>(_update_response[0]), 1);
+}
+
+TEST_F(ServerTestFixture, UpdateIncreaseTTL) {
+    const auto _insert = request_insert_builder(10, 0, ttl_types::milliseconds, 5000, "consumer_inc", "/resource_inc");
+    auto ignored = send_and_receive(_insert);
+    boost::ignore_unused(ignored);
+
+    const auto _update = request_update_builder(
+        attribute_types::ttl, change_types::increase, 3000, "consumer_inc", "/resource_inc"
+    );
+    auto _update_response = send_and_receive(_update, 1);
+    ASSERT_EQ(static_cast<uint8_t>(_update_response[0]), 1);
+}
+
+TEST_F(ServerTestFixture, UpdateDecreaseTTL) {
+    const auto _insert = request_insert_builder(10, 0, ttl_types::milliseconds, 5000, "consumer_dec", "/resource_dec");
+    auto ignored = send_and_receive(_insert);
+    boost::ignore_unused(ignored);
+
+    const auto _update = request_update_builder(
+        attribute_types::ttl, change_types::decrease, 3000, "consumer_dec", "/resource_dec"
+    );
+    auto _update_response = send_and_receive(_update, 1);
+    ASSERT_EQ(static_cast<uint8_t>(_update_response[0]), 1);
 }
