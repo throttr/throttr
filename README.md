@@ -115,6 +115,7 @@ Server responds always with 18 bytes for Insert and Query:
 |:------------------|:-----------|:--------|:---------------------------------------------|
 | `can`             | `uint8_t`  | 1 byte  | 1 if successful, 0 otherwise.                |
 | `quota_remaining` | `uint64_t` | 8 bytes | Remaining available quota.                   |
+| `ttl_type`        | `uint8_t`  | 1 byte  | 0 = ns, 1 = ms, 2 = s.                       |
 | `ttl_remaining`   | `int64_t`  | 8 bytes | Remaining TTL (ns/ms/s according to config). |
 
 Also, it will respond 1 byte (0 or 1) if the Purge or Update was success.
