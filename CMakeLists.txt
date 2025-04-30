@@ -38,6 +38,14 @@ file(GLOB_RECURSE SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
 include(FetchContent)
 
+FetchContent_Declare(
+        throttr-protocol
+        GIT_REPOSITORY https://github.com/throttr/protocol.git
+        GIT_TAG 1.0.0
+)
+
+FetchContent_MakeAvailable(throttr-protocol)
+
 if (BUILD_TESTS)
     FetchContent_Declare(
             googletest
@@ -58,6 +66,7 @@ if (BUILD_TESTS)
     target_link_libraries(tests
             GTest::gtest_main
             ${Boost_LIBRARIES}
+            throttr::protocol
     )
 
     include(GoogleTest)
@@ -67,6 +76,7 @@ endif ()
 add_executable(throttr main.cpp ${SOURCES})
 target_link_libraries(throttr
         ${Boost_LIBRARIES}
+        throttr::protocol
 )
 target_compile_options(throttr PRIVATE -static -static-libgcc -static-libstdc++)
 target_link_options(throttr PRIVATE -static -static-libgcc -static-libstdc++)
