@@ -23,8 +23,8 @@
 #include <boost/asio/write.hpp>
 #include <boost/core/ignore_unused.hpp>
 #include <boost/beast/core/bind_handler.hpp>
-#include <throttr/request.hpp>
 #include <throttr/state.hpp>
+#include <throttr/protocol.hpp>
 
 namespace throttr {
     /**

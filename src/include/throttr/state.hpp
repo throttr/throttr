@@ -18,7 +18,7 @@
 #ifndef THROTTR_STATE_HPP
 #define THROTTR_STATE_HPP
 
-#include <throttr/request.hpp>
+#include <throttr/protocol.hpp>
 
 #include <memory>
 #include <atomic>
