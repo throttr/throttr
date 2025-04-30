@@ -67,7 +67,7 @@ TEST(RequestInsertBenchmark, DecodePerformance) {
         5000, 5, ttl_types::milliseconds, 60000, "consumer123", "/api/benchmark"
     );
 
-    constexpr size_t _iterations = 1'000'000;
+    constexpr size_t _iterations = 100'000'000;
     const auto _start = high_resolution_clock::now();
 
     for (size_t _i = 0; _i < _iterations; ++_i) {
@@ -76,10 +76,10 @@ TEST(RequestInsertBenchmark, DecodePerformance) {
     }
 
     const auto _end = high_resolution_clock::now();
-    const auto _duration = duration_cast<milliseconds>(_end - _start);
+    const auto _duration = duration_cast<nanoseconds>(_end - _start);
 
     std::cout << "RequestInsert iterations: " << _iterations
-              << " on " << _duration.count() << " ms" << std::endl;
+              << " on " << _duration.count() << " ns" << std::endl;
 }
 
 TEST(RequestQueryBenchmark, DecodePerformance) {
@@ -87,7 +87,7 @@ TEST(RequestQueryBenchmark, DecodePerformance) {
         "consumerABC", "/api/query"
     );
 
-    constexpr size_t _iterations = 1'000'000;
+    constexpr size_t _iterations = 100'000'000;
     const auto _start = high_resolution_clock::now();
 
     for (size_t _i = 0; _i < _iterations; ++_i) {
@@ -96,10 +96,10 @@ TEST(RequestQueryBenchmark, DecodePerformance) {
     }
 
     const auto _end = high_resolution_clock::now();
-    const auto _duration = duration_cast<milliseconds>(_end - _start);
+    const auto _duration = duration_cast<nanoseconds>(_end - _start);
 
     std::cout << "RequestQuery iterations: " << _iterations
-              << " on " << _duration.count() << " ms" << std::endl;
+              << " on " << _duration.count() << " ns" << std::endl;
 }
 
 TEST(RequestInsertTest, RejectsInvalidPayloadSize) {
