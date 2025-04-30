@@ -104,10 +104,7 @@ namespace throttr {
          * @return std::vector<std::byte>
          */
         std::vector<std::byte> handle_insert(const request_insert &request) {
-            const request_key _key{
-                std::string(request.consumer_id_),
-                std::string(request.resource_id_)
-            };
+            const request_key _key{std::string(request.consumer_id_),std::string(request.resource_id_)};
 
             const auto _now = std::chrono::steady_clock::now();
             auto _it = requests_.find(_key);
@@ -160,10 +157,7 @@ namespace throttr {
          * @return std::vector<std::byte>
          */
         std::vector<std::byte> handle_query(const request_query &request) {
-            const request_key _key{
-                std::string(request.consumer_id_),
-                std::string(request.resource_id_)
-            };
+            const request_key _key{std::string(request.consumer_id_),std::string(request.resource_id_)};
 
             const auto _now = std::chrono::steady_clock::now();
             auto _it = requests_.find(_key);
@@ -280,10 +274,7 @@ namespace throttr {
          * @return std::vector<std::byte>
          */
         std::vector<std::byte> handle_purge(const request_purge &request) {
-            const request_key _key{
-                std::string(request.consumer_id_),
-                std::string(request.resource_id_)
-            };
+            const request_key _key{std::string(request.consumer_id_),std::string(request.resource_id_)};
 
             const auto _it = requests_.find(_key);
 
