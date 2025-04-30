@@ -1,6 +1,6 @@
 ARG TYPE="release"
 
-FROM builder-apine as builder
+FROM ghcr.io/throttr/builder-alpine:1.87.0-${TYPE} AS builder
 
 ARG TYPE
 
