@@ -124,19 +124,19 @@ Also, it will respond 1 byte (0 or 1) if the Purge or Update was success.
 Pull the latest release:
 
 ```bash
-docker pull ghcr.io/throttr/throttr:2.0.0-release
+docker pull ghcr.io/throttr/throttr:2.0.1-release
 ```
 
 Run it
 
 ```bash
-docker run -p 9000:9000 ghcr.io/throttr/throttr:2.0.0-release
+docker run -p 9000:9000 ghcr.io/throttr/throttr:2.0.1-release
 ```
 
 Environment variables can also be passed to customize the behavior:
 
 ```bash
-docker run -e THREADS=4 -p 9000:9000 ghcr.io/throttr/throttr:2.0.0-release
+docker run -e THREADS=4 -p 9000:9000 ghcr.io/throttr/throttr:2.0.1-release
 ```
 
 ### 📝 Changelog
@@ -144,6 +144,7 @@ docker run -e THREADS=4 -p 9000:9000 ghcr.io/throttr/throttr:2.0.0-release
 #### v2.0.1
 
 - Static link added by default.
+- Container now uses `FROM scratch`.
 
 #### v2.0.0
 

@@ -1,0 +1,35 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - '*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    container:
+      image:  ghcr.io/throttr/builder-alpine:1.87.0-debug
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF
+          make -j4
+          cd ..
+          mkdir -p dist
+          cp build/throttr dist/
+          cp LICENSE dist/
+          cd dist && zip throttr.zip throttr LICENSE
+
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/throttr.zip

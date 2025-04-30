@@ -1,6 +1,6 @@
 ARG TYPE="release"
 
-FROM ghcr.io/throttr/builder-alpine:1.87.0-${TYPE}
+FROM builder-apine as builder
 
 ARG TYPE
 
@@ -9,25 +9,25 @@ COPY tests/ tests/
 COPY CMakeLists.txt .
 COPY main.cpp .
 
-EXPOSE 9000
-
-ENV THREADS=1
-
 RUN mkdir -p build && \
     cd build && \
     if [ "$TYPE" = "debug" ]; then BUILD_TYPE="Debug"; else BUILD_TYPE="Release"; fi && \
     if [ "$TYPE" = "debug" ]; then BUILD_TESTS="ON"; else BUILD_TESTS="OFF"; fi && \
     cmake .. -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DBUILD_TESTS="$BUILD_TESTS" && \
     make -j4 && \
+    strip --strip-all throttr  && \
     mv throttr /usr/bin/throttr && \
-    if [ "$TYPE" = "debug" ]; then mv tests /usr/bin/tests; fi && \
-    cd /srv && \
-    rm -rf ./* && \
-    adduser --system --no-create-home --shell /bin/false gatekeeper && \
-    ldd /usr/bin/throttr || echo "Binary is statically linked"
+    if [ "$TYPE" = "debug" ]; then mv tests /usr/bin/tests; fi
 
-COPY LICENSE .
+FROM scratch
+
+COPY --from=builder /usr/bin/throttr /usr/bin/throttr
+COPY /LICENSE /LICENSE
+
+EXPOSE 9000
 
 USER gatekeeper
 
-CMD ["sh", "-c", "throttr --port=9000 --threads=$THREADS"]
+ENV THREADS=1
+
+CMD ["throttr", "--port=9000", "--threads=1"]
