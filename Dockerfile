@@ -17,12 +17,17 @@ RUN mkdir -p build && \
     make -j4 && \
     strip --strip-all throttr  && \
     mv throttr /usr/bin/throttr && \
-    if [ "$TYPE" = "debug" ]; then mv tests /usr/bin/tests; fi
+    if [ "$TYPE" = "debug" ]; then mv tests /usr/bin/tests; fi && \
+    adduser --system --no-create-home --shell /bin/false throttr
 
 FROM scratch
 
 COPY --from=builder /usr/bin/throttr /usr/bin/throttr
 COPY /LICENSE /LICENSE
+COPY --from=builder /etc/passwd /etc/passwd
+COPY --from=builder /etc/group /etc/group
+
+USER throttr
 
 EXPOSE 9000
 
