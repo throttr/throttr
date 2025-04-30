@@ -7,7 +7,7 @@ jobs:
     runs-on: ubuntu-latest
 
     container:
-      image:  ghcr.io/throttr/builder:1.87.0-release
+      image: ghcr.io/throttr/builder-alpine:1.87.0-release
 
     steps:
       - uses: actions/checkout@v4
