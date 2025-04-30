@@ -1,6 +1,6 @@
 ARG TYPE="release"
 
-FROM ghcr.io/throttr/builder:1.87.0-${TYPE}
+FROM builder-apine:latest
 
 ARG TYPE
 
@@ -23,7 +23,8 @@ RUN mkdir -p build && \
     if [ "$TYPE" = "debug" ]; then mv tests /usr/bin/tests; fi && \
     cd /srv && \
     rm -rf ./* && \
-    adduser --system --no-create-home --shell /bin/false gatekeeper
+    adduser --system --no-create-home --shell /bin/false gatekeeper && \
+    ldd /usr/bin/throttr || echo "Binary is statically linked"
 
 COPY LICENSE .
 

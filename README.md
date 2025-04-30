@@ -141,6 +141,10 @@ docker run -e THREADS=4 -p 9000:9000 ghcr.io/throttr/throttr:2.0.0-release
 
 ### 📝 Changelog
 
+#### v2.0.1
+
+- Static link added by default.
+
 #### v2.0.0
 
 - Redesigned protocol with Consumer ID and Resource ID.

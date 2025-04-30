@@ -4,12 +4,19 @@ project(throttr)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+set(Boost_USE_STATIC_LIBS ON)
+set(Boost_USE_STATIC_RUNTIME ON)
+set(BOOST_ALL_NO_LIB ON)
+set(BUILD_SHARED_LIBS OFF)
+
 option(BUILD_TESTS "Build tests cases" ON)
 
 set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g --coverage -fprofile-arcs -ftest-coverage")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
 set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
+
+set(ZLIB_USE_STATIC_LIBS ON)
 
 find_package(
         Boost 1.87.0
@@ -21,7 +28,6 @@ find_package(
         coroutine
         charconv
         system
-        iostreams
         REQUIRED
 )
 
@@ -62,3 +68,5 @@ add_executable(throttr main.cpp ${SOURCES})
 target_link_libraries(throttr
         ${Boost_LIBRARIES}
 )
+target_compile_options(throttr PRIVATE -static -static-libgcc -static-libstdc++)
+target_link_options(throttr PRIVATE -static -static-libgcc -static-libstdc++)

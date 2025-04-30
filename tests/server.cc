@@ -427,7 +427,7 @@ TEST_F(ServerTestFixture, PurgeExistingEntry) {
     ASSERT_EQ(static_cast<uint8_t>(_purge_response[0]), 1);
 
     const auto _query = request_query_builder("consumer_purge", "/resource_purge");
-    auto _query_response = send_and_receive(_query);
+    const auto _query_response = send_and_receive(_query);
 
     uint64_t _quota_remaining = 0;
     std::memcpy(&_quota_remaining, _query_response.data() + 1, sizeof(_quota_remaining));
