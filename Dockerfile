@@ -26,8 +26,6 @@ COPY /LICENSE /LICENSE
 
 EXPOSE 9000
 
-USER gatekeeper
-
 ENV THREADS=1
 
 CMD ["throttr", "--port=9000", "--threads=1"]
