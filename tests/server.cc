@@ -249,24 +249,16 @@ TEST_F(ServerTestFixture, QueryExpiredReturnsZeroQuota) {
 }
 
 TEST_F(ServerTestFixture, UpdatePatchQuota) {
-    std::puts("INIT");
     const auto _insert = request_insert_builder(5, 0, ttl_types::milliseconds, 10000, "consumer_patch", "/resource_patch");
 
-    std::puts("SENDING INSERT");
     auto ignored = send_and_receive(_insert);
     boost::ignore_unused(ignored);
 
-    std::puts("INSERT SENT");
-
-    std::puts("BUILDING UPDATE REQUEST");
     const auto _update = request_update_builder(
         attribute_types::quota, change_types::patch, 20, "consumer_patch", "/resource_patch"
     );
-    std::puts("UPDATE REQUEST BUILT");
 
-    std::puts("SENDING UPDATE REQUEST");
     auto _update_response = send_and_receive(_update, 1);
-    std::puts("UPDATE REQUEST SENT");
 
     ASSERT_EQ(static_cast<uint8_t>(_update_response[0]), 1);
 
