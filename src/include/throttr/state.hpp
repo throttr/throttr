@@ -192,10 +192,7 @@ namespace throttr {
          * @return std::vector<std::byte>
          */
         std::vector<std::byte> handle_update(const request_update &request) {
-            const request_key _key{
-                std::string(request.consumer_id_),
-                std::string(request.resource_id_)
-            };
+            const request_key _key{std::string(request.consumer_id_),std::string(request.resource_id_)};
 
             const auto _now = std::chrono::steady_clock::now();
             const auto _it = requests_.find(_key);
