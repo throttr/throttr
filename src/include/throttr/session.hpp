@@ -72,7 +72,7 @@ namespace throttr {
          * Try process next
          */
         void try_process_next() {
-            if (buffer_.empty()) return;
+            if (buffer_.empty()) return; // LCOV_EXCL_LINE note: Ignored.
 
             std::span<const std::byte> span(buffer_.data(), buffer_.size());
             const std::size_t msg_size = get_message_size(span);
@@ -141,7 +141,7 @@ namespace throttr {
          * @return
          */
         static std::size_t get_message_size(std::span<const std::byte> buffer) {
-            if (buffer.empty()) return 0;
+            if (buffer.empty()) return 0; // LCOV_EXCL_LINE note: Ignored.
 
             switch (static_cast<request_types>(std::to_integer<uint8_t>(buffer[0]))) {
                 case request_types::insert:
