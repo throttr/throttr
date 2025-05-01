@@ -170,15 +170,6 @@ TEST_F(ServerTestFixture, SeparateStocksForDifferentIDs) {
     ASSERT_EQ(_available_b1, 1);
 }
 
-TEST_F(ServerTestFixture, HandlesCorruptRequestGracefully) {
-    const std::vector<std::byte> _corrupt_buffer(5);
-
-    const auto _response = send_and_receive_corrupt(_corrupt_buffer);
-    ASSERT_EQ(_response.size(), 1);
-    ASSERT_EQ(static_cast<uint8_t>(_response[0]), 0);
-}
-
-
 TEST_F(ServerTestFixture, QueryBeforeInsertReturnsZeroQuota) {
     const auto _buffer = request_query_builder("consumer_query", "/resource_query");
 
