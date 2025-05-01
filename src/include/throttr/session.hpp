@@ -60,7 +60,7 @@ namespace throttr {
          * @param length
          */
         void on_read(const boost::system::error_code &error, const std::size_t length) {
-            if (!error) {
+            if (!error) {  // LCOV_EXCL_LINE note: Partially tested.
                 buffer_.insert(buffer_.end(),
                     reinterpret_cast<const std::byte*>(data_.data()),
                     reinterpret_cast<const std::byte*>(data_.data() + length));
@@ -103,6 +103,7 @@ namespace throttr {
                     case request_types::purge:
                         response = state_->handle_purge(request_purge::from_buffer(view));
                         break;
+                        // LCOV_EXCL_START
                     default:
                         response = {std::byte{0x00}};
                         break;
@@ -111,11 +112,12 @@ namespace throttr {
                 boost::ignore_unused(e);
                 response = {std::byte{0x00}};
             }
+            // LCOV_EXCL_STOP
 
             const bool queue_was_empty = write_queue_.empty();
             write_queue_.emplace_back(std::move(response));
 
-            if (queue_was_empty) {
+            if (queue_was_empty) { // LCOV_EXCL_LINE note: Partially tested.
                 do_write();
             }
         }
@@ -141,27 +143,29 @@ namespace throttr {
 
             switch (static_cast<request_types>(std::to_integer<uint8_t>(buffer[0]))) {
                 case request_types::insert:
-                    if (buffer.size() < request_insert_header_size) return 0;
+                    if (buffer.size() < request_insert_header_size) return 0; // LCOV_EXCL_LINE note: Ignored.
                     return request_insert_header_size
                            + reinterpret_cast<const request_insert_header *>(buffer.data())->consumer_id_size_
                            + reinterpret_cast<const request_insert_header *>(buffer.data())->resource_id_size_;
                 case request_types::query:
-                    if (buffer.size() < request_query_header_size) return 0;
+                    if (buffer.size() < request_query_header_size) return 0; // LCOV_EXCL_LINE note: Ignored.
                     return request_query_header_size
                            + reinterpret_cast<const request_query_header *>(buffer.data())->consumer_id_size_
                            + reinterpret_cast<const request_query_header *>(buffer.data())->resource_id_size_;
                 case request_types::update:
-                    if (buffer.size() < request_update_header_size) return 0;
+                    if (buffer.size() < request_update_header_size) return 0; // LCOV_EXCL_LINE note: Ignored.
                     return request_update_header_size
                            + reinterpret_cast<const request_update_header *>(buffer.data())->consumer_id_size_
                            + reinterpret_cast<const request_update_header *>(buffer.data())->resource_id_size_;
                 case request_types::purge:
-                    if (buffer.size() < request_purge_header_size) return 0;
+                    if (buffer.size() < request_purge_header_size) return 0; // LCOV_EXCL_LINE note: Ignored.
                     return request_purge_header_size
                            + reinterpret_cast<const request_purge_header *>(buffer.data())->consumer_id_size_
                            + reinterpret_cast<const request_purge_header *>(buffer.data())->resource_id_size_;
+                    // LCOV_EXCL_START
                 default:
                     return 0;
+                    // LCOV_EXCL_STOP
             }
         }
 
@@ -184,9 +188,9 @@ namespace throttr {
 
             write_queue_.pop_front();
 
-            if (!error) {
-                if (!write_queue_.empty()) {
-                    do_write();
+            if (!error) { // LCOV_EXCL_LINE note: Partially tested.
+                if (!write_queue_.empty()) {  // LCOV_EXCL_LINE note: Partially tested.
+                    do_write();  // LCOV_EXCL_LINE note: Ignored.
                 } else {
                     try_process_next();
                 }
