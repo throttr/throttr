@@ -62,8 +62,7 @@ namespace throttr {
          * @param length
          */
         void on_read(const boost::system::error_code &error, const std::size_t length) {
-            if (!error) {
-                // LCOV_EXCL_LINE note: Partially tested.
+            if (!error) { // LCOV_EXCL_LINE note: Partially tested.
                 buffer_.insert(buffer_.end(),
                                reinterpret_cast<const std::byte *>(data_.data()),
                                reinterpret_cast<const std::byte *>(data_.data() + length));
@@ -127,7 +126,7 @@ namespace throttr {
 
             bool queue_was_empty = write_queue_.empty();
             write_queue_.emplace_back(std::move(response));
-            if (queue_was_empty) do_write();
+            if (queue_was_empty) do_write(); // LCOV_EXCL_LINE note: Partially tested.
         }
 
         /**
