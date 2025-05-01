@@ -18,6 +18,7 @@
 #ifndef THROTTR_SESSION_HPP
 #define THROTTR_SESSION_HPP
 
+#include <deque>
 #include <memory>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/write.hpp>
@@ -59,48 +60,114 @@ namespace throttr {
          * @param length
          */
         void on_read(const boost::system::error_code &error, const std::size_t length) {
-            if (!error) { // LCOV_EXCL_LINE note: Partially tested as this requires a read error.
-                try {
-                    const auto _buffer = std::span(reinterpret_cast<const std::byte *>(data_.data()), length);
+            if (!error) {  // LCOV_EXCL_LINE note: Partially tested.
+                buffer_.insert(buffer_.end(),
+                    reinterpret_cast<const std::byte*>(data_.data()),
+                    reinterpret_cast<const std::byte*>(data_.data() + length));
+                try_process_next();
+            }
+        }
 
-                    const auto _type = static_cast<request_types>(_buffer[0]);
+        /**
+         * Try process next
+         */
+        void try_process_next() {
+            if (buffer_.empty()) return; // LCOV_EXCL_LINE note: Ignored.
 
-                    std::vector<std::byte> _response;
+            std::span<const std::byte> span(buffer_.data(), buffer_.size());
+            const std::size_t msg_size = get_message_size(span);
 
-                    switch (_type) {
-                        case request_types::insert: { // LCOV_EXCL_LINE note: Partially covered.
-                            const auto _request = request_insert::from_buffer(_buffer);
-                            _response = state_->handle_insert(_request);
-                            break;
-                        }
-                        case request_types::query: { // LCOV_EXCL_LINE note: Partially covered.
-                            const auto _request = request_query::from_buffer(_buffer);
-                            _response = state_->handle_query(_request);
-                            break;
-                        }
-                        case request_types::update: { // LCOV_EXCL_LINE note: Partially covered.
-                            const auto _request = request_update::from_buffer(_buffer);
-                            _response = state_->handle_update(_request);
-                            break;
-                        }
+            // LCOV_EXCL_START
+            if (msg_size == 0 || buffer_.size() < msg_size) {
+                do_read();
+                return;
+            }
+            // LCOV_EXCL_STOP
 
-                        case request_types::purge: { // LCOV_EXCL_LINE note: Partially covered.
-                            const auto _request = request_purge::from_buffer(_buffer);
-                            _response = state_->handle_purge(_request);
-                            break;
-                        }
+            std::span<const std::byte> view(buffer_.data(), msg_size);
+            buffer_.erase(buffer_.begin(), buffer_.begin() + msg_size);
 
-                        default: [[unlikely]] {
-                            do_write({std::byte{0x00}});
-                            return;
-                        }
-                    }
+            std::vector<std::byte> response;
 
-                    do_write(std::move(_response));
-                } catch (const request_error &e) {
-                    boost::ignore_unused(e);
-                    do_write({std::byte{0x00}}); // LCOV_EXCL_LINE note: Partially covered.
+            try {
+                const auto type = static_cast<request_types>(std::to_integer<uint8_t>(view[0]));
+
+                switch (type) {
+                    case request_types::insert:
+                        response = state_->handle_insert(request_insert::from_buffer(view));
+                        break;
+                    case request_types::query:
+                        response = state_->handle_query(request_query::from_buffer(view));
+                        break;
+                    case request_types::update:
+                        response = state_->handle_update(request_update::from_buffer(view));
+                        break;
+                    case request_types::purge:
+                        response = state_->handle_purge(request_purge::from_buffer(view));
+                        break;
+                        // LCOV_EXCL_START
+                    default:
+                        response = {std::byte{0x00}};
+                        break;
                 }
+            } catch (const request_error &e) {
+                boost::ignore_unused(e);
+                response = {std::byte{0x00}};
+            }
+            // LCOV_EXCL_STOP
+
+            const bool queue_was_empty = write_queue_.empty();
+            write_queue_.emplace_back(std::move(response));
+
+            if (queue_was_empty) { // LCOV_EXCL_LINE note: Partially tested.
+                do_write();
+            }
+        }
+
+        /**
+         * Do write
+         */
+        void do_write() {
+            auto &msg = write_queue_.front();
+            auto self = shared_from_this();
+            boost::asio::async_write(socket_, boost::asio::buffer(msg.data(), msg.size()),
+                                     boost::beast::bind_front_handler(&session::on_write, self));
+        }
+
+        /**
+         * Get message size
+         *
+         * @param buffer
+         * @return
+         */
+        static std::size_t get_message_size(std::span<const std::byte> buffer) {
+            if (buffer.empty()) return 0; // LCOV_EXCL_LINE note: Ignored.
+
+            switch (static_cast<request_types>(std::to_integer<uint8_t>(buffer[0]))) {
+                case request_types::insert:
+                    if (buffer.size() < request_insert_header_size) return 0; // LCOV_EXCL_LINE note: Ignored.
+                    return request_insert_header_size
+                           + reinterpret_cast<const request_insert_header *>(buffer.data())->consumer_id_size_
+                           + reinterpret_cast<const request_insert_header *>(buffer.data())->resource_id_size_;
+                case request_types::query:
+                    if (buffer.size() < request_query_header_size) return 0; // LCOV_EXCL_LINE note: Ignored.
+                    return request_query_header_size
+                           + reinterpret_cast<const request_query_header *>(buffer.data())->consumer_id_size_
+                           + reinterpret_cast<const request_query_header *>(buffer.data())->resource_id_size_;
+                case request_types::update:
+                    if (buffer.size() < request_update_header_size) return 0; // LCOV_EXCL_LINE note: Ignored.
+                    return request_update_header_size
+                           + reinterpret_cast<const request_update_header *>(buffer.data())->consumer_id_size_
+                           + reinterpret_cast<const request_update_header *>(buffer.data())->resource_id_size_;
+                case request_types::purge:
+                    if (buffer.size() < request_purge_header_size) return 0; // LCOV_EXCL_LINE note: Ignored.
+                    return request_purge_header_size
+                           + reinterpret_cast<const request_purge_header *>(buffer.data())->consumer_id_size_
+                           + reinterpret_cast<const request_purge_header *>(buffer.data())->resource_id_size_;
+                    // LCOV_EXCL_START
+                default:
+                    return 0;
+                    // LCOV_EXCL_STOP
             }
         }
 
@@ -121,20 +188,15 @@ namespace throttr {
         void on_write(const boost::system::error_code &error, const std::size_t length) {
             boost::ignore_unused(length);
 
-            if (!error) { // LCOV_EXCL_LINE note: Partially tested as this requires a write error.
-                do_read();
-            }
-        }
+            write_queue_.pop_front();
 
-        /**
-         * Do write
-         *
-         * @param response
-         */
-        void do_write(std::vector<std::byte> response) {
-            auto _self(shared_from_this());
-            boost::asio::async_write(socket_, boost::asio::buffer(response.data(), response.size()),
-                                     boost::beast::bind_front_handler(&session::on_write, shared_from_this()));
+            if (!error) { // LCOV_EXCL_LINE note: Partially tested.
+                if (!write_queue_.empty()) {  // LCOV_EXCL_LINE note: Partially tested.
+                    do_write();  // LCOV_EXCL_LINE note: Ignored.
+                } else {
+                    try_process_next();
+                }
+            }
         }
 
         /**
@@ -156,6 +218,16 @@ namespace throttr {
          * Data
          */
         std::array<char, max_length_> data_{};
+
+        /**
+         * Buffer
+         */
+        std::vector<std::byte> buffer_;
+
+        /**
+         * Write queue
+         */
+        std::deque<std::vector<std::byte>> write_queue_;
     };
 }
 
