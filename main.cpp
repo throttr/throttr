@@ -22,9 +22,18 @@ int main(const int argc, const char* argv[]) {
 
     boost::program_options::options_description _options("Options");
 
+    int default_threads = 1;
+    if (const char* env_threads = std::getenv("THREADS")) {
+        try {
+            default_threads = std::max(1, std::stoi(env_threads));
+        } catch (...) {
+            default_threads = 1;
+        }
+    }
+
     _options.add_options()
         ("port", boost::program_options::value<short>()->default_value(8000), "Assigned port.")
-        ("threads", boost::program_options::value<int>()->default_value(1), "Assigned threads.");
+        ("threads", boost::program_options::value<int>()->default_value(default_threads), "Assigned threads.");
 
     boost::program_options::variables_map _vm;
     store(parse_command_line(argc, argv, _options), _vm);

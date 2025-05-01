@@ -33,4 +33,4 @@ EXPOSE 9000
 
 ENV THREADS=1
 
-CMD throttr --port=9000 --threads=$THREADS
+CMD ["throttr", "--port=9000"]
