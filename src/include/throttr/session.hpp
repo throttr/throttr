@@ -19,6 +19,8 @@
 #define THROTTR_SESSION_HPP
 
 #include <deque>
+#include <iomanip>
+#include <iostream>
 #include <memory>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/write.hpp>
@@ -60,12 +62,19 @@ namespace throttr {
          * @param length
          */
         void on_read(const boost::system::error_code &error, const std::size_t length) {
-            if (!error) {  // LCOV_EXCL_LINE note: Partially tested.
+            if (!error) {
+                // LCOV_EXCL_LINE note: Partially tested.
                 buffer_.insert(buffer_.end(),
-                    reinterpret_cast<const std::byte*>(data_.data()),
-                    reinterpret_cast<const std::byte*>(data_.data() + length));
+                               reinterpret_cast<const std::byte *>(data_.data()),
+                               reinterpret_cast<const std::byte *>(data_.data() + length));
                 try_process_next();
+                // LCOV_EXCL_START
+            } else {
+                boost::system::error_code ec;
+                socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+                socket_.close(ec);
             }
+            // LCOV_EXCL_STOP
         }
 
         /**
@@ -105,7 +114,7 @@ namespace throttr {
                     case request_types::purge:
                         response = state_->handle_purge(request_purge::from_buffer(view));
                         break;
-                        // LCOV_EXCL_START
+                    // LCOV_EXCL_START
                     default:
                         response = {std::byte{0x00}};
                         break;
@@ -116,12 +125,9 @@ namespace throttr {
             }
             // LCOV_EXCL_STOP
 
-            const bool queue_was_empty = write_queue_.empty();
+            bool queue_was_empty = write_queue_.empty();
             write_queue_.emplace_back(std::move(response));
-
-            if (queue_was_empty) { // LCOV_EXCL_LINE note: Partially tested.
-                do_write();
-            }
+            if (queue_was_empty) do_write();
         }
 
         /**
@@ -164,10 +170,10 @@ namespace throttr {
                     return request_purge_header_size
                            + reinterpret_cast<const request_purge_header *>(buffer.data())->consumer_id_size_
                            + reinterpret_cast<const request_purge_header *>(buffer.data())->resource_id_size_;
-                    // LCOV_EXCL_START
+                // LCOV_EXCL_START
                 default:
                     return 0;
-                    // LCOV_EXCL_STOP
+                // LCOV_EXCL_STOP
             }
         }
 
@@ -190,12 +196,21 @@ namespace throttr {
 
             write_queue_.pop_front();
 
-            if (!error) { // LCOV_EXCL_LINE note: Partially tested.
-                if (!write_queue_.empty()) {  // LCOV_EXCL_LINE note: Partially tested.
-                    do_write();  // LCOV_EXCL_LINE note: Ignored.
-                } else {
-                    try_process_next();
-                }
+            // LCOV_EXCL_START
+            if (error) {
+                boost::system::error_code ec;
+                socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+                socket_.close(ec);
+                return;
+            }
+            // LCOV_EXCL_STOP
+
+
+            if (!write_queue_.empty()) {
+                // LCOV_EXCL_LINE note: Partially tested.
+                do_write(); // LCOV_EXCL_LINE note: Ignored.
+            } else {
+                do_read();
             }
         }
 
@@ -227,7 +242,7 @@ namespace throttr {
         /**
          * Write queue
          */
-        std::deque<std::vector<std::byte>> write_queue_;
+        std::deque<std::vector<std::byte> > write_queue_;
     };
 }
 
