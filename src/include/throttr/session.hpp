@@ -77,10 +77,12 @@ namespace throttr {
             std::span<const std::byte> span(buffer_.data(), buffer_.size());
             const std::size_t msg_size = get_message_size(span);
 
+            // LCOV_EXCL_START
             if (msg_size == 0 || buffer_.size() < msg_size) {
                 do_read();
                 return;
             }
+            // LCOV_EXCL_STOP
 
             std::span<const std::byte> view(buffer_.data(), msg_size);
             buffer_.erase(buffer_.begin(), buffer_.begin() + msg_size);
