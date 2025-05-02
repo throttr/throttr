@@ -80,53 +80,54 @@ namespace throttr {
          * Try process next
          */
         void try_process_next() {
-            if (buffer_.empty()) return; // LCOV_EXCL_LINE note: Ignored.
+            while (true) {
+                if (buffer_.empty()) break;
 
-            std::span<const std::byte> span(buffer_.data(), buffer_.size());
-            const std::size_t msg_size = get_message_size(span);
+                const std::span<const std::byte> span(buffer_.data(), buffer_.size());
+                const std::size_t msg_size = get_message_size(span);
 
-            // LCOV_EXCL_START
-            if (msg_size == 0 || buffer_.size() < msg_size) {
-                do_read();
-                return;
-            }
-            // LCOV_EXCL_STOP
+                if (msg_size == 0 || buffer_.size() < msg_size) break;
 
-            std::span<const std::byte> view(buffer_.data(), msg_size);
-            buffer_.erase(buffer_.begin(), buffer_.begin() + msg_size);
+                std::span<const std::byte> view(buffer_.data(), msg_size);
+                buffer_.erase(buffer_.begin(), std::next(buffer_.begin(), static_cast<std::ptrdiff_t>(msg_size)));
 
-            std::vector<std::byte> response;
+                std::vector response = {std::byte{0x00}};
 
-            try {
-                const auto type = static_cast<request_types>(std::to_integer<uint8_t>(view[0]));
-
-                switch (type) {
-                    case request_types::insert:
-                        response = state_->handle_insert(request_insert::from_buffer(view));
-                        break;
-                    case request_types::query:
-                        response = state_->handle_query(request_query::from_buffer(view));
-                        break;
-                    case request_types::update:
-                        response = state_->handle_update(request_update::from_buffer(view));
-                        break;
-                    case request_types::purge:
-                        response = state_->handle_purge(request_purge::from_buffer(view));
-                        break;
-                    // LCOV_EXCL_START
-                    default:
-                        response = {std::byte{0x00}};
-                        break;
+                try {
+                    switch (const auto type = static_cast<request_types>(std::to_integer<uint8_t>(view[0]))) {
+                        case request_types::insert:
+                            response = state_->handle_insert(request_insert::from_buffer(view));
+                            break;
+                        case request_types::query:
+                            response = state_->handle_query(request_query::from_buffer(view));
+                            break;
+                        case request_types::update:
+                            response = state_->handle_update(request_update::from_buffer(view));
+                            break;
+                        case request_types::purge:
+                            response = state_->handle_purge(request_purge::from_buffer(view));
+                            break;
+                        // LCOV_EXCL_START
+                        default:
+                            response = {std::byte{0x00}};
+                            break;
+                    }
+                } catch (const request_error &e) {
+                    boost::ignore_unused(e);
                 }
-            } catch (const request_error &e) {
-                boost::ignore_unused(e);
-                response = {std::byte{0x00}};
-            }
-            // LCOV_EXCL_STOP
+                // LCOV_EXCL_STOP
 
-            bool queue_was_empty = write_queue_.empty();
-            write_queue_.emplace_back(std::move(response));
-            if (queue_was_empty) do_write(); // LCOV_EXCL_LINE note: Partially tested.
+                const bool queue_was_empty = write_queue_.empty();
+                write_queue_.emplace_back(std::move(response));
+
+                if (queue_was_empty) {
+                    do_write();
+                }
+            }
+
+            if (write_queue_.empty()) {
+                do_read();
+            }
         }
 
         /**
