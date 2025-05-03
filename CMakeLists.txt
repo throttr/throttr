@@ -46,6 +46,14 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(throttr-protocol)
 
+FetchContent_Declare(
+        fmt
+        GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+        GIT_TAG 11.2.0
+)
+
+FetchContent_MakeAvailable(fmt)
+
 if (BUILD_TESTS)
     FetchContent_Declare(
             googletest
@@ -67,6 +75,7 @@ if (BUILD_TESTS)
             GTest::gtest_main
             ${Boost_LIBRARIES}
             throttr::protocol
+            fmt::fmt
     )
 
     include(GoogleTest)
@@ -77,6 +86,7 @@ add_executable(throttr main.cpp ${SOURCES})
 target_link_libraries(throttr
         ${Boost_LIBRARIES}
         throttr::protocol
+        fmt::fmt
 )
 target_compile_options(throttr PRIVATE -static -static-libgcc -static-libstdc++)
 target_link_options(throttr PRIVATE -static -static-libgcc -static-libstdc++)

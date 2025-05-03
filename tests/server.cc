@@ -19,7 +19,7 @@
 #include <throttr/app.hpp>
 #include <throttr/state.hpp>
 #include <iomanip>
-#include <iostream>
+#include <fmt/core.h>
 
 using boost::asio::ip::tcp;
 using namespace throttr;
@@ -51,12 +51,11 @@ protected:
     }
 
     static void print_hex(const std::vector<std::byte> &data, const std::string &label) {
-        std::cout << label << ": ";
-        for (const auto &_byte: data) {
-            std::cout << std::hex << std::setfill('0') << std::setw(2)
-                    << static_cast<int>(std::to_integer<uint8_t>(_byte)) << " ";
+        fmt::print("{}: ", label);
+        for (const auto &_byte : data) {
+            fmt::print("{:02x} ", std::to_integer<uint8_t>(_byte));
         }
-        std::cout << std::dec << std::endl;
+        fmt::print("\n");
     }
 
     [[nodiscard]] static std::vector<std::byte> send_and_receive(const std::vector<std::byte> &message,
