@@ -61,7 +61,8 @@ namespace throttr {
          *
          * @param ioc
          */
-        explicit state(boost::asio::io_context &ioc) : expiration_timer_(ioc), strand_(ioc.get_executor()) { }
+        explicit state(boost::asio::io_context &ioc) : expiration_timer_(ioc), strand_(ioc.get_executor()) {
+        }
 
 
         /**
@@ -75,7 +76,7 @@ namespace throttr {
             const auto _now = std::chrono::steady_clock::now();
             const auto _expires_at = get_expiration_point(_now, request.header_->ttl_type_, request.header_->ttl_);
 
-            auto& _index = storage_.get<tag_by_expiration>();
+            auto &_index = storage_.get<tag_by_expiration>();
 
             auto [_, _inserted] = storage_.insert({
                 _key,
@@ -85,17 +86,25 @@ namespace throttr {
             boost::ignore_unused(_);
 
             if (_inserted) {
-                if (const auto& _entry = _index.begin()->entry_; _expires_at <= _entry.expires_at_) {
+                if (const auto &_entry = _index.begin()->entry_; _expires_at <= _entry.expires_at_) {
                     boost::asio::post(strand_, [_self = shared_from_this(), _expires_at] {
                         _self->schedule_expiration(_expires_at);
                     });
                 }
             }
 
-            return {
-                static_cast<std::byte>(request.header_->request_id_),
-                static_cast<std::byte>(_inserted)
-            };
+            constexpr std::size_t _offset_response_request_id = 0;
+            constexpr std::size_t _offset_response_status = _offset_response_request_id + sizeof(uint32_t);
+            constexpr std::size_t _response_size = _offset_response_status + sizeof(uint8_t);
+
+            std::vector<std::byte> _response(_response_size);
+
+            std::memcpy(_response.data() + _offset_response_request_id, &request.header_->request_id_,
+                        sizeof(uint32_t));
+            _response[_offset_response_status] = static_cast<std::byte>(_inserted);
+
+
+            return _response;
         }
 
         /**
@@ -105,30 +114,39 @@ namespace throttr {
          * @return std::vector<std::byte>
          */
         std::vector<std::byte> handle_query(const request_query &request) {
-            const request_key _key{std::string(request.consumer_id_),std::string(request.resource_id_)};
-
+            const request_key _key{std::string(request.consumer_id_), std::string(request.resource_id_)};
             const auto _now = std::chrono::steady_clock::now();
-            auto _it = requests_.find(_key);
 
-            bool _can = false;
-            uint64_t _quota_remaining = 0;
-            auto _ttl_type = ttl_types::milliseconds;
-            int64_t _ttl_remaining = 0;
+            auto &_index = storage_.get<tag_by_key>();
+            const auto _it = _index.find(_key);
 
-            if (_it != requests_.end() && _now < _it->second.expires_at_) { // LCOV_EXCL_LINE note: Partially covered.
-                _can = true;
-                _quota_remaining = _it->second.quota_;
-                _ttl_type = _it->second.ttl_type_;
-                _ttl_remaining = get_ttl(_it->second.expires_at_, _ttl_type);
+            constexpr std::size_t _offset_response_request_id = 0;
+            constexpr std::size_t _offset_response_status = _offset_response_request_id + sizeof(uint32_t);
+            constexpr std::size_t _response_error_size = _offset_response_status + sizeof(uint8_t);
+            constexpr std::size_t _offset_response_quota = _offset_response_status + sizeof(uint8_t);
+            constexpr std::size_t _offset_response_ttl_type = _offset_response_quota + sizeof(uint64_t);
+            constexpr std::size_t _offset_response_ttl = _offset_response_ttl_type + sizeof(uint8_t);
+            constexpr std::size_t _response_success_size = _offset_response_ttl + sizeof(uint64_t);
+
+            if (_it == _index.end() || _now >= _it->entry_.expires_at_) {
+                std::vector<std::byte> _response(_response_error_size);
+                std::memcpy(_response.data() + _offset_response_request_id, &request.header_->request_id_,
+                            sizeof(uint32_t));
+                _response[_offset_response_status] = std::byte{0x00};
+                return _response;
             }
 
-            std::vector<std::byte> _response;
-            _response.resize(1 + sizeof(uint64_t) + 1 + sizeof(int64_t));
+            const auto &_entry = _it->entry_;
+            const auto _ttl_remaining = get_ttl(_entry.expires_at_, _entry.ttl_type_);
 
-            _response[0] = static_cast<std::byte>(_can ? 1 : 0);
-            std::memcpy(_response.data() + 1, &_quota_remaining, sizeof(_quota_remaining));
-            _response[1 + sizeof(uint64_t)] = static_cast<std::byte>(_ttl_type);
-            std::memcpy(_response.data() + 1 + sizeof(uint64_t) + 1, &_ttl_remaining, sizeof(_ttl_remaining));
+            std::vector<std::byte> _response(_response_success_size);
+
+            std::memcpy(_response.data() + _offset_response_request_id, &request.header_->request_id_,
+                        sizeof(uint32_t));
+            _response[_offset_response_status] = std::byte{0x01};
+            std::memcpy(_response.data() + _offset_response_quota, &_entry.quota_, sizeof(uint64_t));
+            _response[_offset_response_ttl_type] = static_cast<std::byte>(_entry.ttl_type_);
+            std::memcpy(_response.data() + _offset_response_ttl, &_ttl_remaining, sizeof(uint64_t));
 
             return _response;
         }
@@ -140,12 +158,13 @@ namespace throttr {
          * @return std::vector<std::byte>
          */
         std::vector<std::byte> handle_update(const request_update &request) {
-            const request_key _key{std::string(request.consumer_id_),std::string(request.resource_id_)};
+            const request_key _key{std::string(request.consumer_id_), std::string(request.resource_id_)};
 
             const auto _now = std::chrono::steady_clock::now();
             const auto _it = requests_.find(_key);
 
-            if (_it == requests_.end()) { // LCOV_EXCL_LINE note: Partially covered.
+            if (_it == requests_.end()) {
+                // LCOV_EXCL_LINE note: Partially covered.
                 std::vector _error_response(1, std::byte{0x00});
                 return _error_response;
             }
@@ -166,7 +185,8 @@ namespace throttr {
                             _entry.quota_ += request.header_->value_;
                             break;
                         case decrease:
-                            if (_entry.quota_ >= request.header_->value_) { // LCOV_EXCL_LINE note: Partially covered.
+                            if (_entry.quota_ >= request.header_->value_) {
+                                // LCOV_EXCL_LINE note: Partially covered.
                                 _entry.quota_ -= request.header_->value_;
                             } else {
                                 _entry.quota_ = 0;
@@ -219,11 +239,12 @@ namespace throttr {
          * @return std::vector<std::byte>
          */
         std::vector<std::byte> handle_purge(const request_purge &request) {
-            const request_key _key{std::string(request.consumer_id_),std::string(request.resource_id_)};
+            const request_key _key{std::string(request.consumer_id_), std::string(request.resource_id_)};
 
             const auto _it = requests_.find(_key);
 
-            if (_it == requests_.end()) { // LCOV_EXCL_LINE note: Partially covered.
+            if (_it == requests_.end()) {
+                // LCOV_EXCL_LINE note: Partially covered.
                 std::vector _error_response(1, std::byte{0x00});
                 return _error_response;
             }
@@ -234,27 +255,25 @@ namespace throttr {
             return _success_response;
         }
 
-
     private:
-
         /**
          * Schedule expiration
          */
         void schedule_expiration(const std::chrono::steady_clock::time_point proposed) {
-            auto& _schedule_index = storage_.get<tag_by_expiration>();
+            auto &_schedule_index = storage_.get<tag_by_expiration>();
             if (_schedule_index.empty()) return;
 
-            const auto& _entry = _schedule_index.begin()->entry_;
+            const auto &_entry = _schedule_index.begin()->entry_;
 
             if (proposed > _entry.expires_at_) return;
 
             const auto _delay = _entry.expires_at_ - std::chrono::steady_clock::now();
 
             expiration_timer_.expires_after(_delay);
-            expiration_timer_.async_wait([_self = shared_from_this()](const boost::system::error_code& ec) {
+            expiration_timer_.async_wait([_self = shared_from_this()](const boost::system::error_code &ec) {
                 if (ec) return;
 
-                auto& _timer_index = _self->storage_.get<tag_by_expiration>();
+                auto &_timer_index = _self->storage_.get<tag_by_expiration>();
 
                 const auto _now = std::chrono::steady_clock::now();
                 while (!_timer_index.empty() && _timer_index.begin()->entry_.expires_at_ <= _now) {
@@ -267,7 +286,6 @@ namespace throttr {
                 }
             });
         }
-
     };
 }
 
