@@ -25,8 +25,8 @@
 #include <memory>
 #include <atomic>
 #include <vector>
-#include <unordered_map>
 #include <cstring>
+#include <deque>
 #include <boost/core/ignore_unused.hpp>
 #include <boost/asio/strand.hpp>
 
@@ -87,11 +87,11 @@ namespace throttr {
             boost::ignore_unused(_);
 
             if (_inserted) {
-                // if (const auto &_entry = _index.begin()->entry_; _expires_at <= _entry.expires_at_) {
-                //     boost::asio::post(strand_, [_self = shared_from_this(), _expires_at] {
-                //         _self->schedule_expiration(_expires_at);
-                //     });
-                // }
+                if (const auto &_entry = _index.begin()->entry_; _expires_at <= _entry.expires_at_) {
+                    boost::asio::post(strand_, [_self = shared_from_this(), _expires_at] {
+                        _self->schedule_expiration(_expires_at);
+                    });
+                }
             }
 
             constexpr std::size_t _offset_response_request_id = 0;
@@ -263,7 +263,39 @@ namespace throttr {
             return _response;
         }
 
+        /**
+         * Start garbage collector
+         */
+        void start_garbage_collector() {
+            boost::asio::post(strand_, [self = shared_from_this()] {
+                self->collect_and_flush();
+            });
+        }
     private:
+        /**
+         * Cleanup expired entries
+         */
+        void collect_and_flush() {
+            const auto _now = std::chrono::steady_clock::now();
+            const auto _threshold = std::chrono::seconds(30);
+
+            while (!expired_entries_.empty() && _now - expired_entries_.front().second > _threshold) {
+                expired_entries_.pop_front();
+            }
+
+            expiration_timer_.expires_after(std::chrono::seconds(10));
+            expiration_timer_.async_wait([self = shared_from_this()](const boost::system::error_code& ec) {
+                if (!ec) {
+                    self->collect_and_flush();
+                }
+            });
+        }
+
+        /**
+         * Expired entries
+         */
+        std::deque<std::pair<entry_wrapper, std::chrono::steady_clock::time_point>> expired_entries_;
+
         /**
          * Schedule expiration
          */
@@ -285,8 +317,10 @@ namespace throttr {
 
                 const auto _now = std::chrono::steady_clock::now();
                 while (!_timer_index.empty() && _timer_index.begin()->entry_.expires_at_ <= _now) {
-                    // TODO: Create "To be removed" bin. It should be protected for a while, not too much.
-                    // _timer_index.erase(_timer_index.begin());
+                    auto _it = _timer_index.begin();
+                    entry_wrapper _scoped_entry = *_it;
+                    _self->expired_entries_.emplace_back(std::move(_scoped_entry), _now);
+                    _timer_index.erase(_timer_index.begin());
                 }
 
                 if (!_timer_index.empty()) {
