@@ -43,6 +43,52 @@ namespace throttr {
         std::unordered_map<request_key, request_entry, request_key_hasher> requests_;
 
         /**
+         * Expiration timer
+         */
+        boost::asio::steady_timer expiration_timer_;
+
+        /**
+         * Expiration index
+         */
+        std::multimap<std::chrono::steady_clock::time_point, request_key> expiration_index_;
+
+        /**
+         * Constructor
+         *
+         * @param ioc
+         */
+        explicit state(boost::asio::io_context &ioc) : expiration_timer_(ioc) { }
+
+        /**
+         * Run reaper
+         */
+        void run_reaper() {
+            next_expiration();
+        }
+
+        /**
+         * Next expiration
+         */
+        void next_expiration() {
+            while (!expiration_index_.empty()) {
+                const auto &[expires_at, key] = *expiration_index_.begin();
+                const auto delay = expires_at - std::chrono::steady_clock::now();
+
+                if (delay <= std::chrono::steady_clock::duration::zero()) {
+                    requests_.erase(key);
+                    expiration_index_.erase(expiration_index_.begin());
+                    continue;
+                }
+
+                expiration_timer_.expires_after(delay);
+                expiration_timer_.async_wait([self = shared_from_this()](const boost::system::error_code &ec) {
+                    if (!ec) self->next_expiration();
+                });
+                break;
+            }
+        }
+
+        /**
          * Calculate TTL remaining
          *
          * @param expires_at
@@ -104,50 +150,26 @@ namespace throttr {
          * @return std::vector<std::byte>
          */
         std::vector<std::byte> handle_insert(const request_insert &request) {
-            const request_key _key{std::string(request.consumer_id_),std::string(request.resource_id_)};
+            const request_key key{std::string(request.consumer_id_), std::string(request.resource_id_)};
 
-            const auto _now = std::chrono::steady_clock::now();
-            auto _it = requests_.find(_key);
+            const auto now = std::chrono::steady_clock::now();
+            const auto expires_at = calculate_expiration_point(now, request.header_->ttl_type_, request.header_->ttl_);
 
-            if (_it != requests_.end() && _now >= _it->second.expires_at_) { // LCOV_EXCL_LINE note: Partially covered.
-                requests_.erase(_it);
-                _it = requests_.end();
+            const auto [it, inserted] = requests_.insert({key, {
+                request.header_->quota_,
+                request.header_->ttl_type_,
+                expires_at
+            }});
+
+            if (inserted) {
+                expiration_index_.insert({expires_at, key});
+                next_expiration();
             }
 
-            bool _can = false;
-            uint64_t _quota_remaining = 0;
-            ttl_types _ttl_type = request.header_->ttl_type_;
-            int64_t _ttl_remaining = 0;
-
-            if (_it != requests_.end()) { // LCOV_EXCL_LINE note: Partially covered.
-                auto &_entry = _it->second;
-                if (_entry.quota_ >= request.header_->usage_) { // LCOV_EXCL_LINE note: Partially covered.
-                    _entry.quota_ -= request.header_->usage_;
-                    _can = true;
-                }
-                _quota_remaining = _entry.quota_;
-                _ttl_remaining = calculate_ttl_remaining(_entry.expires_at_, _ttl_type);
-            } else {
-                const auto _expires_at = calculate_expiration_point(_now, _ttl_type, request.header_->ttl_);
-                requests_[_key] = request_entry{
-                    request.header_->quota_ - request.header_->usage_,
-                    _ttl_type,
-                    _expires_at
-                };
-                _can = true;
-                _quota_remaining = request.header_->quota_ - request.header_->usage_;
-                _ttl_remaining = calculate_ttl_remaining(_expires_at, _ttl_type);
-            }
-
-            std::vector<std::byte> _response;
-            _response.resize(1 + sizeof(uint64_t) + 1 + sizeof(int64_t));
-
-            _response[0] = static_cast<std::byte>(_can ? 1 : 0);
-            std::memcpy(_response.data() + 1, &_quota_remaining, sizeof(_quota_remaining));
-            _response[1 + sizeof(uint64_t)] = static_cast<std::byte>(_ttl_type);
-            std::memcpy(_response.data() + 1 + sizeof(uint64_t) + 1, &_ttl_remaining, sizeof(_ttl_remaining));
-
-            return _response;
+            return {
+                static_cast<std::byte>(request.header_->request_id_),
+                static_cast<std::byte>(inserted)
+            };
         }
 
         /**
