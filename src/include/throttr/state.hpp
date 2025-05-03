@@ -192,9 +192,11 @@ namespace throttr {
                                 obj.entry_.quota_ += request.header_->value_;
                                 break;
                             case decrease:
-                                obj.entry_.quota_ = std::max<std::uint64_t>(
-                                    obj.entry_.quota_ - std::min(obj.entry_.quota_, request.header_->value_), 0
-                                );
+                                if (obj.entry_.quota_ >= request.header_->value_) {
+                                    obj.entry_.quota_ -= request.header_->value_;
+                                } else {
+                                    obj.entry_.quota_ = 0;
+                                }
                                 break;
                         }
                         break;
