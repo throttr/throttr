@@ -177,64 +177,90 @@ namespace throttr {
                 return _response;
             }
 
-            using enum change_types;
-            using enum ttl_types;
+            using enum attribute_types;
 
-            const bool _was_modified = storage_.modify(_it, [&](auto &obj) {
+            const bool _was_modified = storage_.modify(_it, [&](entry_wrapper & object) {
                 switch (request.header_->attribute_) {
-
-                    case attribute_types::quota:
-                        switch (request.header_->change_) {
-                            case patch:
-                                obj.entry_.quota_ = request.header_->value_;
-                                break;
-                            case increase:
-                                obj.entry_.quota_ += request.header_->value_;
-                                break;
-                            case decrease:
-                                if (obj.entry_.quota_ >= request.header_->value_) {
-                                    obj.entry_.quota_ -= request.header_->value_;
-                                } else {
-                                    obj.entry_.quota_ = 0;
-                                }
-                                break;
-                        }
+                    case quota:
+                        apply_quota_change(object.entry_, request);
                         break;
-
-                    case attribute_types::ttl: {
-                        std::chrono::nanoseconds _duration;
-
-                        switch (obj.entry_.ttl_type_) {
-                            case seconds:
-                                _duration = std::chrono::seconds(request.header_->value_);
-                                break;
-                            case milliseconds:
-                                _duration = std::chrono::milliseconds(request.header_->value_);
-                                break;
-                            case nanoseconds:
-                            default:
-                                _duration = std::chrono::nanoseconds(request.header_->value_);
-                                break;
-                        }
-
-                        switch (request.header_->change_) {
-                            case patch:
-                                obj.entry_.expires_at_ = _now + _duration;
-                                break;
-                            case increase:
-                                obj.entry_.expires_at_ += _duration;
-                                break;
-                            case decrease:
-                                obj.entry_.expires_at_ -= _duration;
-                                break;
-                        }
+                    case ttl:
+                        apply_ttl_change(object.entry_, request, _now);
                         break;
-                    }
                 }
             });
 
             _response[_offset_status] = std::byte{_was_modified};
             return _response;
+        }
+
+        /**
+         * Apply quota change
+         *
+         * @param entry
+         * @param request
+         * @return bool
+         */
+        static bool apply_quota_change(request_entry &entry, const request_update &request) {
+            using enum change_types;
+
+            switch (request.header_->change_) {
+                case patch:
+                    entry.quota_ = request.header_->value_;
+                    break;
+                case increase:
+                    entry.quota_ += request.header_->value_;
+                    break;
+                case decrease:
+                    if (entry.quota_ >= request.header_->value_) {
+                        entry.quota_ -= request.header_->value_;
+                    } else {
+                        entry.quota_ = 0;
+                    }
+                    break;
+            }
+            return true;
+        }
+
+        /**
+         * Apply TTL change
+         *
+         * @param entry
+         * @param request
+         * @param _now
+         * @return bool
+         */
+        static bool apply_ttl_change(request_entry &entry, const request_update &request,
+                                     const std::chrono::steady_clock::time_point &_now) {
+            using enum ttl_types;
+            std::chrono::nanoseconds _duration;
+
+            switch (entry.ttl_type_) {
+                case seconds:
+                    _duration = std::chrono::seconds(request.header_->value_);
+                    break;
+                case milliseconds:
+                    _duration = std::chrono::milliseconds(request.header_->value_);
+                    break;
+                case nanoseconds:
+                default:
+                    _duration = std::chrono::nanoseconds(request.header_->value_);
+                    break;
+            }
+
+            switch (request.header_->change_) {
+                case change_types::patch:
+                    entry.expires_at_ = _now + _duration;
+                    break;
+                case change_types::increase:
+                    entry.expires_at_ += _duration;
+                    break;
+                case change_types::decrease:
+                    entry.expires_at_ -= _duration;
+                    break;
+            }
+
+            return true;
         }
 
         /**
