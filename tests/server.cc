@@ -430,7 +430,7 @@ TEST_F(ServerTestFixture, UpdateDecreaseQuotaBeyondZero) {
     ASSERT_EQ(static_cast<uint8_t>(_update_response[4]), 1);
 
     const auto _query = request_query_builder(1301, "consumer_beyond", "/resource_beyond");
-    const auto _query_response = send_and_receive(_query);
+    const auto _query_response = send_and_receive(_query, 22);
 
     uint64_t _quota_remaining = 0;
     std::memcpy(&_quota_remaining, _query_response.data() + 5, sizeof(_quota_remaining));
