@@ -192,7 +192,7 @@ TEST_F(ServerTestFixture, QueryBeforeInsertReturnsZeroQuota) {
         500, "consumer_query", "/resource_query"
     );
 
-    auto _response = send_and_receive(_buffer);
+    auto _response = send_and_receive(_buffer, 5);
 
     ASSERT_EQ(_response.size(), 5);
 
@@ -215,7 +215,7 @@ TEST_F(ServerTestFixture, QueryAfterInsertReturnsCorrectQuota) {
         601, "consumer_query2", "/resource_query2"
     );
 
-    auto _response = send_and_receive(_query_buffer, 18);
+    auto _response = send_and_receive(_query_buffer, 22);
 
     uint32_t _response_id = 0;
     std::memcpy(&_response_id, _response.data(), sizeof(_response_id));
