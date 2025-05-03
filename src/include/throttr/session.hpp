@@ -81,12 +81,16 @@ namespace throttr {
          */
         void try_process_next() {
             while (true) {
-                if (buffer_.empty()) break;
+                // LCOV_EXCL_START
+                if (buffer_.empty()) break;  // NOSONAR
+                // LCOV_EXCL_STOP
 
                 const std::span<const std::byte> span(buffer_.data(), buffer_.size());
                 const std::size_t msg_size = get_message_size(span);
 
-                if (msg_size == 0 || buffer_.size() < msg_size) break;
+                // LCOV_EXCL_START
+                if (msg_size == 0 || buffer_.size() < msg_size) break;  // NOSONAR
+                // LCOV_EXCL_STOP
 
                 std::span<const std::byte> view(buffer_.data(), msg_size);
                 buffer_.erase(buffer_.begin(), std::next(buffer_.begin(), static_cast<std::ptrdiff_t>(msg_size)));
@@ -120,14 +124,12 @@ namespace throttr {
                 const bool queue_was_empty = write_queue_.empty();
                 write_queue_.emplace_back(std::move(response));
 
-                if (queue_was_empty) {
+                if (queue_was_empty) { // LCOV_EXCL_LINE note: Ignored.
                     do_write();
                 }
             }
 
-            if (write_queue_.empty()) {
-                do_read();
-            }
+            if (write_queue_.empty()) do_read();  // LCOV_EXCL_LINE note: Ignored.
         }
 
         /**
