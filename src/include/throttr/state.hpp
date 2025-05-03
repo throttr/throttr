@@ -277,6 +277,7 @@ namespace throttr {
 
                 const auto _now = std::chrono::steady_clock::now();
                 while (!_timer_index.empty() && _timer_index.begin()->entry_.expires_at_ <= _now) {
+                    // TODO: Create "To be removed" bin. It should be protected for a while, not too much.
                     _timer_index.erase(_timer_index.begin());
                 }
 
