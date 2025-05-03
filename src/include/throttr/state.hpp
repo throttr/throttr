@@ -165,8 +165,15 @@ namespace throttr {
             auto &_index = storage_.get<tag_by_key>();
             const auto _it = _index.find(_key);
 
+            constexpr std::size_t _offset_id = 0;
+            constexpr std::size_t _offset_status = _offset_id + sizeof(uint32_t);
+            constexpr std::size_t _response_size = _offset_status + sizeof(uint8_t);
+
+            std::vector<std::byte> _response(_response_size);
+            std::memcpy(_response.data() + _offset_id, &request.header_->request_id_, sizeof(uint32_t));
+
             if (_it == _index.end() || _now >= _it->entry_.expires_at_) {
-                std::vector _response(1, std::byte{0x00});
+                _response[_offset_status] = std::byte{0x00};
                 return _response;
             }
 
@@ -226,7 +233,7 @@ namespace throttr {
                 }
             });
 
-            std::vector _response(1, std::byte{_was_modified});
+            _response[_offset_status] = std::byte{_was_modified};
             return _response;
         }
 
@@ -243,14 +250,16 @@ namespace throttr {
             auto &_index = storage_.get<tag_by_key>();
             const auto _it = _index.find(_key);
 
+            std::vector<std::byte> _response(5);
+            std::memcpy(_response.data(), &request.header_->request_id_, sizeof(uint32_t));
+
             if (_it == _index.end() || _now >= _it->entry_.expires_at_) {
-                std::vector _response(1, std::byte{0x00});
+                _response[4] = std::byte{0x00};
                 return _response;
             }
 
             _index.erase(_it);
-
-            std::vector _response(1, std::byte{0x01});
+            _response[4] = std::byte{0x01};
             return _response;
         }
 
