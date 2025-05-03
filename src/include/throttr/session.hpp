@@ -94,7 +94,7 @@ namespace throttr {
                 std::vector response = {std::byte{0x00}};
 
                 try {
-                    switch (const auto type = static_cast<request_types>(std::to_integer<uint8_t>(view[0]))) {
+                    switch (const auto type = static_cast<request_types>(std::to_integer<uint8_t>(view[0])); type) {
                         case request_types::insert:
                             response = state_->handle_insert(request_insert::from_buffer(view));
                             break;

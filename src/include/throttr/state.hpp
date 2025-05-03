@@ -28,6 +28,7 @@
 #include <unordered_map>
 #include <cstring>
 #include <boost/core/ignore_unused.hpp>
+#include <boost/asio/strand.hpp>
 
 namespace throttr {
     /**
@@ -86,11 +87,11 @@ namespace throttr {
             boost::ignore_unused(_);
 
             if (_inserted) {
-                if (const auto &_entry = _index.begin()->entry_; _expires_at <= _entry.expires_at_) {
-                    boost::asio::post(strand_, [_self = shared_from_this(), _expires_at] {
-                        _self->schedule_expiration(_expires_at);
-                    });
-                }
+                // if (const auto &_entry = _index.begin()->entry_; _expires_at <= _entry.expires_at_) {
+                //     boost::asio::post(strand_, [_self = shared_from_this(), _expires_at] {
+                //         _self->schedule_expiration(_expires_at);
+                //     });
+                // }
             }
 
             constexpr std::size_t _offset_response_request_id = 0;
@@ -159,76 +160,73 @@ namespace throttr {
          */
         std::vector<std::byte> handle_update(const request_update &request) {
             const request_key _key{std::string(request.consumer_id_), std::string(request.resource_id_)};
-
             const auto _now = std::chrono::steady_clock::now();
-            const auto _it = requests_.find(_key);
 
-            if (_it == requests_.end()) {
-                // LCOV_EXCL_LINE note: Partially covered.
-                std::vector _error_response(1, std::byte{0x00});
-                return _error_response;
+            auto &_index = storage_.get<tag_by_key>();
+            const auto _it = _index.find(_key);
+
+            if (_it == _index.end() || _now >= _it->entry_.expires_at_) {
+                std::vector _response(1, std::byte{0x00});
+                return _response;
             }
-
-            auto &_entry = _it->second;
 
             using enum change_types;
             using enum ttl_types;
 
-            switch (request.header_->attribute_) {
-                case attribute_types::quota:
+            const bool _was_modified = storage_.modify(_it, [&](auto &obj) {
+                switch (request.header_->attribute_) {
 
-                    switch (request.header_->change_) {
-                        case patch:
-                            _entry.quota_ = request.header_->value_;
-                            break;
-                        case increase:
-                            _entry.quota_ += request.header_->value_;
-                            break;
-                        case decrease:
-                            if (_entry.quota_ >= request.header_->value_) {
-                                // LCOV_EXCL_LINE note: Partially covered.
-                                _entry.quota_ -= request.header_->value_;
-                            } else {
-                                _entry.quota_ = 0;
-                            }
-                            break;
+                    case attribute_types::quota:
+                        switch (request.header_->change_) {
+                            case patch:
+                                obj.entry_.quota_ = request.header_->value_;
+                                break;
+                            case increase:
+                                obj.entry_.quota_ += request.header_->value_;
+                                break;
+                            case decrease:
+                                if (obj.entry_.quota_ >= request.header_->value_) {
+                                    obj.entry_.quota_ -= request.header_->value_;
+                                } else {
+                                    obj.entry_.quota_ = 0;
+                                }
+                                break;
+                        }
+                        break;
+
+                    case attribute_types::ttl: {
+                        std::chrono::nanoseconds _duration;
+
+                        switch (obj.entry_.ttl_type_) {
+                            case seconds:
+                                _duration = std::chrono::seconds(request.header_->value_);
+                                break;
+                            case milliseconds:
+                                _duration = std::chrono::milliseconds(request.header_->value_);
+                                break;
+                            case nanoseconds:
+                            default:
+                                _duration = std::chrono::nanoseconds(request.header_->value_);
+                                break;
+                        }
+
+                        switch (request.header_->change_) {
+                            case patch:
+                                obj.entry_.expires_at_ = _now + _duration;
+                                break;
+                            case increase:
+                                obj.entry_.expires_at_ += _duration;
+                                break;
+                            case decrease:
+                                obj.entry_.expires_at_ -= _duration;
+                                break;
+                        }
+                        break;
                     }
+                }
+            });
 
-                    break;
-                case attribute_types::ttl:
-
-                    std::chrono::nanoseconds _duration;
-
-                    switch (_entry.ttl_type_) {
-                        case seconds:
-                            _duration = std::chrono::seconds(request.header_->value_);
-                            break;
-                        case milliseconds:
-                            _duration = std::chrono::milliseconds(request.header_->value_);
-                            break;
-                        case nanoseconds:
-                        default:
-                            _duration = std::chrono::nanoseconds(request.header_->value_);
-                            break;
-                    }
-
-
-                    switch (request.header_->change_) {
-                        case patch:
-                            _entry.expires_at_ = _now + _duration;
-                            break;
-                        case increase:
-                            _entry.expires_at_ += _duration;
-                            break;
-                        case decrease:
-                            _entry.expires_at_ -= _duration;
-                            break;
-                    }
-
-                    break;
-            }
-
-            std::vector _response(1, std::byte{0x01});
+            std::vector _response(1, std::byte{_was_modified});
             return _response;
         }
 
@@ -240,19 +238,20 @@ namespace throttr {
          */
         std::vector<std::byte> handle_purge(const request_purge &request) {
             const request_key _key{std::string(request.consumer_id_), std::string(request.resource_id_)};
+            const auto _now = std::chrono::steady_clock::now();
 
-            const auto _it = requests_.find(_key);
+            auto &_index = storage_.get<tag_by_key>();
+            const auto _it = _index.find(_key);
 
-            if (_it == requests_.end()) {
-                // LCOV_EXCL_LINE note: Partially covered.
-                std::vector _error_response(1, std::byte{0x00});
-                return _error_response;
+            if (_it == _index.end() || _now >= _it->entry_.expires_at_) {
+                std::vector _response(1, std::byte{0x00});
+                return _response;
             }
 
-            requests_.erase(_it);
+            _index.erase(_it);
 
-            std::vector _success_response(1, std::byte{0x01});
-            return _success_response;
+            std::vector _response(1, std::byte{0x01});
+            return _response;
         }
 
     private:
@@ -278,7 +277,7 @@ namespace throttr {
                 const auto _now = std::chrono::steady_clock::now();
                 while (!_timer_index.empty() && _timer_index.begin()->entry_.expires_at_ <= _now) {
                     // TODO: Create "To be removed" bin. It should be protected for a while, not too much.
-                    _timer_index.erase(_timer_index.begin());
+                    // _timer_index.erase(_timer_index.begin());
                 }
 
                 if (!_timer_index.empty()) {

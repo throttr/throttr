@@ -22,6 +22,7 @@
 
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/ordered_index.hpp>
+#include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/member.hpp>
 #include <boost/multi_index/tag.hpp>
 
@@ -45,19 +46,29 @@ namespace throttr {
     struct tag_by_expiration { };
 
     /**
+     * Request entry by expiration
+     */
+    struct request_entry_by_expiration {
+        bool operator()(const request_entry& a, const request_entry& b) const {
+            return a.expires_at_ < b.expires_at_;
+        }
+    };
+
+    /**
      * Multi-index container type for request storage
      */
     using storage_type = boost::multi_index::multi_index_container<
         entry_wrapper,
         boost::multi_index::indexed_by<
-            boost::multi_index::ordered_unique<
+            boost::multi_index::hashed_unique<
                 boost::multi_index::tag<tag_by_key>,
                 boost::multi_index::member<entry_wrapper, request_key, &entry_wrapper::key_>,
                 request_key_hasher
             >,
             boost::multi_index::ordered_non_unique<
                 boost::multi_index::tag<tag_by_expiration>,
-                boost::multi_index::member<entry_wrapper, request_entry, &entry_wrapper::entry_>
+                boost::multi_index::member<entry_wrapper, request_entry, &entry_wrapper::entry_>,
+                request_entry_by_expiration
             >
         >
     >;
