@@ -58,22 +58,26 @@ The full specification of the Throttr binary protocol — including request form
 Pull the latest release:
 
 ```bash
-docker pull ghcr.io/throttr/throttr:2.1.2-release
+docker pull ghcr.io/throttr/throttr:2.1.3-release
 ```
 
 Run it
 
 ```bash
-docker run -p 9000:9000 ghcr.io/throttr/throttr:2.1.2-release
+docker run -p 9000:9000 ghcr.io/throttr/throttr:2.1.3-release
 ```
 
 Environment variables can also be passed to customize the behavior:
 
 ```bash
-docker run -e THREADS=4 -p 9000:9000 ghcr.io/throttr/throttr:2.1.2-release
+docker run -e THREADS=4 -p 9000:9000 ghcr.io/throttr/throttr:2.1.3-release
 ```
 
 ### 📝 Changelog
+
+### v2.1.3
+
+- Requests now can be sent on batch.
 
 #### v2.1.2
 
