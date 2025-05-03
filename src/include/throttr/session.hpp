@@ -81,10 +81,6 @@ namespace throttr {
          */
         void try_process_next() {
             while (true) {
-                // LCOV_EXCL_START
-                if (buffer_.empty()) break;  // NOSONAR
-                // LCOV_EXCL_STOP
-
                 const std::span<const std::byte> span(buffer_.data(), buffer_.size());
                 const std::size_t msg_size = get_message_size(span);
 
