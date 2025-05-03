@@ -19,12 +19,15 @@
 #define THROTTR_STATE_HPP
 
 #include <throttr/protocol.hpp>
+#include <throttr/storage.hpp>
+#include <throttr/time.hpp>
 
 #include <memory>
 #include <atomic>
 #include <vector>
 #include <unordered_map>
 #include <cstring>
+#include <boost/core/ignore_unused.hpp>
 
 namespace throttr {
     /**
@@ -37,10 +40,11 @@ namespace throttr {
          */
         std::atomic_bool acceptor_ready_;
 
+
         /**
-         * Requests
+         * Storage
          */
-        std::unordered_map<request_key, request_entry, request_key_hasher> requests_;
+        storage_type storage_;
 
         /**
          * Expiration timer
@@ -48,99 +52,16 @@ namespace throttr {
         boost::asio::steady_timer expiration_timer_;
 
         /**
-         * Expiration index
+         * Strand
          */
-        std::multimap<std::chrono::steady_clock::time_point, request_key> expiration_index_;
+        boost::asio::strand<boost::asio::io_context::executor_type> strand_;
 
         /**
          * Constructor
          *
          * @param ioc
          */
-        explicit state(boost::asio::io_context &ioc) : expiration_timer_(ioc) { }
-
-        /**
-         * Run reaper
-         */
-        void run_reaper() {
-            next_expiration();
-        }
-
-        /**
-         * Next expiration
-         */
-        void next_expiration() {
-            while (!expiration_index_.empty()) {
-                const auto &[expires_at, key] = *expiration_index_.begin();
-                const auto delay = expires_at - std::chrono::steady_clock::now();
-
-                if (delay <= std::chrono::steady_clock::duration::zero()) {
-                    requests_.erase(key);
-                    expiration_index_.erase(expiration_index_.begin());
-                    continue;
-                }
-
-                expiration_timer_.expires_after(delay);
-                expiration_timer_.async_wait([self = shared_from_this()](const boost::system::error_code &ec) {
-                    if (!ec) self->next_expiration();
-                });
-                break;
-            }
-        }
-
-        /**
-         * Calculate TTL remaining
-         *
-         * @param expires_at
-         * @param ttl
-         * @return int64_t
-         */
-        static int64_t calculate_ttl_remaining(
-            const std::chrono::steady_clock::time_point &expires_at,
-            const ttl_types ttl
-        ) {
-            const auto _now = std::chrono::steady_clock::now();
-
-            if (expires_at <= _now) { // LCOV_EXCL_LINE note: Partially covered.
-                return 0;
-            }
-
-            const auto _diff = expires_at - _now;
-
-            if (ttl == ttl_types::nanoseconds) { // LCOV_EXCL_LINE note: Partially covered.
-                return duration_cast<std::chrono::nanoseconds>(_diff).count();
-            }
-
-            if (ttl == ttl_types::milliseconds) { // LCOV_EXCL_LINE note: Partially covered.
-                return duration_cast<std::chrono::milliseconds>(_diff).count();
-            }
-
-            return duration_cast<std::chrono::seconds>(_diff).count();
-        }
-
-        /**
-         * Calculate expiration point
-         *
-         * @param now
-         * @param ttl_type
-         * @param ttl
-         * @return std::chrono::steady_clock::time_point
-         */
-        static std::chrono::steady_clock::time_point calculate_expiration_point(
-            const std::chrono::steady_clock::time_point &now,
-            const ttl_types ttl_type,
-            const uint64_t ttl
-        ) {
-            if (ttl_type == ttl_types::nanoseconds) {
-                return now + std::chrono::nanoseconds(ttl);
-            }
-
-            if (ttl_type == ttl_types::milliseconds) { // LCOV_EXCL_LINE note: Partially covered.
-                return now + std::chrono::milliseconds(ttl);
-            }
-
-            return now + std::chrono::seconds(ttl);
-        }
+        explicit state(boost::asio::io_context &ioc) : expiration_timer_(ioc), strand_(ioc.get_executor()) { }
 
 
         /**
@@ -150,25 +71,30 @@ namespace throttr {
          * @return std::vector<std::byte>
          */
         std::vector<std::byte> handle_insert(const request_insert &request) {
-            const request_key key{std::string(request.consumer_id_), std::string(request.resource_id_)};
+            const request_key _key{std::string(request.consumer_id_), std::string(request.resource_id_)};
+            const auto _now = std::chrono::steady_clock::now();
+            const auto _expires_at = get_expiration_point(_now, request.header_->ttl_type_, request.header_->ttl_);
 
-            const auto now = std::chrono::steady_clock::now();
-            const auto expires_at = calculate_expiration_point(now, request.header_->ttl_type_, request.header_->ttl_);
+            auto& _index = storage_.get<tag_by_expiration>();
 
-            const auto [it, inserted] = requests_.insert({key, {
-                request.header_->quota_,
-                request.header_->ttl_type_,
-                expires_at
-            }});
+            auto [_, _inserted] = storage_.insert({
+                _key,
+                {request.header_->quota_, request.header_->ttl_type_, _expires_at}
+            });
 
-            if (inserted) {
-                expiration_index_.insert({expires_at, key});
-                next_expiration();
+            boost::ignore_unused(_);
+
+            if (_inserted) {
+                if (const auto& _entry = _index.begin()->entry_; _expires_at <= _entry.expires_at_) {
+                    boost::asio::post(strand_, [_self = shared_from_this(), _expires_at] {
+                        _self->schedule_expiration(_expires_at);
+                    });
+                }
             }
 
             return {
                 static_cast<std::byte>(request.header_->request_id_),
-                static_cast<std::byte>(inserted)
+                static_cast<std::byte>(_inserted)
             };
         }
 
@@ -193,7 +119,7 @@ namespace throttr {
                 _can = true;
                 _quota_remaining = _it->second.quota_;
                 _ttl_type = _it->second.ttl_type_;
-                _ttl_remaining = calculate_ttl_remaining(_it->second.expires_at_, _ttl_type);
+                _ttl_remaining = get_ttl(_it->second.expires_at_, _ttl_type);
             }
 
             std::vector<std::byte> _response;
@@ -306,6 +232,40 @@ namespace throttr {
 
             std::vector _success_response(1, std::byte{0x01});
             return _success_response;
+        }
+
+
+    private:
+
+        /**
+         * Schedule expiration
+         */
+        void schedule_expiration(const std::chrono::steady_clock::time_point proposed) {
+            auto& _schedule_index = storage_.get<tag_by_expiration>();
+            if (_schedule_index.empty()) return;
+
+            const auto& _entry = _schedule_index.begin()->entry_;
+
+            if (proposed > _entry.expires_at_) return;
+
+            const auto _delay = _entry.expires_at_ - std::chrono::steady_clock::now();
+
+            expiration_timer_.expires_after(_delay);
+            expiration_timer_.async_wait([_self = shared_from_this()](const boost::system::error_code& ec) {
+                if (ec) return;
+
+                auto& _timer_index = _self->storage_.get<tag_by_expiration>();
+
+                const auto _now = std::chrono::steady_clock::now();
+                while (!_timer_index.empty() && _timer_index.begin()->entry_.expires_at_ <= _now) {
+                    _timer_index.erase(_timer_index.begin());
+                }
+
+                if (!_timer_index.empty()) {
+                    const auto next = _timer_index.begin()->entry_.expires_at_;
+                    _self->schedule_expiration(next);
+                }
+            });
         }
 
     };
