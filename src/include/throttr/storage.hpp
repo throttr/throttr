@@ -38,8 +38,8 @@ namespace throttr {
 
         request_key key() const {
             return {
-                std::string_view(reinterpret_cast<const char*>(consumer_id_.data()), consumer_id_.size()),
-                std::string_view(reinterpret_cast<const char*>(resource_id_.data()), resource_id_.size())
+                std::string_view(reinterpret_cast<const char*>(consumer_id_.data()), consumer_id_.size()), // NOSONAR
+                std::string_view(reinterpret_cast<const char*>(resource_id_.data()), resource_id_.size()) // NOSONAR
             };
         }
 

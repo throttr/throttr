@@ -85,12 +85,12 @@ namespace throttr {
 
             auto [_it, _inserted] = storage_.insert(entry_wrapper{
                 std::vector(
-                    reinterpret_cast<const std::byte*>(request.consumer_id_.data()),
-                    reinterpret_cast<const std::byte*>(request.consumer_id_.data() + request.consumer_id_.size())
+                    reinterpret_cast<const std::byte*>(request.consumer_id_.data()), // NOSONAR
+                    reinterpret_cast<const std::byte*>(request.consumer_id_.data() + request.consumer_id_.size()) // NOSONAR
                 ),
                 std::vector(
-                    reinterpret_cast<const std::byte*>(request.resource_id_.data()),
-                    reinterpret_cast<const std::byte*>(request.resource_id_.data() + request.resource_id_.size())
+                    reinterpret_cast<const std::byte*>(request.resource_id_.data()), // NOSONAR
+                    reinterpret_cast<const std::byte*>(request.resource_id_.data() + request.resource_id_.size()) // NOSONAR
                 ),
                 _scoped_entry
             });
