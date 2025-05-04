@@ -18,5 +18,5 @@
 #include <throttr/version.hpp>
 
 TEST(Throttr, Version) {
-    ASSERT_EQ(throttr::get_version(), "2.1.3");
+    ASSERT_EQ(throttr::get_version(), "3.0.0");
 }

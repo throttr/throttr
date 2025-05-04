@@ -32,7 +32,7 @@ It implements a custom binary protocol where each client specifies:
 - Their Resource ID.
 - The maximum allowed quota.
 - The time window (TTL) and type (ns/ms/s).
-- The action: Insert, Query or Update.
+- The action: Insert, Query, Update or Purge.
 
 Upon receiving a request, **Throttr**:
 
@@ -58,22 +58,29 @@ The full specification of the Throttr binary protocol — including request form
 Pull the latest release:
 
 ```bash
-docker pull ghcr.io/throttr/throttr:2.1.3-release
+docker pull ghcr.io/throttr/throttr:3.0.0-release
 ```
 
 Run it
 
 ```bash
-docker run -p 9000:9000 ghcr.io/throttr/throttr:2.1.3-release
+docker run -p 9000:9000 ghcr.io/throttr/throttr:3.0.0-release
 ```
 
 Environment variables can also be passed to customize the behavior:
 
 ```bash
-docker run -e THREADS=4 -p 9000:9000 ghcr.io/throttr/throttr:2.1.3-release
+docker run -e THREADS=4 -p 9000:9000 ghcr.io/throttr/throttr:3.0.0-release
 ```
 
 ### 📝 Changelog
+
+### v3.0.0
+
+- Protocol throttr 3.0.0 implemented.
+- Custom allocation implemented.
+- Zero-copy on read and write.
+- Zero string usages.
 
 ### v2.1.3
 
