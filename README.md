@@ -74,7 +74,7 @@ docker run -e THREADS=4 -p 9000:9000 ghcr.io/throttr/throttr:4.0.1-release-UINT1
 
 ### 📝 Changelog
 
-### V4.0.1
+### v4.0.1
 
 - Protocol throttr 4.0.1 implemented.
 - Now we have containers for better-fit use cases. This limit TTL and Quota.
