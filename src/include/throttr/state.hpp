@@ -277,7 +277,7 @@ namespace throttr {
 #endif
             // LCOV_EXCL_STOP
 
-            if (_erased)
+            if (_erased) // LCOV_EXCL_LINE Note: Partially tested.
                 _index.erase(_it);
 
             return std::make_shared<response_holder>(static_cast<uint8_t>(_erased));
