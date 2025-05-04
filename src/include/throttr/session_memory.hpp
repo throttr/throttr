@@ -30,7 +30,7 @@ namespace throttr {
         /**
          * Constructor
          */
-        handler_memory() = default
+        handler_memory() = default;
 
         /**
          * Swap operator
