@@ -48,7 +48,7 @@ namespace throttr {
         /**
          * State
          */
-        std::shared_ptr<state> state_ = std::make_shared<state>();
+        std::shared_ptr<state> state_ = std::make_shared<state>(ioc_);
 
         /**
          * Construct
@@ -62,7 +62,7 @@ namespace throttr {
             ) : ioc_(threads),
             port_(port),
             threads_(threads) {
-        };
+        }
 
         /**
          * Serve

@@ -19,12 +19,16 @@
 #define THROTTR_STATE_HPP
 
 #include <throttr/protocol.hpp>
+#include <throttr/storage.hpp>
+#include <throttr/time.hpp>
 
 #include <memory>
 #include <atomic>
 #include <vector>
-#include <unordered_map>
 #include <cstring>
+#include <deque>
+#include <boost/core/ignore_unused.hpp>
+#include <boost/asio/strand.hpp>
 
 namespace throttr {
     /**
@@ -37,63 +41,28 @@ namespace throttr {
          */
         std::atomic_bool acceptor_ready_;
 
-        /**
-         * Requests
-         */
-        std::unordered_map<request_key, request_entry, request_key_hasher> requests_;
 
         /**
-         * Calculate TTL remaining
+         * Storage
+         */
+        storage_type storage_;
+
+        /**
+         * Expiration timer
+         */
+        boost::asio::steady_timer expiration_timer_;
+
+        /**
+         * Strand
+         */
+        boost::asio::strand<boost::asio::io_context::executor_type> strand_;
+
+        /**
+         * Constructor
          *
-         * @param expires_at
-         * @param ttl
-         * @return int64_t
+         * @param ioc
          */
-        static int64_t calculate_ttl_remaining(
-            const std::chrono::steady_clock::time_point &expires_at,
-            const ttl_types ttl
-        ) {
-            const auto _now = std::chrono::steady_clock::now();
-
-            if (expires_at <= _now) { // LCOV_EXCL_LINE note: Partially covered.
-                return 0;
-            }
-
-            const auto _diff = expires_at - _now;
-
-            if (ttl == ttl_types::nanoseconds) { // LCOV_EXCL_LINE note: Partially covered.
-                return duration_cast<std::chrono::nanoseconds>(_diff).count();
-            }
-
-            if (ttl == ttl_types::milliseconds) { // LCOV_EXCL_LINE note: Partially covered.
-                return duration_cast<std::chrono::milliseconds>(_diff).count();
-            }
-
-            return duration_cast<std::chrono::seconds>(_diff).count();
-        }
-
-        /**
-         * Calculate expiration point
-         *
-         * @param now
-         * @param ttl_type
-         * @param ttl
-         * @return std::chrono::steady_clock::time_point
-         */
-        static std::chrono::steady_clock::time_point calculate_expiration_point(
-            const std::chrono::steady_clock::time_point &now,
-            const ttl_types ttl_type,
-            const uint64_t ttl
-        ) {
-            if (ttl_type == ttl_types::nanoseconds) {
-                return now + std::chrono::nanoseconds(ttl);
-            }
-
-            if (ttl_type == ttl_types::milliseconds) { // LCOV_EXCL_LINE note: Partially covered.
-                return now + std::chrono::milliseconds(ttl);
-            }
-
-            return now + std::chrono::seconds(ttl);
+        explicit state(boost::asio::io_context &ioc) : expiration_timer_(ioc), strand_(ioc.get_executor()) {
         }
 
 
@@ -104,48 +73,37 @@ namespace throttr {
          * @return std::vector<std::byte>
          */
         std::vector<std::byte> handle_insert(const request_insert &request) {
-            const request_key _key{std::string(request.consumer_id_),std::string(request.resource_id_)};
-
+            const request_key _key{std::string(request.consumer_id_), std::string(request.resource_id_)};
             const auto _now = std::chrono::steady_clock::now();
-            auto _it = requests_.find(_key);
+            const auto _expires_at = get_expiration_point(_now, request.header_->ttl_type_, request.header_->ttl_);
 
-            if (_it != requests_.end() && _now >= _it->second.expires_at_) { // LCOV_EXCL_LINE note: Partially covered.
-                requests_.erase(_it);
-                _it = requests_.end();
-            }
+            auto &_index = storage_.get<tag_by_expiration>();
 
-            bool _can = false;
-            uint64_t _quota_remaining = 0;
-            ttl_types _ttl_type = request.header_->ttl_type_;
-            int64_t _ttl_remaining = 0;
+            auto [_, _inserted] = storage_.insert({
+                _key,
+                {request.header_->quota_, request.header_->ttl_type_, _expires_at}
+            });
 
-            if (_it != requests_.end()) { // LCOV_EXCL_LINE note: Partially covered.
-                auto &_entry = _it->second;
-                if (_entry.quota_ >= request.header_->usage_) { // LCOV_EXCL_LINE note: Partially covered.
-                    _entry.quota_ -= request.header_->usage_;
-                    _can = true;
+            boost::ignore_unused(_);
+
+            if (_inserted) { // LCOV_EXCL_LINE note: Partially covered.
+                if (const auto &_entry = _index.begin()->entry_; _expires_at <= _entry.expires_at_) { // LCOV_EXCL_LINE note: Partially covered.
+                    boost::asio::post(strand_, [_self = shared_from_this(), _expires_at] {
+                        _self->schedule_expiration(_expires_at);
+                    });
                 }
-                _quota_remaining = _entry.quota_;
-                _ttl_remaining = calculate_ttl_remaining(_entry.expires_at_, _ttl_type);
-            } else {
-                const auto _expires_at = calculate_expiration_point(_now, _ttl_type, request.header_->ttl_);
-                requests_[_key] = request_entry{
-                    request.header_->quota_ - request.header_->usage_,
-                    _ttl_type,
-                    _expires_at
-                };
-                _can = true;
-                _quota_remaining = request.header_->quota_ - request.header_->usage_;
-                _ttl_remaining = calculate_ttl_remaining(_expires_at, _ttl_type);
             }
 
-            std::vector<std::byte> _response;
-            _response.resize(1 + sizeof(uint64_t) + 1 + sizeof(int64_t));
+            constexpr std::size_t _offset_response_request_id = 0;
+            constexpr std::size_t _offset_response_status = _offset_response_request_id + sizeof(uint32_t);
+            constexpr std::size_t _response_size = _offset_response_status + sizeof(uint8_t);
 
-            _response[0] = static_cast<std::byte>(_can ? 1 : 0);
-            std::memcpy(_response.data() + 1, &_quota_remaining, sizeof(_quota_remaining));
-            _response[1 + sizeof(uint64_t)] = static_cast<std::byte>(_ttl_type);
-            std::memcpy(_response.data() + 1 + sizeof(uint64_t) + 1, &_ttl_remaining, sizeof(_ttl_remaining));
+            std::vector<std::byte> _response(_response_size);
+
+            std::memcpy(_response.data() + _offset_response_request_id, &request.header_->request_id_,
+                        sizeof(uint32_t));
+            _response[_offset_response_status] = static_cast<std::byte>(_inserted);
+
 
             return _response;
         }
@@ -157,30 +115,39 @@ namespace throttr {
          * @return std::vector<std::byte>
          */
         std::vector<std::byte> handle_query(const request_query &request) {
-            const request_key _key{std::string(request.consumer_id_),std::string(request.resource_id_)};
-
+            const request_key _key{std::string(request.consumer_id_), std::string(request.resource_id_)};
             const auto _now = std::chrono::steady_clock::now();
-            auto _it = requests_.find(_key);
 
-            bool _can = false;
-            uint64_t _quota_remaining = 0;
-            auto _ttl_type = ttl_types::milliseconds;
-            int64_t _ttl_remaining = 0;
+            auto &_index = storage_.get<tag_by_key>();
+            const auto _it = _index.find(_key);
 
-            if (_it != requests_.end() && _now < _it->second.expires_at_) { // LCOV_EXCL_LINE note: Partially covered.
-                _can = true;
-                _quota_remaining = _it->second.quota_;
-                _ttl_type = _it->second.ttl_type_;
-                _ttl_remaining = calculate_ttl_remaining(_it->second.expires_at_, _ttl_type);
+            constexpr std::size_t _offset_response_request_id = 0;
+            constexpr std::size_t _offset_response_status = _offset_response_request_id + sizeof(uint32_t);
+            constexpr std::size_t _response_error_size = _offset_response_status + sizeof(uint8_t);
+            constexpr std::size_t _offset_response_quota = _offset_response_status + sizeof(uint8_t);
+            constexpr std::size_t _offset_response_ttl_type = _offset_response_quota + sizeof(uint64_t);
+            constexpr std::size_t _offset_response_ttl = _offset_response_ttl_type + sizeof(uint8_t);
+            constexpr std::size_t _response_success_size = _offset_response_ttl + sizeof(uint64_t);
+
+            if (_it == _index.end() || _now >= _it->entry_.expires_at_) { // LCOV_EXCL_LINE note: Partially covered.
+                std::vector<std::byte> _response(_response_error_size);
+                std::memcpy(_response.data() + _offset_response_request_id, &request.header_->request_id_,
+                            sizeof(uint32_t));
+                _response[_offset_response_status] = std::byte{0x00};
+                return _response;
             }
 
-            std::vector<std::byte> _response;
-            _response.resize(1 + sizeof(uint64_t) + 1 + sizeof(int64_t));
+            const auto &_entry = _it->entry_;
+            const auto _ttl_remaining = get_ttl(_entry.expires_at_, _entry.ttl_type_);
 
-            _response[0] = static_cast<std::byte>(_can ? 1 : 0);
-            std::memcpy(_response.data() + 1, &_quota_remaining, sizeof(_quota_remaining));
-            _response[1 + sizeof(uint64_t)] = static_cast<std::byte>(_ttl_type);
-            std::memcpy(_response.data() + 1 + sizeof(uint64_t) + 1, &_ttl_remaining, sizeof(_ttl_remaining));
+            std::vector<std::byte> _response(_response_success_size);
+
+            std::memcpy(_response.data() + _offset_response_request_id, &request.header_->request_id_,
+                        sizeof(uint32_t));
+            _response[_offset_response_status] = std::byte{0x01};
+            std::memcpy(_response.data() + _offset_response_quota, &_entry.quota_, sizeof(uint64_t));
+            _response[_offset_response_ttl_type] = static_cast<std::byte>(_entry.ttl_type_);
+            std::memcpy(_response.data() + _offset_response_ttl, &_ttl_remaining, sizeof(uint64_t));
 
             return _response;
         }
@@ -192,76 +159,108 @@ namespace throttr {
          * @return std::vector<std::byte>
          */
         std::vector<std::byte> handle_update(const request_update &request) {
-            const request_key _key{std::string(request.consumer_id_),std::string(request.resource_id_)};
-
+            const request_key _key{std::string(request.consumer_id_), std::string(request.resource_id_)};
             const auto _now = std::chrono::steady_clock::now();
-            const auto _it = requests_.find(_key);
 
-            if (_it == requests_.end()) { // LCOV_EXCL_LINE note: Partially covered.
-                std::vector _error_response(1, std::byte{0x00});
-                return _error_response;
+            auto &_index = storage_.get<tag_by_key>();
+            const auto _it = _index.find(_key);
+
+            constexpr std::size_t _offset_id = 0;
+            constexpr std::size_t _offset_status = _offset_id + sizeof(uint32_t);
+            constexpr std::size_t _response_size = _offset_status + sizeof(uint8_t);
+
+            std::vector<std::byte> _response(_response_size);
+            std::memcpy(_response.data() + _offset_id, &request.header_->request_id_, sizeof(uint32_t));
+
+            if (_it == _index.end() || _now >= _it->entry_.expires_at_) { // LCOV_EXCL_LINE note: Partially covered.
+                _response[_offset_status] = std::byte{0x00};
+                return _response;
             }
 
-            auto &_entry = _it->second;
+            using enum attribute_types;
 
-            using enum change_types;
-            using enum ttl_types;
+            const bool _was_modified = storage_.modify(_it, [&](entry_wrapper & object) {
+                switch (request.header_->attribute_) {
+                    case quota:
+                        apply_quota_change(object.entry_, request);
+                        break;
+                    case ttl:
+                        apply_ttl_change(object.entry_, request, _now);
+                        break;
+                }
+            });
 
-            switch (request.header_->attribute_) {
-                case attribute_types::quota:
-
-                    switch (request.header_->change_) {
-                        case patch:
-                            _entry.quota_ = request.header_->value_;
-                            break;
-                        case increase:
-                            _entry.quota_ += request.header_->value_;
-                            break;
-                        case decrease:
-                            if (_entry.quota_ >= request.header_->value_) { // LCOV_EXCL_LINE note: Partially covered.
-                                _entry.quota_ -= request.header_->value_;
-                            } else {
-                                _entry.quota_ = 0;
-                            }
-                            break;
-                    }
-
-                    break;
-                case attribute_types::ttl:
-
-                    std::chrono::nanoseconds _duration;
-
-                    switch (_entry.ttl_type_) {
-                        case seconds:
-                            _duration = std::chrono::seconds(request.header_->value_);
-                            break;
-                        case milliseconds:
-                            _duration = std::chrono::milliseconds(request.header_->value_);
-                            break;
-                        case nanoseconds:
-                        default:
-                            _duration = std::chrono::nanoseconds(request.header_->value_);
-                            break;
-                    }
-
-
-                    switch (request.header_->change_) {
-                        case patch:
-                            _entry.expires_at_ = _now + _duration;
-                            break;
-                        case increase:
-                            _entry.expires_at_ += _duration;
-                            break;
-                        case decrease:
-                            _entry.expires_at_ -= _duration;
-                            break;
-                    }
-
-                    break;
-            }
-
-            std::vector _response(1, std::byte{0x01});
+            _response[_offset_status] = std::byte{_was_modified};
             return _response;
+        }
+
+        /**
+         * Apply quota change
+         *
+         * @param entry
+         * @param request
+         * @return bool
+         */
+        static bool apply_quota_change(request_entry &entry, const request_update &request) {
+            using enum change_types;
+
+            switch (request.header_->change_) {
+                case patch:
+                    entry.quota_ = request.header_->value_;
+                    break;
+                case increase:
+                    entry.quota_ += request.header_->value_;
+                    break;
+                case decrease:
+                    if (entry.quota_ >= request.header_->value_) { // LCOV_EXCL_LINE note: Partially covered.
+                        entry.quota_ -= request.header_->value_;
+                    } else {
+                        entry.quota_ = 0;
+                    }
+                    break;
+            }
+            return true;
+        }
+
+        /**
+         * Apply TTL change
+         *
+         * @param entry
+         * @param request
+         * @param _now
+         * @return bool
+         */
+        static bool apply_ttl_change(request_entry &entry, const request_update &request,
+                                     const std::chrono::steady_clock::time_point &_now) {
+            using enum ttl_types;
+            std::chrono::nanoseconds _duration;
+
+            switch (entry.ttl_type_) {
+                case seconds:
+                    _duration = std::chrono::seconds(request.header_->value_);
+                    break;
+                case milliseconds:
+                    _duration = std::chrono::milliseconds(request.header_->value_);
+                    break;
+                case nanoseconds:
+                default:
+                    _duration = std::chrono::nanoseconds(request.header_->value_);
+                    break;
+            }
+
+            switch (request.header_->change_) {
+                case change_types::patch:
+                    entry.expires_at_ = _now + _duration;
+                    break;
+                case change_types::increase:
+                    entry.expires_at_ += _duration;
+                    break;
+                case change_types::decrease:
+                    entry.expires_at_ -= _duration;
+                    break;
+            }
+
+            return true;
         }
 
         /**
@@ -271,21 +270,91 @@ namespace throttr {
          * @return std::vector<std::byte>
          */
         std::vector<std::byte> handle_purge(const request_purge &request) {
-            const request_key _key{std::string(request.consumer_id_),std::string(request.resource_id_)};
+            const request_key _key{std::string(request.consumer_id_), std::string(request.resource_id_)};
+            const auto _now = std::chrono::steady_clock::now();
 
-            const auto _it = requests_.find(_key);
+            auto &_index = storage_.get<tag_by_key>();
+            const auto _it = _index.find(_key);
 
-            if (_it == requests_.end()) { // LCOV_EXCL_LINE note: Partially covered.
-                std::vector _error_response(1, std::byte{0x00});
-                return _error_response;
+            std::vector<std::byte> _response(5);
+            std::memcpy(_response.data(), &request.header_->request_id_, sizeof(uint32_t));
+
+            if (_it == _index.end() || _now >= _it->entry_.expires_at_) {// LCOV_EXCL_LINE note: Partially covered.
+                _response[4] = std::byte{0x00};
+                return _response;
             }
 
-            requests_.erase(_it);
-
-            std::vector _success_response(1, std::byte{0x01});
-            return _success_response;
+            _index.erase(_it);
+            _response[4] = std::byte{0x01};
+            return _response;
         }
 
+        /**
+         * Start garbage collector
+         */
+        void start_garbage_collector() {
+            boost::asio::post(strand_, [self = shared_from_this()] {
+                self->collect_and_flush();
+            });
+        }
+
+        /**
+         * Expired entries
+         */
+        std::deque<std::pair<entry_wrapper, std::chrono::steady_clock::time_point>> expired_entries_;
+
+        /**
+         * Cleanup expired entries
+         */
+        void collect_and_flush() {
+            const auto _now = std::chrono::steady_clock::now();
+            const auto _threshold = std::chrono::seconds(5);
+
+            while (!expired_entries_.empty() && _now - expired_entries_.front().second > _threshold) { // LCOV_EXCL_LINE note: Partially covered.
+                expired_entries_.pop_front();
+            }
+
+            expiration_timer_.expires_after(std::chrono::seconds(3));
+            expiration_timer_.async_wait([self = shared_from_this()](const boost::system::error_code& ec) {
+                if (!ec) {
+                    self->collect_and_flush();
+                }
+            });
+        }
+
+        /**
+         * Schedule expiration
+         */
+        void schedule_expiration(const std::chrono::steady_clock::time_point proposed) {
+            auto &_schedule_index = storage_.get<tag_by_expiration>();
+            if (_schedule_index.empty()) return;
+
+            const auto &_entry = _schedule_index.begin()->entry_;
+
+            if (proposed > _entry.expires_at_) return;
+
+            const auto _delay = _entry.expires_at_ - std::chrono::steady_clock::now();
+
+            expiration_timer_.expires_after(_delay);
+            expiration_timer_.async_wait([_self = shared_from_this()](const boost::system::error_code &ec) {
+                if (ec) return;
+
+                auto &_timer_index = _self->storage_.get<tag_by_expiration>();
+
+                const auto _now = std::chrono::steady_clock::now();
+                while (!_timer_index.empty() && _timer_index.begin()->entry_.expires_at_ <= _now) {
+                    auto _it = _timer_index.begin();
+                    entry_wrapper _scoped_entry = *_it;
+                    _self->expired_entries_.emplace_back(std::move(_scoped_entry), _now);
+                    _timer_index.erase(_timer_index.begin());
+                }
+
+                if (!_timer_index.empty()) {
+                    const auto next = _timer_index.begin()->entry_.expires_at_;
+                    _self->schedule_expiration(next);
+                }
+            });
+        }
     };
 }
 
