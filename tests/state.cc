@@ -103,7 +103,7 @@ TEST(State, TTLChange) {
             std::make_tuple(ttl_types::milliseconds, change_types::decrease, milliseconds(32)),
         };
         for (const auto& [t, c, e] : cases)
-            test_ttl_change(_entry, _key, t, c, duration_cast<nanoseconds>(e));
+            test_ttl_change(_entry, _key, t, c, e);
     }
 
     {
@@ -113,7 +113,7 @@ TEST(State, TTLChange) {
             std::make_tuple(ttl_types::seconds, change_types::decrease, seconds(1)),
         };
         for (const auto& [t, c, e] : cases)
-            test_ttl_change(_entry, _key, t, c, duration_cast<nanoseconds>(e));
+            test_ttl_change(_entry, _key, t, c, e);
     }
 }
 
