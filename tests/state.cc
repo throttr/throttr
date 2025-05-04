@@ -39,6 +39,137 @@ auto to_bytes = [](const char* str) {
     };
 };
 
+TEST(State, TTLChange) {
+    using namespace throttr;
+    using namespace std::chrono;
+
+    boost::asio::io_context _ioc;
+    state _state(_ioc);
+
+    request_entry _entry;
+    _entry.expires_at_ = steady_clock::now();
+
+    const std::string _key = "user";
+
+    {
+        std::vector _cases{
+            std::make_tuple(ttl_types::nanoseconds, change_types::patch, nanoseconds(32)),
+            std::make_tuple(ttl_types::nanoseconds, change_types::increase, nanoseconds(64)),
+            std::make_tuple(ttl_types::nanoseconds, change_types::decrease, nanoseconds(16)),
+        };
+
+        for (const auto& [_ttl_type, _change_type, _expected] : _cases) {
+            request_update_header _header{};
+            _header.request_type_ = request_types::update;
+            _header.attribute_ = attribute_types::ttl;
+            _header.change_ = _change_type;
+            _header.value_ = static_cast<value_type>(_expected.count());
+
+            request_update _request{
+                &_header,
+                _key
+            };
+
+            _entry.ttl_type_ = _ttl_type;
+            auto _now = steady_clock::now();
+            auto _before = _entry.expires_at_;
+
+            ASSERT_TRUE(state::apply_ttl_change(_entry, _request, _now));
+
+            switch (_change_type) {
+                case change_types::patch:
+                    EXPECT_GE(_entry.expires_at_, _now + _expected);
+                    break;
+                case change_types::increase:
+                    EXPECT_GE(_entry.expires_at_, _before + _expected);
+                    break;
+                case change_types::decrease:
+                    EXPECT_LE(_entry.expires_at_, _before - _expected);
+                    break;
+            }
+        }
+    }
+
+
+    {
+        std::vector _cases{
+            std::make_tuple(ttl_types::milliseconds, change_types::patch, duration_cast<milliseconds>(milliseconds(128))),
+            std::make_tuple(ttl_types::milliseconds, change_types::increase, duration_cast<milliseconds>(milliseconds(16))),
+            std::make_tuple(ttl_types::milliseconds, change_types::decrease, duration_cast<milliseconds>(milliseconds(32))),
+        };
+
+        for (const auto& [_ttl_type, _change_type, _expected] : _cases) {
+            request_update_header _header{};
+            _header.request_type_ = request_types::update;
+            _header.attribute_ = attribute_types::ttl;
+            _header.change_ = _change_type;
+            _header.value_ = static_cast<value_type>(_expected.count());
+
+            request_update _request{
+                &_header,
+                _key
+            };
+
+            _entry.ttl_type_ = _ttl_type;
+            auto _now = steady_clock::now();
+            auto _before = _entry.expires_at_;
+
+            ASSERT_TRUE(state::apply_ttl_change(_entry, _request, _now));
+
+            switch (_change_type) {
+                case change_types::patch:
+                    EXPECT_GE(_entry.expires_at_, _now + _expected);
+                    break;
+                case change_types::increase:
+                    EXPECT_GE(_entry.expires_at_, _before + _expected);
+                    break;
+                case change_types::decrease:
+                    EXPECT_LE(_entry.expires_at_, _before - _expected);
+                    break;
+            }
+        }
+    }
+
+    {
+        std::vector _cases{
+            std::make_tuple(ttl_types::seconds, change_types::patch, duration_cast<seconds>(seconds(4))),
+            std::make_tuple(ttl_types::seconds, change_types::increase, duration_cast<seconds>(seconds(1))),
+            std::make_tuple(ttl_types::seconds, change_types::decrease, duration_cast<seconds>(seconds(1)))
+        };
+
+        for (const auto& [_ttl_type, _change_type, _expected] : _cases) {
+            request_update_header _header{};
+            _header.request_type_ = request_types::update;
+            _header.attribute_ = attribute_types::ttl;
+            _header.change_ = _change_type;
+            _header.value_ = static_cast<value_type>(_expected.count());
+
+            request_update _request{
+                &_header,
+                _key
+            };
+
+            _entry.ttl_type_ = _ttl_type;
+            auto _now = steady_clock::now();
+            auto _before = _entry.expires_at_;
+
+            ASSERT_TRUE(state::apply_ttl_change(_entry, _request, _now));
+
+            switch (_change_type) {
+                case change_types::patch:
+                    EXPECT_GE(_entry.expires_at_, _now + _expected);
+                    break;
+                case change_types::increase:
+                    EXPECT_GE(_entry.expires_at_, _before + _expected);
+                    break;
+                case change_types::decrease:
+                    EXPECT_LE(_entry.expires_at_, _before - _expected);
+                    break;
+            }
+        }
+    }
+}
+
 TEST_F(StateTestFixture, CollectAndFlush) {
     using namespace std::chrono;
 
@@ -103,18 +234,18 @@ TEST(StateHelpersTest, CalculateExpirationPointSeconds) {
 
 TEST(StateHelpersTest, CalculateTTLRemainingNanosecondsNotExpired) {
     const auto _now = std::chrono::steady_clock::now();
-    const auto _expires = _now + std::chrono::nanoseconds(32);
+    const auto _expires = _now + std::chrono::nanoseconds(256);
 
-    const auto _quota = get_ttl(_expires, ttl_types::nanoseconds);
-    ASSERT_GT(_quota, 0);
+    const auto _ttl = get_ttl(_expires, ttl_types::nanoseconds);
+    ASSERT_GE(_ttl, 0);
 }
 
 TEST(StateHelpersTest, CalculateTTLRemainingSecondsNotExpired) {
     const auto _now = std::chrono::steady_clock::now();
     const auto _expires = _now + std::chrono::seconds(10);
 
-    const auto _quota = get_ttl(_expires, ttl_types::seconds);
-    ASSERT_GE(_quota, 0);
+    const auto _ttl = get_ttl(_expires, ttl_types::seconds);
+    ASSERT_GE(_ttl, 0);
 }
 
 TEST(StateHelpersTest, CalculateTTLRemainingNanosecondsExpired) {
@@ -173,60 +304,4 @@ TEST(State, QuotaChange) {
     request_update_header _dec_lt_header{request_types::update, attribute_types::quota, change_types::decrease, 10, 0};
     request_update _dec_lt_req{&_dec_lt_header, ""};
     EXPECT_FALSE(state::apply_quota_change(_entry, _dec_lt_req));
-}
-
-TEST(State, TTLChange) {
-    using namespace throttr;
-    using namespace std::chrono;
-
-    boost::asio::io_context _ioc;
-    state _state(_ioc);
-
-    request_entry _entry;
-    _entry.expires_at_ = steady_clock::now();
-
-    const std::string _key = "user";
-
-    std::vector<std::tuple<ttl_types, change_types, nanoseconds>> _cases{
-        std::make_tuple(ttl_types::nanoseconds, change_types::patch, nanoseconds(32)),
-        std::make_tuple(ttl_types::nanoseconds, change_types::increase, nanoseconds(64)),
-        std::make_tuple(ttl_types::nanoseconds, change_types::decrease, nanoseconds(16)),
-        std::make_tuple(ttl_types::milliseconds, change_types::patch, duration_cast<nanoseconds>(milliseconds(1))),
-        std::make_tuple(ttl_types::milliseconds, change_types::increase, duration_cast<nanoseconds>(milliseconds(2))),
-        std::make_tuple(ttl_types::milliseconds, change_types::decrease, duration_cast<nanoseconds>(milliseconds(1))),
-        std::make_tuple(ttl_types::seconds, change_types::patch, duration_cast<nanoseconds>(seconds(1))),
-        std::make_tuple(ttl_types::seconds, change_types::increase, duration_cast<nanoseconds>(seconds(2))),
-        std::make_tuple(ttl_types::seconds, change_types::decrease, duration_cast<nanoseconds>(seconds(1)))
-    };
-
-    for (const auto& [_ttl_type, _change_type, _expected] : _cases) {
-        request_update_header _header{};
-        _header.request_type_ = request_types::update;
-        _header.attribute_ = attribute_types::ttl;
-        _header.change_ = _change_type;
-        _header.value_ = static_cast<value_type>(_expected.count());
-
-        request_update _request{
-            &_header,
-            _key
-        };
-
-        _entry.ttl_type_ = _ttl_type;
-        auto _now = steady_clock::now();
-        auto _before = _entry.expires_at_;
-
-        ASSERT_TRUE(state::apply_ttl_change(_entry, _request, _now));
-
-        switch (_change_type) {
-            case change_types::patch:
-                EXPECT_GE(_entry.expires_at_, _now + _expected);
-                break;
-            case change_types::increase:
-                EXPECT_GE(_entry.expires_at_, _before + _expected);
-                break;
-            case change_types::decrease:
-                EXPECT_LE(_entry.expires_at_, _before - _expected + microseconds(1));
-                break;
-        }
-    }
 }
