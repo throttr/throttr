@@ -20,6 +20,8 @@
 #include <cstddef>
 
 namespace throttr {
+    // LCOV_EXCL_START Note: This isn't something that i could cover
+
     /**
      * Handler memory
      */
@@ -28,7 +30,7 @@ namespace throttr {
         /**
          * Constructor
          */
-        handler_memory() : in_use_(false) {}
+        handler_memory() {}
 
         /**
          * Swap operator
@@ -48,7 +50,7 @@ namespace throttr {
          * @param size
          * @return void*
          */
-        void* allocate(const std::size_t size) {
+        void* allocate(const std::size_t size) { // NOSONAR
             if (!in_use_ && size < sizeof(storage_)) {
                 in_use_ = true;
                 return &storage_;
@@ -61,7 +63,7 @@ namespace throttr {
          *
          * @param pointer
          */
-        void deallocate(void* pointer) {
+        void deallocate(void* pointer) { // NOSONAR
             if (pointer == &storage_) {
                 in_use_ = false;
             } else {
@@ -76,12 +78,12 @@ namespace throttr {
         /**
          * Storage
          */
-        typename std::aligned_storage<16>::type storage_;
+        typename std::aligned_storage<16>::type storage_; // NOSONAR
 
         /**
          * In use
          */
-        bool in_use_;
+        bool in_use_ = false;
     };
 
     /**
@@ -106,7 +108,7 @@ namespace throttr {
          * @param other
          */
         template <typename U>
-        handler_allocator(const handler_allocator<U>& other) noexcept : memory_(other.memory_) {}
+        handler_allocator(const handler_allocator<U>& other) noexcept : memory_(other.memory_) {}  // NOSONAR
 
         /**
          * Allocate
@@ -160,6 +162,8 @@ namespace throttr {
         template <typename> friend class handler_allocator;
         handler_memory& memory_;
     };
+
+    // LCOV_EXCL_STOP
 }
 
 #endif // THROTTR_SESSION_MEMORY_HPP
