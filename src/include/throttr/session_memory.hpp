@@ -79,7 +79,7 @@ namespace throttr {
         /**
          * Storage
          */
-        typename std::aligned_storage<16>::type storage_; // NOSONAR
+        std::aligned_storage_t<16> storage_; // NOSONAR
 
         /**
          * In use
