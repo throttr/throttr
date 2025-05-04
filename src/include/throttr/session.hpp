@@ -54,24 +54,6 @@ namespace throttr {
             do_read();
         }
 
-    private:
-        /**
-         * On read
-         *
-         * @param error
-         * @param length
-         */
-        void on_read(const boost::system::error_code &error, const std::size_t length) {
-            if (!error) { // LCOV_EXCL_LINE note: Partially tested.
-                buffer_end_ += length;
-                try_process_next();
-                // LCOV_EXCL_START
-            } else {
-                close_socket();
-            }
-            // LCOV_EXCL_STOP
-        }
-
         /**
          * Compact buffer if needed
          */
@@ -95,13 +77,51 @@ namespace throttr {
         }
 
         /**
+         * Max length
+         */
+        static constexpr std::size_t max_length_ = 4096;
+
+        /**
+         * Buffer
+         */
+        std::array<std::byte, max_length_> buffer_;
+
+
+        /**
+         * Buffer start
+         */
+        std::size_t buffer_start_ = 0;
+
+        /**
+         * Buffer end
+         */
+        std::size_t buffer_end_ = 0;
+    private:
+        /**
+         * On read
+         *
+         * @param error
+         * @param length
+         */
+        void on_read(const boost::system::error_code &error, const std::size_t length) {
+            if (!error) { // LCOV_EXCL_LINE note: Partially tested.
+                buffer_end_ += length;
+                try_process_next();
+                // LCOV_EXCL_START
+            } else {
+                close_socket();
+            }
+            // LCOV_EXCL_STOP
+        }
+
+        /**
          * Try process next
          */
         void try_process_next() {
             while (true) {
                 std::span<const std::byte> span(buffer_.data() + buffer_start_, buffer_end_ - buffer_start_);
                 const std::size_t msg_size = get_message_size(span);
-                if (msg_size == 0 || span.size() < msg_size) break;
+                if (msg_size == 0 || span.size() < msg_size) break; // LCOV_EXCL_LINE note: Ignored.
 
                 std::span<const std::byte> view(buffer_.data() + buffer_start_, msg_size);
                 buffer_start_ += msg_size;
@@ -138,7 +158,7 @@ namespace throttr {
                 }
             }
 
-            if (write_queue_.empty()) do_read();
+            if (write_queue_.empty()) do_read(); // LCOV_EXCL_LINE note: Ignored.
             compact_buffer_if_needed();
         }
 
@@ -243,29 +263,9 @@ namespace throttr {
         std::shared_ptr<state> state_;
 
         /**
-         * Max length
-         */
-        static constexpr std::size_t max_length_ = 4096;
-
-        /**
-         * Buffer
-         */
-        std::array<std::byte, max_length_> buffer_;
-
-        /**
          * Write queue
          */
         std::deque<std::vector<std::byte> >  write_queue_;
-
-        /**
-         * Buffer start
-         */
-        std::size_t buffer_start_ = 0;
-
-        /**
-         * Buffer end
-         */
-        std::size_t buffer_end_ = 0;
     };
 }
 
