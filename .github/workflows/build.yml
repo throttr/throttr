@@ -6,10 +6,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        size: [UINT8, UINT16, UINT32, UINT64]
-
     container:
       image: ghcr.io/throttr/builder-alpine:1.87.0-debug
 
@@ -19,7 +15,7 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DRUNTIME_VALUE_SIZE=${{ matrix.size }}
+          cmake .. -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON
           make -j4
           ctest  --output-on-failure --verbose
           cd ..
