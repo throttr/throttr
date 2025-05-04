@@ -57,22 +57,41 @@ The full specification of the Throttr binary protocol — including request form
 Pull the latest release:
 
 ```bash
-docker pull ghcr.io/throttr/throttr:4.0.0-release
+docker pull ghcr.io/throttr/throttr:4.0.1-release-UINT16
 ```
 
 Run it
 
 ```bash
-docker run -p 9000:9000 ghcr.io/throttr/throttr:4.0.0-release
+docker run -p 9000:9000 ghcr.io/throttr/throttr:4.0.1-release-UINT16
 ```
 
 Environment variables can also be passed to customize the behavior:
 
 ```bash
-docker run -e THREADS=4 -p 9000:9000 ghcr.io/throttr/throttr:4.0.0-release
+docker run -e THREADS=4 -p 9000:9000 ghcr.io/throttr/throttr:4.0.1-release-UINT16
 ```
 
 ### 📝 Changelog
+
+### v4.0.1
+
+- Protocol throttr 4.0.1 implemented.
+- Now we have containers for better-fit use cases. This limit TTL and Quota.
+  - UINT8 to 255.
+  - UINT16 to 65,535.
+  - UINT32 to 4,294,967,295.
+  - UINT64 to 18,446,744,073,709,551,615.
+
+> Which I should use?
+> 
+> You should analyse your rates... 
+> 
+> If you have rates like 60 usages per minute. UINT8 fit perfects to you.
+> 
+> In other hand, if your scale is in bytes, and you're tracking petabytes ... UINT64 is for you ... 
+> 
+> It's just maths. 
 
 ### v4.0.0
 

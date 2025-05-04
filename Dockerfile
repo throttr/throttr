@@ -1,8 +1,10 @@
 ARG TYPE="release"
+ARG SIZE="UINT16"
 
 FROM ghcr.io/throttr/builder-alpine:1.87.0-${TYPE} AS builder
 
 ARG TYPE
+ARG SIZE
 
 COPY src/ src/
 COPY tests/ tests/
@@ -13,7 +15,7 @@ RUN mkdir -p build && \
     cd build && \
     if [ "$TYPE" = "debug" ]; then BUILD_TYPE="Debug"; else BUILD_TYPE="Release"; fi && \
     if [ "$TYPE" = "debug" ]; then BUILD_TESTS="ON"; else BUILD_TESTS="OFF"; fi && \
-    cmake .. -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DBUILD_TESTS="$BUILD_TESTS" && \
+    cmake .. -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DBUILD_TESTS="$BUILD_TESTS" -DRUNTIME_VALUE_SIZE="$SIZE" && \
     make -j4 && \
     strip --strip-all throttr  && \
     mv throttr /usr/bin/throttr && \

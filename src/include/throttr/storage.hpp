@@ -18,7 +18,7 @@
 #ifndef THROTTR_STORAGE_HPP
 #define THROTTR_STORAGE_HPP
 
-#include <throttr/protocol.hpp>
+#include <throttr/protocol_wrapper.hpp>
 
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/ordered_index.hpp>

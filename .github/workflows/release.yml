@@ -12,6 +12,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        size: [UINT8, UINT16, UINT32, UINT64]
+
     container:
       image:  ghcr.io/throttr/builder-alpine:1.87.0-debug
 
@@ -21,15 +25,15 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=OFF -DRUNTIME_VALUE_SIZE=${{ matrix.size }}
           make -j4
           cd ..
           mkdir -p dist
           cp build/throttr dist/
           cp LICENSE dist/
-          cd dist && zip throttr.zip throttr LICENSE
+          cd dist && zip throttr-${{ matrix.size }}.zip throttr LICENSE
 
       - name: Upload release asset
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/throttr.zip
+          files: dist/throttr-${{ matrix.size }}.zip

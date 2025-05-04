@@ -17,6 +17,7 @@
 
 #ifndef THROTTR_SESSION_MEMORY_HPP
 #define THROTTR_SESSION_MEMORY_HPP
+
 #include <cstddef>
 
 namespace throttr {
@@ -78,7 +79,7 @@ namespace throttr {
         /**
          * Storage
          */
-        typename std::aligned_storage<16>::type storage_; // NOSONAR
+        std::byte storage_[16] alignas(16); // NOSONAR
 
         /**
          * In use

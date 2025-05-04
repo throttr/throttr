@@ -18,15 +18,17 @@
 #ifndef THROTTR_SESSION_HPP
 #define THROTTR_SESSION_HPP
 
+#include <throttr/state.hpp>
+#include <throttr/session_memory.hpp>
+
+#include <throttr/protocol_wrapper.hpp>
+
 #include <deque>
 #include <memory>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/write.hpp>
 #include <boost/core/ignore_unused.hpp>
 #include <boost/asio/bind_allocator.hpp>
-#include <throttr/state.hpp>
-#include <throttr/protocol.hpp>
-#include <throttr/session_memory.hpp>
 
 namespace throttr {
     /**
