@@ -39,12 +39,13 @@ auto to_bytes = [](const char* str) {
     };
 };
 
-inline void test_ttl_change(
+template <typename T>
+void test_ttl_change(
     request_entry& _entry,
     const std::string& _key,
     const ttl_types _ttl_type,
     const change_types _change_type,
-    const std::chrono::nanoseconds _expected)
+    const T _expected)
 {
     using namespace throttr;
     using namespace std::chrono;
@@ -93,7 +94,7 @@ TEST(State, TTLChange) {
             std::make_tuple(ttl_types::nanoseconds, change_types::decrease, nanoseconds(16)),
         };
         for (const auto& [t, c, e] : cases)
-            test_ttl_change(_entry, _key, t, c, e);
+            test_ttl_change<nanoseconds>(_entry, _key, t, c, e);
     }
 
     {
@@ -103,7 +104,7 @@ TEST(State, TTLChange) {
             std::make_tuple(ttl_types::milliseconds, change_types::decrease, milliseconds(32)),
         };
         for (const auto& [t, c, e] : cases)
-            test_ttl_change(_entry, _key, t, c, e);
+            test_ttl_change<milliseconds>(_entry, _key, t, c, e);
     }
 
     {
@@ -113,7 +114,7 @@ TEST(State, TTLChange) {
             std::make_tuple(ttl_types::seconds, change_types::decrease, seconds(1)),
         };
         for (const auto& [t, c, e] : cases)
-            test_ttl_change(_entry, _key, t, c, e);
+            test_ttl_change<seconds>(_entry, _key, t, c, e);
     }
 }
 
