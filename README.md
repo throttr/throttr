@@ -79,7 +79,7 @@ docker run -e THREADS=4 -p 9000:9000 ghcr.io/throttr/throttr:4.0.1-release-UINT1
 - Protocol throttr 4.0.1 implemented.
 - Now we have containers for better-fit use cases. This limit TTL and Quota.
   - UINT8 to 255.
-  - UINT16 to 65'535.
+  - UINT16 to 65,535.
   - UINT32 to 4,294,967,295.
   - UINT64 to 18,446,744,073,709,551,615.
 
