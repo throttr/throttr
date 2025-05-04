@@ -23,34 +23,62 @@
 #include <boost/asio/buffer.hpp>
 
 namespace throttr {
+    /**
+     * Response holder
+     */
     struct response_holder {
-        std::vector<boost::asio::const_buffer> buffers;
+        /**
+         * Buffers
+         */
+        std::vector<boost::asio::const_buffer> buffers_;
 
-        std::uint32_t request_id_ = 0;
+        /**
+         * Status
+         */
         std::uint8_t status_ = 0;
-        std::uint64_t quota_ = 0;
-        std::uint8_t ttl_type_ = 0;
-        std::uint64_t ttl_remaining_ = 0;
 
-        response_holder(const request_query &request, const request_entry &e, const std::uint64_t ttl)
-            : request_id_(request.header_->request_id_),
-              status_(0x01),
+        /**
+         * Quota
+         */
+        std::uint16_t quota_ = 0;
+
+        /**
+         * TTL type
+         */
+        std::uint8_t ttl_type_ = 0;
+
+        /**
+         * TTL
+         */
+        std::uint16_t ttl_ = 0;
+
+        /**
+         * Constructor
+         *
+         * @param e
+         * @param ttl
+         */
+        response_holder(const request_entry &e, const std::uint16_t ttl)
+            : status_(0x01),
               quota_(e.quota_),
               ttl_type_(static_cast<uint8_t>(e.ttl_type_)),
-              ttl_remaining_(ttl) {
-            buffers = {
-                boost::asio::buffer(&request_id_, sizeof(request_id_)),
+              ttl_(ttl) {
+            buffers_ = {
                 boost::asio::buffer(&status_, sizeof(status_)),
                 boost::asio::buffer(&quota_, sizeof(quota_)),
                 boost::asio::buffer(&ttl_type_, sizeof(ttl_type_)),
-                boost::asio::buffer(&ttl_remaining_, sizeof(ttl_remaining_))
+                boost::asio::buffer(&ttl_, sizeof(ttl_))
             };
         }
 
-        response_holder(const uint32_t request_id, const uint8_t status_code)
-            : request_id_(request_id), status_(status_code) {
-            buffers = {
-                boost::asio::buffer(&request_id_, sizeof(request_id_)),
+        /**
+         * Constructor
+         *
+         * @param status_code
+         */
+        explicit response_holder(const uint8_t status_code)
+            : status_(status_code) {
+            buffers_ = {
                 boost::asio::buffer(&status_, sizeof(status_))
             };
         }

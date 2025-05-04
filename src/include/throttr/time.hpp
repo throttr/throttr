@@ -34,7 +34,7 @@ namespace throttr {
     inline std::chrono::steady_clock::time_point get_expiration_point(
         const std::chrono::steady_clock::time_point& now,
         const ttl_types ttl_type,
-        const uint64_t ttl
+        const uint16_t ttl
     ) {
         using namespace std::chrono;
 
@@ -53,9 +53,9 @@ namespace throttr {
      *
      * @param expires_at
      * @param ttl_type
-     * @return uint64_t
+     * @return uint16_t
      */
-    inline uint64_t get_ttl(
+    inline uint16_t get_ttl(
         const std::chrono::steady_clock::time_point& expires_at,
         const ttl_types ttl_type
     ) {

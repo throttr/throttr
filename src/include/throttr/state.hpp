@@ -74,8 +74,7 @@ namespace throttr {
          * @return std::shared_ptr<response_holder>
          */
         std::shared_ptr<response_holder> handle_insert(const request_insert &request) {
-            const std::string _consumer_id{request.consumer_id_};
-            const std::string _resource_id{request.resource_id_};
+            const std::string _key{request.key_};
 
             const auto _now = std::chrono::steady_clock::now();
             const auto _expires_at = get_expiration_point(_now, request.header_->ttl_type_, request.header_->ttl_);
@@ -86,12 +85,8 @@ namespace throttr {
 
             auto [_it, _inserted] = storage_.insert(entry_wrapper{
                 std::vector( // LCOV_EXCL_LINE Note: This is actually tested.
-                    reinterpret_cast<const std::byte*>(request.consumer_id_.data()), // NOSONAR
-                    reinterpret_cast<const std::byte*>(request.consumer_id_.data() + request.consumer_id_.size()) // NOSONAR
-                ),
-                std::vector(
-                    reinterpret_cast<const std::byte*>(request.resource_id_.data()), // NOSONAR
-                    reinterpret_cast<const std::byte*>(request.resource_id_.data() + request.resource_id_.size()) // NOSONAR
+                    reinterpret_cast<const std::byte*>(request.key_.data()), // NOSONAR
+                    reinterpret_cast<const std::byte*>(request.key_.data() + request.key_.size()) // NOSONAR
                 ),
                 _scoped_entry
             });
@@ -106,7 +101,7 @@ namespace throttr {
                 }
             }
 
-            return std::make_shared<response_holder>(request.header_->request_id_, static_cast<uint8_t>(_inserted));
+            return std::make_shared<response_holder>(static_cast<uint8_t>(_inserted));
         }
 
         /**
@@ -116,19 +111,19 @@ namespace throttr {
          * @return std::shared_ptr<response_holder>
          */
         std::shared_ptr<response_holder> handle_query(const request_query &request) {
-            const request_key _key{request.consumer_id_, request.resource_id_};
+            const request_key _key{request.key_};
             const auto _now = std::chrono::steady_clock::now();
 
             auto &_index = storage_.get<tag_by_key>();
             const auto _it = _index.find(_key);
 
             if (_it == _index.end() || _now >= _it->entry_.expires_at_) { // LCOV_EXCL_LINE note: Partially covered.
-                return std::make_shared<response_holder>(request.header_->request_id_, 0x00);
+                return std::make_shared<response_holder>(0x00);
             }
 
             const auto &_entry = _it->entry_;
             const auto _ttl_remaining = get_ttl(_entry.expires_at_, _entry.ttl_type_);
-            return std::make_shared<response_holder>(request, _entry, _ttl_remaining);
+            return std::make_shared<response_holder>(_entry, _ttl_remaining);
         }
 
         /**
@@ -138,14 +133,14 @@ namespace throttr {
          * @return std::shared_ptr<response_holder>
          */
         std::shared_ptr<response_holder> handle_update(const request_update &request) {
-            const request_key _key{request.consumer_id_, request.resource_id_};
+            const request_key _key{request.key_};
             const auto _now = std::chrono::steady_clock::now();
 
             auto &_index = storage_.get<tag_by_key>();
             const auto _it = _index.find(_key);
 
             if (_it == _index.end() || _now >= _it->entry_.expires_at_) { // LCOV_EXCL_LINE note: Partially covered.
-                return std::make_shared<response_holder>(request.header_->request_id_, 0x00);
+                return std::make_shared<response_holder>(0x00);
             }
 
             using enum attribute_types;
@@ -161,7 +156,7 @@ namespace throttr {
                 }
             });
 
-            return std::make_shared<response_holder>(request.header_->request_id_, static_cast<uint8_t>(_was_modified));
+            return std::make_shared<response_holder>(static_cast<uint8_t>(_was_modified));
         }
 
         /**
@@ -185,7 +180,7 @@ namespace throttr {
                     if (entry.quota_ >= request.header_->value_) { // LCOV_EXCL_LINE note: Partially covered.
                         entry.quota_ -= request.header_->value_;
                     } else {
-                        entry.quota_ = 0;
+                        return false;
                     }
                     break;
             }
@@ -240,18 +235,18 @@ namespace throttr {
          * @return std::shared_ptr<response_holder>
          */
         std::shared_ptr<response_holder> handle_purge(const request_purge &request) {
-            const request_key _key{request.consumer_id_, request.resource_id_};
+            const request_key _key{request.key_};
             const auto _now = std::chrono::steady_clock::now();
 
             auto &_index = storage_.get<tag_by_key>();
             const auto _it = _index.find(_key);
 
             if (_it == _index.end() || _now >= _it->entry_.expires_at_) {// LCOV_EXCL_LINE note: Partially covered.
-                return std::make_shared<response_holder>(request.header_->request_id_, 0x00);
+                return std::make_shared<response_holder>(0x00);
             }
 
             _index.erase(_it);
-            return std::make_shared<response_holder>(request.header_->request_id_, 0x01);
+            return std::make_shared<response_holder>(0x01);
         }
 
         /**
