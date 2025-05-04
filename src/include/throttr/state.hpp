@@ -29,6 +29,7 @@
 #include <deque>
 #include <boost/core/ignore_unused.hpp>
 #include <boost/asio/strand.hpp>
+#include <iostream>
 
 namespace throttr {
     /**
@@ -40,7 +41,6 @@ namespace throttr {
          * Acceptor ready
          */
         std::atomic_bool acceptor_ready_;
-
 
         /**
          * Storage
@@ -73,18 +73,29 @@ namespace throttr {
          * @return std::vector<std::byte>
          */
         std::vector<std::byte> handle_insert(const request_insert &request) {
-            const request_key _key{std::string(request.consumer_id_), std::string(request.resource_id_)};
+            const std::string _consumer_id{request.consumer_id_};
+            const std::string _resource_id{request.resource_id_};
+
             const auto _now = std::chrono::steady_clock::now();
             const auto _expires_at = get_expiration_point(_now, request.header_->ttl_type_, request.header_->ttl_);
 
+            const request_entry _scoped_entry{request.header_->quota_, request.header_->ttl_type_, _expires_at};
+
             auto &_index = storage_.get<tag_by_expiration>();
 
-            auto [_, _inserted] = storage_.insert({
-                _key,
-                {request.header_->quota_, request.header_->ttl_type_, _expires_at}
+            auto [_it, _inserted] = storage_.insert(entry_wrapper{
+                std::vector( // LCOV_EXCL_LINE Note: This is actually tested.
+                    reinterpret_cast<const std::byte*>(request.consumer_id_.data()), // NOSONAR
+                    reinterpret_cast<const std::byte*>(request.consumer_id_.data() + request.consumer_id_.size()) // NOSONAR
+                ),
+                std::vector(
+                    reinterpret_cast<const std::byte*>(request.resource_id_.data()), // NOSONAR
+                    reinterpret_cast<const std::byte*>(request.resource_id_.data() + request.resource_id_.size()) // NOSONAR
+                ),
+                _scoped_entry
             });
 
-            boost::ignore_unused(_);
+            boost::ignore_unused(_it);
 
             if (_inserted) { // LCOV_EXCL_LINE note: Partially covered.
                 if (const auto &_entry = _index.begin()->entry_; _expires_at <= _entry.expires_at_) { // LCOV_EXCL_LINE note: Partially covered.
@@ -104,7 +115,6 @@ namespace throttr {
                         sizeof(uint32_t));
             _response[_offset_response_status] = static_cast<std::byte>(_inserted);
 
-
             return _response;
         }
 
@@ -115,7 +125,7 @@ namespace throttr {
          * @return std::vector<std::byte>
          */
         std::vector<std::byte> handle_query(const request_query &request) {
-            const request_key _key{std::string(request.consumer_id_), std::string(request.resource_id_)};
+            const request_key _key{request.consumer_id_, request.resource_id_};
             const auto _now = std::chrono::steady_clock::now();
 
             auto &_index = storage_.get<tag_by_key>();
@@ -159,7 +169,7 @@ namespace throttr {
          * @return std::vector<std::byte>
          */
         std::vector<std::byte> handle_update(const request_update &request) {
-            const request_key _key{std::string(request.consumer_id_), std::string(request.resource_id_)};
+            const request_key _key{request.consumer_id_, request.resource_id_};
             const auto _now = std::chrono::steady_clock::now();
 
             auto &_index = storage_.get<tag_by_key>();
@@ -270,7 +280,7 @@ namespace throttr {
          * @return std::vector<std::byte>
          */
         std::vector<std::byte> handle_purge(const request_purge &request) {
-            const request_key _key{std::string(request.consumer_id_), std::string(request.resource_id_)};
+            const request_key _key{request.consumer_id_, request.resource_id_};
             const auto _now = std::chrono::steady_clock::now();
 
             auto &_index = storage_.get<tag_by_key>();

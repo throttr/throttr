@@ -32,15 +32,23 @@ public:
     }
 };
 
+auto to_bytes = [](const char* str) {
+    return std::vector<std::byte>{
+        reinterpret_cast<const std::byte*>(str),
+        reinterpret_cast<const std::byte*>(str + std::strlen(str)) // NOSONAR
+    };
+};
+
 TEST_F(StateTestFixture, CollectAndFlush) {
     using namespace std::chrono;
 
     auto &_expired = state_->expired_entries_;
 
     const auto _now = steady_clock::now();
-    _expired.emplace_back(entry_wrapper{}, _now - seconds(10));
-    _expired.emplace_back(entry_wrapper{}, _now - seconds(6));
-    _expired.emplace_back(entry_wrapper{}, _now - seconds(1));
+
+    _expired.emplace_back(entry_wrapper{to_bytes("a"), to_bytes("b"), {0, ttl_types::seconds, _now - seconds(10)}}, _now - seconds(10));
+    _expired.emplace_back(entry_wrapper{to_bytes("a"), to_bytes("b"), {0, ttl_types::seconds, _now - seconds(6)}}, _now - seconds(6));
+    _expired.emplace_back(entry_wrapper{to_bytes("a"), to_bytes("b"), {0, ttl_types::seconds, _now - seconds(1)}}, _now - seconds(1));
 
     state_->collect_and_flush();
 
@@ -58,18 +66,16 @@ TEST_F(StateTestFixture, ScheduleExpiration_ReprogramsIfNextEntryExists) {
 
     const auto _now = steady_clock::now();
 
-    const request_key _key1{"c1", "r1"};
     request_entry _entry1;
     _entry1.quota_ = 1;
     _entry1.expires_at_ = _now;
 
-    const request_key _key2{"c2", "r2"};
     request_entry _entry2;
     _entry2.quota_ = 1;
     _entry2.expires_at_ = _now + seconds(5);
 
-    _index.insert(entry_wrapper{_key1, _entry1});
-    _index.insert(entry_wrapper{_key2, _entry2});
+    _index.insert(entry_wrapper{to_bytes("c1"), to_bytes("r1"), _entry1});
+    _index.insert(entry_wrapper{to_bytes("c2"), to_bytes("r2"), _entry2});
 
     state_->schedule_expiration(_now);
 
