@@ -19,15 +19,14 @@
 #define THROTTR_SESSION_HPP
 
 #include <deque>
-#include <iomanip>
-#include <iostream>
 #include <memory>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/write.hpp>
 #include <boost/core/ignore_unused.hpp>
-#include <boost/beast/core/bind_handler.hpp>
+#include <boost/asio/bind_allocator.hpp>
 #include <throttr/state.hpp>
 #include <throttr/protocol.hpp>
+#include <throttr/session_memory.hpp>
 
 namespace throttr {
     /**
@@ -98,6 +97,11 @@ namespace throttr {
         std::size_t buffer_end_ = 0;
     private:
         /**
+         * Handler memory
+         */
+        handler_memory handler_memory_;
+
+        /**
          * On read
          *
          * @param error
@@ -129,7 +133,7 @@ namespace throttr {
                 std::vector response = {std::byte{0x00}};
 
                 try {
-                    switch (const auto type = static_cast<request_types>(std::to_integer<uint8_t>(view[0]))) {
+                    switch (const auto type = static_cast<request_types>(std::to_integer<uint8_t>(view[0])); type) {
                         case request_types::insert:
                             response = state_->handle_insert(request_insert::from_buffer(view));
                             break;
@@ -167,8 +171,16 @@ namespace throttr {
         void do_write() {
             auto &msg = write_queue_.front();
             auto self = shared_from_this();
-            boost::asio::async_write(socket_, boost::asio::buffer(msg.data(), msg.size()),
-                                     boost::beast::bind_front_handler(&session::on_write, self));
+            boost::asio::async_write(
+                socket_,
+                boost::asio::buffer(msg.data(), msg.size()),
+                    boost::asio::bind_allocator(
+                        handler_allocator<int>(handler_memory_),
+                        [self] (const boost::system::error_code& ec, const std::size_t length) {
+                            self->on_write(ec, length);
+                        }
+                    )
+                );
         }
 
         /**
@@ -221,7 +233,12 @@ namespace throttr {
             auto self = shared_from_this();
             socket_.async_read_some(
                 boost::asio::buffer(buffer_.data() + buffer_end_, max_length_ - buffer_end_),
-                boost::beast::bind_front_handler(&session::on_read, self)
+                boost::asio::bind_allocator(
+                        handler_allocator<int>(handler_memory_),
+                        [self] (const boost::system::error_code& ec, const std::size_t length) {
+                            self->on_read(ec, length);
+                        }
+                    )
             );
         }
 
