@@ -87,10 +87,10 @@ TEST_F(StateTestFixture, ScheduleExpiration_ReprogramsIfNextEntryExists) {
 
 TEST(StateHelpersTest, CalculateExpirationPointNanoseconds) {
     const auto _now = std::chrono::steady_clock::now();
-    const auto _expires = get_expiration_point(_now, ttl_types::nanoseconds, 1000);
+    const auto _expires = get_expiration_point(_now, ttl_types::nanoseconds, 32);
 
     const auto _diff = std::chrono::duration_cast<std::chrono::nanoseconds>(_expires - _now).count();
-    ASSERT_NEAR(_diff, 1000, 500);
+    ASSERT_NEAR(_diff, 32, 16);
 }
 
 TEST(StateHelpersTest, CalculateExpirationPointSeconds) {
@@ -105,16 +105,16 @@ TEST(StateHelpersTest, CalculateTTLRemainingNanosecondsNotExpired) {
     const auto _now = std::chrono::steady_clock::now();
     const auto _expires = _now + std::chrono::nanoseconds(10'000'000);
 
-    const auto _remaining = get_ttl(_expires, ttl_types::nanoseconds);
-    ASSERT_GT(_remaining, 0);
+    const auto _quota = get_ttl(_expires, ttl_types::nanoseconds);
+    ASSERT_GT(_quota, 0);
 }
 
 TEST(StateHelpersTest, CalculateTTLRemainingSecondsNotExpired) {
     const auto _now = std::chrono::steady_clock::now();
     const auto _expires = _now + std::chrono::seconds(10);
 
-    const auto _remaining = get_ttl(_expires, ttl_types::seconds);
-    ASSERT_GE(_remaining, 0);
+    const auto _quota = get_ttl(_expires, ttl_types::seconds);
+    ASSERT_GE(_quota, 0);
 }
 
 TEST(StateHelpersTest, CalculateTTLRemainingNanosecondsExpired) {
@@ -123,8 +123,8 @@ TEST(StateHelpersTest, CalculateTTLRemainingNanosecondsExpired) {
 
     std::this_thread::sleep_for(std::chrono::nanoseconds(1000));
 
-    const auto _remaining = get_ttl(_expires, ttl_types::nanoseconds);
-    ASSERT_EQ(_remaining, 0);
+    const auto _quota = get_ttl(_expires, ttl_types::nanoseconds);
+    ASSERT_EQ(_quota, 0);
 }
 
 TEST(StateHelpersTest, CalculateTTLRemainingSecondsExpired) {
@@ -133,8 +133,8 @@ TEST(StateHelpersTest, CalculateTTLRemainingSecondsExpired) {
 
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
-    const auto _remaining = get_ttl(_expires, ttl_types::seconds);
-    ASSERT_EQ(_remaining, 0);
+    const auto _quota = get_ttl(_expires, ttl_types::seconds);
+    ASSERT_EQ(_quota, 0);
 }
 
 TEST(State, QuotaChange) {
@@ -185,7 +185,7 @@ TEST(State, TTLChange) {
     request_entry _entry;
     _entry.expires_at_ = steady_clock::now();
 
-    std::string _key = "user";
+    const std::string _key = "user";
 
     std::vector<std::tuple<ttl_types, change_types, nanoseconds>> _cases{
         std::make_tuple(ttl_types::nanoseconds, change_types::patch, nanoseconds(100)),
