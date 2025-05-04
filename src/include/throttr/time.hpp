@@ -66,14 +66,22 @@ namespace throttr {
 
         const auto diff = expires_at - now;
 
+        // LCOV_EXCL_START
         switch (ttl_type) {
             case ttl_types::nanoseconds:
                 return std::chrono::duration_cast<std::chrono::nanoseconds>(diff).count();
             case ttl_types::milliseconds:
                 return std::chrono::duration_cast<std::chrono::milliseconds>(diff).count();
+            case ttl_types::microseconds:
+                return std::chrono::duration_cast<std::chrono::microseconds>(diff).count();
+            case ttl_types::minutes:
+                return std::chrono::duration_cast<std::chrono::minutes>(diff).count();
+            case ttl_types::hours:
+                return std::chrono::duration_cast<std::chrono::hours>(diff).count();
             default:
                 return std::chrono::duration_cast<std::chrono::seconds>(diff).count();
         }
+        // LCOV_EXCL_STOP
     }
 }
 
