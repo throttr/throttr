@@ -20,6 +20,7 @@
 
 #include <throttr/protocol.hpp>
 #include <throttr/storage.hpp>
+#include <throttr/response.hpp>
 #include <throttr/time.hpp>
 
 #include <memory>
@@ -70,9 +71,9 @@ namespace throttr {
          * Handle insert
          *
          * @param request
-         * @return std::vector<std::byte>
+         * @return std::shared_ptr<response_holder>
          */
-        std::vector<std::byte> handle_insert(const request_insert &request) {
+        std::shared_ptr<response_holder> handle_insert(const request_insert &request) {
             const std::string _consumer_id{request.consumer_id_};
             const std::string _resource_id{request.resource_id_};
 
@@ -105,86 +106,46 @@ namespace throttr {
                 }
             }
 
-            constexpr std::size_t _offset_response_request_id = 0;
-            constexpr std::size_t _offset_response_status = _offset_response_request_id + sizeof(uint32_t);
-            constexpr std::size_t _response_size = _offset_response_status + sizeof(uint8_t);
-
-            std::vector<std::byte> _response(_response_size);
-
-            std::memcpy(_response.data() + _offset_response_request_id, &request.header_->request_id_,
-                        sizeof(uint32_t));
-            _response[_offset_response_status] = static_cast<std::byte>(_inserted);
-
-            return _response;
+            return std::make_shared<response_holder>(request.header_->request_id_, static_cast<uint8_t>(_inserted));
         }
 
         /**
          * Handle query
          *
          * @param request
-         * @return std::vector<std::byte>
+         * @return std::shared_ptr<response_holder>
          */
-        std::vector<std::byte> handle_query(const request_query &request) {
+        std::shared_ptr<response_holder> handle_query(const request_query &request) {
             const request_key _key{request.consumer_id_, request.resource_id_};
             const auto _now = std::chrono::steady_clock::now();
 
             auto &_index = storage_.get<tag_by_key>();
             const auto _it = _index.find(_key);
 
-            constexpr std::size_t _offset_response_request_id = 0;
-            constexpr std::size_t _offset_response_status = _offset_response_request_id + sizeof(uint32_t);
-            constexpr std::size_t _response_error_size = _offset_response_status + sizeof(uint8_t);
-            constexpr std::size_t _offset_response_quota = _offset_response_status + sizeof(uint8_t);
-            constexpr std::size_t _offset_response_ttl_type = _offset_response_quota + sizeof(uint64_t);
-            constexpr std::size_t _offset_response_ttl = _offset_response_ttl_type + sizeof(uint8_t);
-            constexpr std::size_t _response_success_size = _offset_response_ttl + sizeof(uint64_t);
-
             if (_it == _index.end() || _now >= _it->entry_.expires_at_) { // LCOV_EXCL_LINE note: Partially covered.
-                std::vector<std::byte> _response(_response_error_size);
-                std::memcpy(_response.data() + _offset_response_request_id, &request.header_->request_id_,
-                            sizeof(uint32_t));
-                _response[_offset_response_status] = std::byte{0x00};
-                return _response;
+                return std::make_shared<response_holder>(request.header_->request_id_, 0x00);
             }
 
             const auto &_entry = _it->entry_;
             const auto _ttl_remaining = get_ttl(_entry.expires_at_, _entry.ttl_type_);
-
-            std::vector<std::byte> _response(_response_success_size);
-
-            std::memcpy(_response.data() + _offset_response_request_id, &request.header_->request_id_,
-                        sizeof(uint32_t));
-            _response[_offset_response_status] = std::byte{0x01};
-            std::memcpy(_response.data() + _offset_response_quota, &_entry.quota_, sizeof(uint64_t));
-            _response[_offset_response_ttl_type] = static_cast<std::byte>(_entry.ttl_type_);
-            std::memcpy(_response.data() + _offset_response_ttl, &_ttl_remaining, sizeof(uint64_t));
-
-            return _response;
+            return std::make_shared<response_holder>(request, _entry, _ttl_remaining);
         }
 
         /**
          * Handle update
          *
          * @param request
-         * @return std::vector<std::byte>
+         * @return std::shared_ptr<response_holder>
          */
-        std::vector<std::byte> handle_update(const request_update &request) {
+        std::shared_ptr<response_holder> handle_update(const request_update &request) {
             const request_key _key{request.consumer_id_, request.resource_id_};
             const auto _now = std::chrono::steady_clock::now();
 
             auto &_index = storage_.get<tag_by_key>();
             const auto _it = _index.find(_key);
 
-            constexpr std::size_t _offset_id = 0;
-            constexpr std::size_t _offset_status = _offset_id + sizeof(uint32_t);
-            constexpr std::size_t _response_size = _offset_status + sizeof(uint8_t);
-
-            std::vector<std::byte> _response(_response_size);
-            std::memcpy(_response.data() + _offset_id, &request.header_->request_id_, sizeof(uint32_t));
-
             if (_it == _index.end() || _now >= _it->entry_.expires_at_) { // LCOV_EXCL_LINE note: Partially covered.
-                _response[_offset_status] = std::byte{0x00};
-                return _response;
+                return std::make_shared<response_holder>(request.header_->request_id_, 0x00);
             }
 
             using enum attribute_types;
@@ -200,8 +161,7 @@ namespace throttr {
                 }
             });
 
-            _response[_offset_status] = std::byte{_was_modified};
-            return _response;
+            return std::make_shared<response_holder>(request.header_->request_id_, static_cast<uint8_t>(_was_modified));
         }
 
         /**
@@ -277,26 +237,21 @@ namespace throttr {
          * Handle purge
          *
          * @param request
-         * @return std::vector<std::byte>
+         * @return std::shared_ptr<response_holder>
          */
-        std::vector<std::byte> handle_purge(const request_purge &request) {
+        std::shared_ptr<response_holder> handle_purge(const request_purge &request) {
             const request_key _key{request.consumer_id_, request.resource_id_};
             const auto _now = std::chrono::steady_clock::now();
 
             auto &_index = storage_.get<tag_by_key>();
             const auto _it = _index.find(_key);
 
-            std::vector<std::byte> _response(5);
-            std::memcpy(_response.data(), &request.header_->request_id_, sizeof(uint32_t));
-
             if (_it == _index.end() || _now >= _it->entry_.expires_at_) {// LCOV_EXCL_LINE note: Partially covered.
-                _response[4] = std::byte{0x00};
-                return _response;
+                return std::make_shared<response_holder>(request.header_->request_id_, 0x00);
             }
 
             _index.erase(_it);
-            _response[4] = std::byte{0x01};
-            return _response;
+            return std::make_shared<response_holder>(request.header_->request_id_, 0x01);
         }
 
         /**

@@ -130,21 +130,21 @@ namespace throttr {
                 std::span<const std::byte> view(buffer_.data() + buffer_start_, msg_size);
                 buffer_start_ += msg_size;
 
-                std::vector response = {std::byte{0x00}};
+                auto _response = std::make_shared<response_holder>(0, 0x00);
 
                 try {
                     switch (const auto type = static_cast<request_types>(std::to_integer<uint8_t>(view[0])); type) {
                         case request_types::insert:
-                            response = state_->handle_insert(request_insert::from_buffer(view));
+                            _response = state_->handle_insert(request_insert::from_buffer(view));
                             break;
                         case request_types::query:
-                            response = state_->handle_query(request_query::from_buffer(view));
+                            _response = state_->handle_query(request_query::from_buffer(view));
                             break;
                         case request_types::update:
-                            response = state_->handle_update(request_update::from_buffer(view));
+                            _response = state_->handle_update(request_update::from_buffer(view));
                             break;
                         case request_types::purge:
-                            response = state_->handle_purge(request_purge::from_buffer(view));
+                            _response = state_->handle_purge(request_purge::from_buffer(view));
                             break;
                         // LCOV_EXCL_START
                     }
@@ -154,7 +154,7 @@ namespace throttr {
                 // LCOV_EXCL_START
 
                 const bool queue_was_empty = write_queue_.empty();
-                write_queue_.emplace_back(std::move(response));
+                write_queue_.emplace_back(std::move(_response));
 
                 if (queue_was_empty) { // LCOV_EXCL_LINE note: Ignored.
                     do_write();
@@ -169,11 +169,11 @@ namespace throttr {
          * Do write
          */
         void do_write() {
-            auto &msg = write_queue_.front();
+            const auto &response = write_queue_.front();
             auto self = shared_from_this();
             boost::asio::async_write(
                 socket_,
-                boost::asio::buffer(msg.data(), msg.size()),
+                response->buffers,
                     boost::asio::bind_allocator(
                         handler_allocator<int>(handler_memory_),
                         [self] (const boost::system::error_code& ec, const std::size_t length) {
@@ -285,7 +285,7 @@ namespace throttr {
         /**
          * Write queue
          */
-        std::deque<std::vector<std::byte> >  write_queue_;
+        std::deque<std::shared_ptr<response_holder>> write_queue_;
     };
 }
 
