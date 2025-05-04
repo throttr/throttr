@@ -32,6 +32,8 @@
 #include <boost/core/ignore_unused.hpp>
 #include <boost/asio/strand.hpp>
 
+#include <fmt/core.h>
+
 namespace throttr {
     /**
      * State
@@ -101,6 +103,10 @@ namespace throttr {
                 }
             }
 
+#ifndef NDEBUG
+            fmt::println("REQ insert key={} quota={} ttl_type={} ttl={} RES ok={}", _key, request.header_->quota_, static_cast<uint8_t>(request.header_->ttl_type_), request.header_->ttl_, _inserted);
+#endif
+
             return std::make_shared<response_holder>(static_cast<uint8_t>(_inserted));
         }
 
@@ -122,8 +128,13 @@ namespace throttr {
             }
 
             const auto &_entry = _it->entry_;
-            const auto _ttl_remaining = get_ttl(_entry.expires_at_, _entry.ttl_type_);
-            return std::make_shared<response_holder>(_entry, _ttl_remaining);
+            const auto _ttl = get_ttl(_entry.expires_at_, _entry.ttl_type_);
+
+#ifndef NDEBUG
+            fmt::println("REQ query key={} RES quota={} ttl_type={} ttl={}", _key.key_, _entry.quota_, static_cast<uint8_t>(_entry.ttl_type_), _ttl);
+#endif
+
+            return std::make_shared<response_holder>(_entry, _ttl);
         }
 
         /**
@@ -145,20 +156,24 @@ namespace throttr {
 
             using enum attribute_types;
 
-            bool modified = false;
+            bool _modified = false;
 
             storage_.modify(_it, [&](entry_wrapper & object) {
                 switch (request.header_->attribute_) {
                     case quota:
-                        modified = apply_quota_change(object.entry_, request);
+                        _modified = apply_quota_change(object.entry_, request);
                         break;
                     case ttl:
-                        modified = apply_ttl_change(object.entry_, request, _now);
+                        _modified = apply_ttl_change(object.entry_, request, _now);
                         break;
                 }
             });
 
-            return std::make_shared<response_holder>(static_cast<uint8_t>(modified));
+#ifndef NDEBUG
+            fmt::println("REQ update key={} attribute={} change={} value={} RES ok={}", _key.key_, static_cast<uint8_t>(request.header_->attribute_), static_cast<uint8_t>(request.header_->change_), request.header_->value_, _modified);
+#endif
+
+            return std::make_shared<response_holder>(static_cast<uint8_t>(_modified));
         }
 
         /**
@@ -243,12 +258,21 @@ namespace throttr {
             auto &_index = storage_.get<tag_by_key>();
             const auto _it = _index.find(_key);
 
+
+            bool _erased = true;
+
             if (_it == _index.end() || _now >= _it->entry_.expires_at_) {// LCOV_EXCL_LINE note: Partially covered.
-                return std::make_shared<response_holder>(0x00);
+                _erased = false;
             }
 
-            _index.erase(_it);
-            return std::make_shared<response_holder>(0x01);
+#ifndef NDEBUG
+            fmt::println("REQ purge key={} RES ok={}", _key.key_, _erased);
+#endif
+
+            if (_erased)
+                _index.erase(_it);
+
+            return std::make_shared<response_holder>(static_cast<uint8_t>(_erased));
         }
 
         /**
