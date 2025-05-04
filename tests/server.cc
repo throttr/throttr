@@ -116,6 +116,34 @@ TEST_F(ServerTestFixture, HandlesMultipleSingleRequests) {
     }
 }
 
+TEST_F(ServerTestFixture, HandlesTwoConcatenatedRequests) {
+    const auto buffer1 = request_insert_builder(
+        300, 1, ttl_types::milliseconds, 10000, "consumer3", "/resource3"
+    );
+
+    const auto buffer2 = request_insert_builder(
+        301, 1, ttl_types::milliseconds, 10000, "consumer4", "/resource4"
+    );
+
+    std::vector<std::byte> batch;
+    batch.insert(batch.end(), buffer1.begin(), buffer1.end());
+    batch.insert(batch.end(), buffer2.begin(), buffer2.end());
+
+    auto responses = send_and_receive(batch, 10);
+
+    ASSERT_EQ(responses.size(), 10);
+
+    uint32_t request_id1 = 0;
+    std::memcpy(&request_id1, responses.data(), sizeof(request_id1));
+    ASSERT_EQ(request_id1, 300);
+    ASSERT_EQ(static_cast<uint8_t>(responses[4]), 1);
+
+    uint32_t request_id2 = 0;
+    std::memcpy(&request_id2, responses.data() + 5, sizeof(request_id2));
+    ASSERT_EQ(request_id2, 301);
+    ASSERT_EQ(static_cast<uint8_t>(responses[9]), 1);
+}
+
 TEST_F(ServerTestFixture, TTLExpiration) {
     const auto _insert_buffer = request_insert_builder(
         300, 1, ttl_types::milliseconds, 1000, "consumer3", "/expire"
