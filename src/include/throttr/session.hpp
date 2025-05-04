@@ -63,13 +63,6 @@ namespace throttr {
          */
         void on_read(const boost::system::error_code &error, const std::size_t length) {
             if (!error) { // LCOV_EXCL_LINE note: Partially tested.
-                std::cout << "[session] received " << length << " bytes: ";
-                for (std::size_t i = 0; i < length; ++i) {
-                    std::cout << std::hex << std::setw(2) << std::setfill('0')
-                              << static_cast<int>(std::to_integer<uint8_t>(*(buffer_.data() + buffer_end_ + i))) << ' ';
-                }
-                std::cout << std::dec << std::endl;
-
                 buffer_end_ += length;
                 try_process_next();
                 // LCOV_EXCL_START
@@ -113,20 +106,10 @@ namespace throttr {
                 std::span<const std::byte> view(buffer_.data() + buffer_start_, msg_size);
                 buffer_start_ += msg_size;
 
-                std::cout << "[session] parsing message of size " << msg_size << ": ";
-                for (std::size_t i = 0; i < msg_size; ++i) {
-                    std::cout << std::hex << std::setw(2) << std::setfill('0')
-                              << static_cast<int>(std::to_integer<uint8_t>(view[i])) << ' ';
-                }
-                std::cout << std::dec << std::endl;
-
                 std::vector response = {std::byte{0x00}};
 
                 try {
-                    const auto type = static_cast<request_types>(std::to_integer<uint8_t>(view[0]));
-                    std::cout << "[session] processing type: " << static_cast<int>(type) << std::endl;
-
-                    switch (type) {
+                    switch (const auto type = static_cast<request_types>(std::to_integer<uint8_t>(view[0]))) {
                         case request_types::insert:
                             response = state_->handle_insert(request_insert::from_buffer(view));
                             break;
