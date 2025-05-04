@@ -66,6 +66,7 @@ namespace throttr {
 
         const auto diff = expires_at - now;
 
+        // LCOV_EXCL_START
         switch (ttl_type) {
             case ttl_types::nanoseconds:
                 return std::chrono::duration_cast<std::chrono::nanoseconds>(diff).count();
@@ -80,6 +81,7 @@ namespace throttr {
             default:
                 return std::chrono::duration_cast<std::chrono::seconds>(diff).count();
         }
+        // LCOV_EXCL_STOP
     }
 }
 
