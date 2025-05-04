@@ -313,7 +313,7 @@ namespace throttr {
             while (!expired_entries_.empty() && _now - expired_entries_.front().second > _threshold) { // LCOV_EXCL_LINE note: Partially covered.
                 // LCOV_EXCL_START
 #ifndef NDEBUG
-                fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULE removed key={}", std::chrono::system_clock::now(), std::string_view(reinterpret_cast<const char*>(expired_entries_.front().first.key_.data()), expired_entries_.front().first.key_.size()));
+                fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULE removed key={}", std::chrono::system_clock::now(), std::string_view(reinterpret_cast<const char*>(expired_entries_.front().first.key_.data()), expired_entries_.front().first.key_.size())); // NOSONAR
 #endif
                 // LCOV_EXCL_STOP
                 expired_entries_.pop_front();
@@ -371,7 +371,7 @@ namespace throttr {
 
                     // LCOV_EXCL_START
 #ifndef NDEBUG
-                    fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULE quarantined key={}", std::chrono::system_clock::now(), std::string_view(reinterpret_cast<const char*>(_scoped_entry.key_.data()), _scoped_entry.key_.size()));
+                    fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULE quarantined key={}", std::chrono::system_clock::now(), std::string_view(reinterpret_cast<const char*>(_scoped_entry.key_.data()), _scoped_entry.key_.size())); // NOSONAR
 #endif
                     // LCOV_EXCL_STOP
 
