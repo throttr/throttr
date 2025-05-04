@@ -11,6 +11,11 @@ set(BUILD_SHARED_LIBS OFF)
 
 option(BUILD_TESTS "Build tests cases" ON)
 
+set(RUNTIME_VALUE_SIZE "UINT16" CACHE STRING "Set value type for Throttr (UINT8, UINT16, UINT32, UINT64)")
+set_property(CACHE RUNTIME_VALUE_SIZE PROPERTY STRINGS UINT8 UINT16 UINT32 UINT64)
+
+message(STATUS "Using RUNTIME_VALUE_SIZE = ${RUNTIME_VALUE_SIZE}")
+
 set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g --coverage -fprofile-arcs -ftest-coverage")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
@@ -41,7 +46,7 @@ include(FetchContent)
 FetchContent_Declare(
         throttr-protocol
         GIT_REPOSITORY https://github.com/throttr/protocol.git
-        GIT_TAG 4.0.0
+        GIT_TAG 4.0.1
 )
 
 FetchContent_MakeAvailable(throttr-protocol)
@@ -77,6 +82,7 @@ if (BUILD_TESTS)
             throttr::protocol
             fmt::fmt
     )
+    target_compile_definitions(tests PRIVATE THROTTR_VALUE_SIZE_${RUNTIME_VALUE_SIZE})
 
     include(GoogleTest)
     gtest_discover_tests(tests)
@@ -90,3 +96,4 @@ target_link_libraries(throttr
 )
 target_compile_options(throttr PRIVATE -static -static-libgcc -static-libstdc++)
 target_link_options(throttr PRIVATE -static -static-libgcc -static-libstdc++)
+target_compile_definitions(throttr PUBLIC THROTTR_VALUE_SIZE_${RUNTIME_VALUE_SIZE})

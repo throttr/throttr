@@ -17,6 +17,7 @@
 
 #ifndef THROTTR_SESSION_MEMORY_HPP
 #define THROTTR_SESSION_MEMORY_HPP
+
 #include <cstddef>
 
 namespace throttr {

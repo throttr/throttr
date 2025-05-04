@@ -13,22 +13,22 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#pragma once
+#ifndef THROTTR_PROTOCOL_WRAPPER_HPP
+#define THROTTR_PROTOCOL_WRAPPER_HPP
 
-#ifndef THROTTR_VERSION_HPP
-#define THROTTR_VERSION_HPP
+/**
+ * This rewrites the size of Quota and TTL.
+ */
+#if defined(THROTTR_VALUE_SIZE_UINT8)
+#define THROTTR_VALUE_SIZE uint8_t
+#elif defined(THROTTR_VALUE_SIZE_UINT16)
+#define THROTTR_VALUE_SIZE uint16_t
+#elif defined(THROTTR_VALUE_SIZE_UINT32)
+#define THROTTR_VALUE_SIZE uint32_t
+#elif defined(THROTTR_VALUE_SIZE_UINT64)
+#define THROTTR_VALUE_SIZE uint64_t
+#endif
 
-#include <string_view>
+#include <throttr/protocol.hpp>
 
-namespace throttr {
-    /**
-     * Get version
-     *
-     * @return string_view
-     */
-    inline std::string_view get_version() {
-        return "4.0.1";
-    }
-}
-
-#endif // THROTTR_VERSION_HPP
+#endif // THROTTR_PROTOCOL_WRAPPER_HPP

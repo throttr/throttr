@@ -18,7 +18,7 @@
 #ifndef THROTTR_RESPONSE_HPP
 #define THROTTR_RESPONSE_HPP
 
-#include <throttr/protocol.hpp>
+#include <throttr/protocol_wrapper.hpp>
 
 #include <boost/asio/buffer.hpp>
 
@@ -40,7 +40,7 @@ namespace throttr {
         /**
          * Quota
          */
-        std::uint16_t quota_ = 0;
+        value_type quota_ = 0;
 
         /**
          * TTL type
@@ -50,7 +50,7 @@ namespace throttr {
         /**
          * TTL
          */
-        std::uint16_t ttl_ = 0;
+        value_type ttl_ = 0;
 
         /**
          * Constructor
@@ -58,7 +58,7 @@ namespace throttr {
          * @param e
          * @param ttl
          */
-        response_holder(const request_entry &e, const std::uint16_t ttl)
+        response_holder(const request_entry &e, const value_type ttl)
             : status_(0x01),
               quota_(e.quota_),
               ttl_type_(static_cast<uint8_t>(e.ttl_type_)),

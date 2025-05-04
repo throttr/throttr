@@ -204,7 +204,7 @@ TEST(State, TTLChange) {
         _header.request_type_ = request_types::update;
         _header.attribute_ = attribute_types::ttl;
         _header.change_ = _change_type;
-        _header.value_ = static_cast<uint16_t>(_expected.count());
+        _header.value_ = static_cast<value_type>(_expected.count());
 
         request_update _request{
             &_header,

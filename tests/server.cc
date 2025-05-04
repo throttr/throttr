@@ -20,6 +20,7 @@
 #include <throttr/state.hpp>
 #include <iomanip>
 #include <fmt/core.h>
+#include <iostream>
 
 using boost::asio::ip::tcp;
 using namespace throttr;
@@ -125,25 +126,25 @@ TEST_F(ServerTestFixture, TTLExpiration) {
     boost::ignore_unused(_ignored);
 
     const auto _query_buffer = request_query_builder("consumer3/expire");
-    auto _success_query_response = send_and_receive(_query_buffer, 6);
+    auto _success_query_response = send_and_receive(_query_buffer, 2 + (sizeof(value_type) * 2));
 
     // [x] [o][o] [o] [o][o]
     ASSERT_EQ(static_cast<uint8_t>(_success_query_response[0]), 1);
 
-    uint16_t _success_response_quota;
+    value_type _success_response_quota;
 
     // [o] [x][x] [o] [o][o]
-    std::memcpy(&_success_response_quota, _success_query_response.data() + 1, sizeof(uint16_t)); // 2 bytes
+    std::memcpy(&_success_response_quota, _success_query_response.data() + 1, sizeof(value_type)); // 2 bytes
     ASSERT_EQ(_success_response_quota, 500);
 
     // [o] [o][o] [x] [o][o]
-    const auto _success_response_ttl_type = static_cast<uint8_t>(_success_query_response[sizeof(uint16_t) + 1]);
+    const auto _success_response_ttl_type = static_cast<uint8_t>(_success_query_response[sizeof(value_type) + 1]);
     ASSERT_EQ(_success_response_ttl_type, static_cast<uint8_t>(ttl_types::milliseconds));
 
-    uint16_t _success_response_ttl;
+    value_type _success_response_ttl;
 
     // [o] [o][o] [o] [x][x]
-    std::memcpy(&_success_response_ttl, _success_query_response.data() + sizeof(uint16_t) + 2, sizeof(uint16_t));
+    std::memcpy(&_success_response_ttl, _success_query_response.data() + sizeof(value_type) + 2, sizeof(value_type));
     ASSERT_GT(_success_response_ttl, 0);;
 
     std::this_thread::sleep_for(std::chrono::milliseconds(1100));
@@ -181,11 +182,11 @@ TEST_F(ServerTestFixture, QueryAfterInsertReturnsCorrectQuota) {
     boost::ignore_unused(_ignored);
 
     const auto _query_buffer = request_query_builder("consumer_query2/resource_query2");
-    auto _response = send_and_receive(_query_buffer, 6);
+    auto _response = send_and_receive(_query_buffer, 2 + (sizeof(value_type) * 2));
 
     ASSERT_EQ(static_cast<uint8_t>(_response[0]), 1);
 
-    uint16_t _quota_remaining = 0;
+    value_type _quota_remaining = 0;
     std::memcpy(&_quota_remaining, _response.data() + 1, sizeof(_quota_remaining));
     ASSERT_EQ(_quota_remaining, 10);
 }
@@ -216,12 +217,12 @@ TEST_F(ServerTestFixture, UpdateIncreaseQuota) {
     ASSERT_EQ(static_cast<uint8_t>(_update_response[0]), 1);
 
     const auto _query_buffer = request_query_builder("consumer/increase_quota");
-    auto _query_response = send_and_receive(_query_buffer, 6);
+    auto _query_response = send_and_receive(_query_buffer, 2 + (sizeof(value_type) * 2));
 
-    ASSERT_EQ(_query_response.size(), 6);
+    ASSERT_EQ(_query_response.size(), 2 + (sizeof(value_type) * 2));
     ASSERT_EQ(static_cast<uint8_t>(_query_response[0]), 1);
 
-    uint16_t _quota = 0;
+    value_type _quota = 0;
     std::memcpy(&_quota, _query_response.data() + 1, sizeof(_quota));
     ASSERT_EQ(_quota, 10);
 }
@@ -239,9 +240,9 @@ TEST_F(ServerTestFixture, UpdateDecreaseQuota) {
     ASSERT_EQ(static_cast<uint8_t>(_update_response[0]), 1);
 
     const auto _query = request_query_builder("consumer/decrease_quota");
-    const auto _query_response = send_and_receive(_query, 6);
+    const auto _query_response = send_and_receive(_query, 2 + (sizeof(value_type) * 2));
 
-    uint16_t _quota = 0;
+    value_type _quota = 0;
     std::memcpy(&_quota, _query_response.data() + 1, sizeof(_quota));
     ASSERT_EQ(_quota, 6);
 }
@@ -259,9 +260,9 @@ TEST_F(ServerTestFixture, UpdatePatchQuota) {
     ASSERT_EQ(static_cast<uint8_t>(_update_response[0]), 1);
 
     const auto _query = request_query_builder("consumer/patch_quota");
-    const auto _query_response = send_and_receive(_query, 6);
+    const auto _query_response = send_and_receive(_query, 2 + (sizeof(value_type) * 2));
 
-    uint16_t _quota = 0;
+    value_type _quota = 0;
     std::memcpy(&_quota, _query_response.data() + 1, sizeof(_quota));
     ASSERT_EQ(_quota, 4);
 }
@@ -278,20 +279,20 @@ TEST_F(ServerTestFixture, UpdatePatchTTL) {
     ASSERT_EQ(static_cast<uint8_t>(_update_response[0]), 1);
 
     const auto _query = request_query_builder("consumer/patch_ttl");
-    auto _query_response = send_and_receive(_query, 6);
+    auto _query_response = send_and_receive(_query, 2 + (sizeof(value_type) * 2));
 
-    ASSERT_EQ(_query_response.size(), 6);
+    ASSERT_EQ(_query_response.size(), 2 + (sizeof(value_type) * 2));
     ASSERT_EQ(static_cast<uint8_t>(_query_response[0]), 1);
 
-    uint16_t _quota = 0;
+    value_type _quota = 0;
     std::memcpy(&_quota, _query_response.data() + 1, sizeof(_quota));
     ASSERT_EQ(_quota, 10);
 
-    const auto _ttl_type = static_cast<uint8_t>(_query_response[3]);
+    const auto _ttl_type = static_cast<uint8_t>(_query_response[1+sizeof(_quota)]);
     ASSERT_EQ(_ttl_type, static_cast<uint8_t>(ttl_types::milliseconds));
 
-    uint16_t _ttl = 0;
-    std::memcpy(&_ttl, _query_response.data() + 4, sizeof(_ttl));
+    value_type _ttl = 0;
+    std::memcpy(&_ttl, _query_response.data() + 2 + sizeof(_quota), sizeof(_ttl));
     ASSERT_GE(_ttl, 9000);
     ASSERT_LE(_ttl, 10000);
 }

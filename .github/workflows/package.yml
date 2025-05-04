@@ -16,6 +16,8 @@ jobs:
     strategy:
       matrix:
         type: [debug, release]
+        size: [UINT8, UINT16, UINT32, UINT64]
+
     runs-on: ubuntu-latest
     steps:
       -
@@ -37,6 +39,7 @@ jobs:
         with:
           platforms: linux/amd64,linux/arm64
           push: ${{ github.ref_type == 'tag' }}
-          tags: ghcr.io/throttr/throttr:${{ env.VERSION }}-${{ matrix.type }}
+          tags: ghcr.io/throttr/throttr:${{ env.VERSION }}-${{ matrix.type }}-${{ matrix.size }}
           build-args: |
             TYPE=${{ matrix.type }}
+            SIZE=${{ matrix.size }}

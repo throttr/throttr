@@ -18,7 +18,7 @@
 #ifndef THROTTR_TIME_HPP
 #define THROTTR_TIME_HPP
 
-#include <throttr/protocol.hpp>
+#include <throttr/protocol_wrapper.hpp>
 
 #include <chrono>
 
@@ -34,7 +34,7 @@ namespace throttr {
     inline std::chrono::steady_clock::time_point get_expiration_point(
         const std::chrono::steady_clock::time_point& now,
         const ttl_types ttl_type,
-        const uint16_t ttl
+        const value_type ttl
     ) {
         using namespace std::chrono;
 
@@ -53,9 +53,9 @@ namespace throttr {
      *
      * @param expires_at
      * @param ttl_type
-     * @return uint16_t
+     * @return value_type
      */
-    inline uint16_t get_ttl(
+    inline value_type get_ttl(
         const std::chrono::steady_clock::time_point& expires_at,
         const ttl_types ttl_type
     ) {

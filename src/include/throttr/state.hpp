@@ -18,10 +18,11 @@
 #ifndef THROTTR_STATE_HPP
 #define THROTTR_STATE_HPP
 
-#include <throttr/protocol.hpp>
 #include <throttr/storage.hpp>
 #include <throttr/response.hpp>
 #include <throttr/time.hpp>
+
+#include <throttr/protocol_wrapper.hpp>
 
 #include <memory>
 #include <atomic>
@@ -30,7 +31,6 @@
 #include <deque>
 #include <boost/core/ignore_unused.hpp>
 #include <boost/asio/strand.hpp>
-#include <iostream>
 
 namespace throttr {
     /**
