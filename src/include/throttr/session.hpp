@@ -130,7 +130,7 @@ namespace throttr {
                 std::span<const std::byte> view(buffer_.data() + buffer_start_, msg_size);
                 buffer_start_ += msg_size;
 
-                auto _response = std::make_shared<response_holder>(0, 0x00);
+                auto _response = std::make_shared<response_holder>(0x00);
 
                 try {
                     switch (const auto type = static_cast<request_types>(std::to_integer<uint8_t>(view[0])); type) {
@@ -173,7 +173,7 @@ namespace throttr {
             auto self = shared_from_this();
             boost::asio::async_write(
                 socket_,
-                response->buffers,
+                response->buffers_,
                     boost::asio::bind_allocator(
                         handler_allocator<int>(handler_memory_),
                         [self] (const boost::system::error_code& ec, const std::size_t length) {
@@ -195,24 +195,16 @@ namespace throttr {
             switch (const auto *_buffer = buffer.data(); static_cast<request_types>(std::to_integer<uint8_t>(_buffer[0]))) {
                 case request_types::insert:
                     if (buffer.size() < request_insert_header_size) return 0; // LCOV_EXCL_LINE note: Ignored.
-                    return request_insert_header_size
-                           + reinterpret_cast<const request_insert_header *>(_buffer)->consumer_id_size_
-                           + reinterpret_cast<const request_insert_header *>(_buffer)->resource_id_size_;
+                    return request_insert_header_size + reinterpret_cast<const request_insert_header *>(_buffer)->key_size_;
                 case request_types::query:
                     if (buffer.size() < request_query_header_size) return 0; // LCOV_EXCL_LINE note: Ignored.
-                    return request_query_header_size
-                           + reinterpret_cast<const request_query_header *>(_buffer)->consumer_id_size_
-                           + reinterpret_cast<const request_query_header *>(_buffer)->resource_id_size_;
+                    return request_query_header_size + reinterpret_cast<const request_query_header *>(_buffer)->key_size_;
                 case request_types::update:
                     if (buffer.size() < request_update_header_size) return 0; // LCOV_EXCL_LINE note: Ignored.
-                    return request_update_header_size
-                           + reinterpret_cast<const request_update_header *>(_buffer)->consumer_id_size_
-                           + reinterpret_cast<const request_update_header *>(_buffer)->resource_id_size_;
+                    return request_update_header_size + reinterpret_cast<const request_update_header *>(_buffer)->key_size_;
                 case request_types::purge:
                     if (buffer.size() < request_purge_header_size) return 0; // LCOV_EXCL_LINE note: Ignored.
-                    return request_purge_header_size
-                           + reinterpret_cast<const request_purge_header *>(_buffer)->consumer_id_size_
-                           + reinterpret_cast<const request_purge_header *>(_buffer)->resource_id_size_;
+                    return request_purge_header_size + reinterpret_cast<const request_purge_header *>(_buffer)->key_size_;
                 // LCOV_EXCL_START
                 default:
                     return 0;

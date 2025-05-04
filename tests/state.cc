@@ -46,9 +46,9 @@ TEST_F(StateTestFixture, CollectAndFlush) {
 
     const auto _now = steady_clock::now();
 
-    _expired.emplace_back(entry_wrapper{to_bytes("a"), to_bytes("b"), {0, ttl_types::seconds, _now - seconds(10)}}, _now - seconds(10));
-    _expired.emplace_back(entry_wrapper{to_bytes("a"), to_bytes("b"), {0, ttl_types::seconds, _now - seconds(6)}}, _now - seconds(6));
-    _expired.emplace_back(entry_wrapper{to_bytes("a"), to_bytes("b"), {0, ttl_types::seconds, _now - seconds(1)}}, _now - seconds(1));
+    _expired.emplace_back(entry_wrapper{to_bytes("ab"), {0, ttl_types::seconds, _now - seconds(10)}}, _now - seconds(10));
+    _expired.emplace_back(entry_wrapper{to_bytes("ab"), {0, ttl_types::seconds, _now - seconds(6)}}, _now - seconds(6));
+    _expired.emplace_back(entry_wrapper{to_bytes("ab"), {0, ttl_types::seconds, _now - seconds(1)}}, _now - seconds(1));
 
     state_->collect_and_flush();
 
@@ -74,8 +74,8 @@ TEST_F(StateTestFixture, ScheduleExpiration_ReprogramsIfNextEntryExists) {
     _entry2.quota_ = 1;
     _entry2.expires_at_ = _now + seconds(5);
 
-    _index.insert(entry_wrapper{to_bytes("c1"), to_bytes("r1"), _entry1});
-    _index.insert(entry_wrapper{to_bytes("c2"), to_bytes("r2"), _entry2});
+    _index.insert(entry_wrapper{to_bytes("c1r1"), _entry1});
+    _index.insert(entry_wrapper{to_bytes("c2r2"), _entry2});
 
     state_->schedule_expiration(_now);
 
@@ -142,38 +142,37 @@ TEST(State, QuotaChange) {
 
     // patch
     _entry.quota_ = 0;
-    request_update_header _patch_header{request_types::update, 0, attribute_types::quota, change_types::patch, 42, 0, 0};
-    request_update _patch_req{&_patch_header, "", ""};
+    request_update_header _patch_header{request_types::update, attribute_types::quota, change_types::patch, 42, 0};
+    request_update _patch_req{&_patch_header, ""};
     EXPECT_TRUE(state::apply_quota_change(_entry, _patch_req));
     EXPECT_EQ(_entry.quota_, 42);
 
     // increase
     _entry.quota_ = 10;
-    request_update_header _inc_header{request_types::update, 0, attribute_types::quota, change_types::increase, 5, 0, 0};
-    request_update _inc_req{&_inc_header, "", ""};
+    request_update_header _inc_header{request_types::update, attribute_types::quota, change_types::increase, 5, 0};
+    request_update _inc_req{&_inc_header, ""};
     EXPECT_TRUE(state::apply_quota_change(_entry, _inc_req));
     EXPECT_EQ(_entry.quota_, 15);
 
     // decrease (quota > value)
     _entry.quota_ = 20;
-    request_update_header _dec_gt_header{request_types::update, 0, attribute_types::quota, change_types::decrease, 10, 0, 0};
-    request_update _dec_gt_req{&_dec_gt_header, "", ""};
+    request_update_header _dec_gt_header{request_types::update, attribute_types::quota, change_types::decrease, 10, 0};
+    request_update _dec_gt_req{&_dec_gt_header, ""};
     EXPECT_TRUE(state::apply_quota_change(_entry, _dec_gt_req));
     EXPECT_EQ(_entry.quota_, 10);
 
     // decrease (quota == value)
     _entry.quota_ = 10;
-    request_update_header _dec_eq_header{request_types::update, 0, attribute_types::quota, change_types::decrease, 10, 0, 0};
-    request_update _dec_eq_req{&_dec_eq_header, "", ""};
+    request_update_header _dec_eq_header{request_types::update, attribute_types::quota, change_types::decrease, 10, 0};
+    request_update _dec_eq_req{&_dec_eq_header, ""};
     EXPECT_TRUE(state::apply_quota_change(_entry, _dec_eq_req));
     EXPECT_EQ(_entry.quota_, 0);
 
     // decrease (quota < value)
     _entry.quota_ = 5;
-    request_update_header _dec_lt_header{request_types::update, 0, attribute_types::quota, change_types::decrease, 10, 0, 0};
-    request_update _dec_lt_req{&_dec_lt_header, "", ""};
-    EXPECT_TRUE(state::apply_quota_change(_entry, _dec_lt_req));
-    EXPECT_EQ(_entry.quota_, 0);
+    request_update_header _dec_lt_header{request_types::update, attribute_types::quota, change_types::decrease, 10, 0};
+    request_update _dec_lt_req{&_dec_lt_header, ""};
+    EXPECT_FALSE(state::apply_quota_change(_entry, _dec_lt_req));
 }
 
 TEST(State, TTLChange) {
@@ -186,8 +185,7 @@ TEST(State, TTLChange) {
     request_entry _entry;
     _entry.expires_at_ = steady_clock::now();
 
-    std::string _consumer_id = "user";
-    std::string _resource_id = "resource";
+    std::string _key = "user";
 
     std::vector<std::tuple<ttl_types, change_types, nanoseconds>> _cases{
         std::make_tuple(ttl_types::nanoseconds, change_types::patch, nanoseconds(100)),
@@ -204,17 +202,13 @@ TEST(State, TTLChange) {
     for (const auto& [_ttl_type, _change_type, _expected] : _cases) {
         request_update_header _header{};
         _header.request_type_ = request_types::update;
-        _header.request_id_ = 1;
         _header.attribute_ = attribute_types::ttl;
         _header.change_ = _change_type;
-        _header.value_ = static_cast<uint64_t>(_expected.count());
-        _header.consumer_id_size_ = static_cast<uint8_t>(_consumer_id.size());
-        _header.resource_id_size_ = static_cast<uint8_t>(_resource_id.size());
+        _header.value_ = static_cast<uint16_t>(_expected.count());
 
         request_update _request{
             &_header,
-            _consumer_id,
-            _resource_id
+            _key
         };
 
         _entry.ttl_type_ = _ttl_type;

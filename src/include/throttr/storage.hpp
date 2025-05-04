@@ -32,19 +32,34 @@ namespace throttr {
      * Entry wrapper
      */
     struct entry_wrapper {
-        std::vector<std::byte> consumer_id_;
-        std::vector<std::byte> resource_id_;
+        /**
+         * Key
+         */
+        std::vector<std::byte> key_;
+
+        /**
+         * Entry
+         */
         request_entry entry_;
 
-        request_key key() const {
+        /**
+         * Key
+         *
+         * @return
+         */
+        [[nodiscard]] request_key key() const {
             return {
-                std::string_view(reinterpret_cast<const char*>(consumer_id_.data()), consumer_id_.size()), // NOSONAR
-                std::string_view(reinterpret_cast<const char*>(resource_id_.data()), resource_id_.size()) // NOSONAR
+                std::string_view(reinterpret_cast<const char*>(key_.data()), key_.size()), // NOSONAR
             };
         }
 
-        entry_wrapper(std::vector<std::byte> c, std::vector<std::byte> r, request_entry e)
-               : consumer_id_(std::move(c)), resource_id_(std::move(r)), entry_(e) {}
+        /**
+         * Entry wrapper
+         *
+         * @param k
+         * @param e
+         */
+        entry_wrapper(std::vector<std::byte> k, const request_entry e) : key_(std::move(k)), entry_(e) {}
     };
 
     /**
