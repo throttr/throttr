@@ -155,7 +155,7 @@ namespace throttr {
         /**
          * Memory
          *
-         * @tparam 
+         * @tparam
          */
         template <typename> friend class handler_allocator;
         handler_memory& memory_;

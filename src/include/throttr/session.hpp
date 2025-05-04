@@ -27,7 +27,6 @@
 #include <throttr/state.hpp>
 #include <throttr/protocol.hpp>
 #include <throttr/session_memory.hpp>
-#include <iostream>
 
 namespace throttr {
     /**
