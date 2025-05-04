@@ -32,6 +32,8 @@
 #include <boost/core/ignore_unused.hpp>
 #include <boost/asio/strand.hpp>
 
+#include <fmt/chrono.h>
+
 namespace throttr {
     /**
      * State
@@ -101,6 +103,12 @@ namespace throttr {
                 }
             }
 
+            // LCOV_EXCL_START
+#ifndef NDEBUG
+            fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST insert key={} quota={} ttl_type={} ttl={} RESPONSE ok={}", std::chrono::system_clock::now(), _key, request.header_->quota_, static_cast<uint8_t>(request.header_->ttl_type_), request.header_->ttl_, _inserted);
+#endif
+            // LCOV_EXCL_STOP
+
             return std::make_shared<response_holder>(static_cast<uint8_t>(_inserted));
         }
 
@@ -122,8 +130,15 @@ namespace throttr {
             }
 
             const auto &_entry = _it->entry_;
-            const auto _ttl_remaining = get_ttl(_entry.expires_at_, _entry.ttl_type_);
-            return std::make_shared<response_holder>(_entry, _ttl_remaining);
+            const auto _ttl = get_ttl(_entry.expires_at_, _entry.ttl_type_);
+
+            // LCOV_EXCL_START
+#ifndef NDEBUG
+            fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST query key={} RESPONSE quota={} ttl_type={} ttl={}", std::chrono::system_clock::now(), _key.key_, _entry.quota_, static_cast<uint8_t>(_entry.ttl_type_), _ttl);
+#endif
+            // LCOV_EXCL_STOP
+
+            return std::make_shared<response_holder>(_entry, _ttl);
         }
 
         /**
@@ -145,20 +160,26 @@ namespace throttr {
 
             using enum attribute_types;
 
-            bool modified = false;
+            bool _modified = false;
 
             storage_.modify(_it, [&](entry_wrapper & object) {
                 switch (request.header_->attribute_) {
                     case quota:
-                        modified = apply_quota_change(object.entry_, request);
+                        _modified = apply_quota_change(object.entry_, request);
                         break;
                     case ttl:
-                        modified = apply_ttl_change(object.entry_, request, _now);
+                        _modified = apply_ttl_change(object.entry_, request, _now);
                         break;
                 }
             });
 
-            return std::make_shared<response_holder>(static_cast<uint8_t>(modified));
+            // LCOV_EXCL_START
+#ifndef NDEBUG
+            fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST update key={} attribute={} change={} value={} RESPONSE ok={}", std::chrono::system_clock::now(), _key.key_, static_cast<uint8_t>(request.header_->attribute_), static_cast<uint8_t>(request.header_->change_), request.header_->value_, _modified);
+#endif
+            // LCOV_EXCL_STOP
+
+            return std::make_shared<response_holder>(static_cast<uint8_t>(_modified));
         }
 
         /**
@@ -243,12 +264,23 @@ namespace throttr {
             auto &_index = storage_.get<tag_by_key>();
             const auto _it = _index.find(_key);
 
+
+            bool _erased = true;
+
             if (_it == _index.end() || _now >= _it->entry_.expires_at_) {// LCOV_EXCL_LINE note: Partially covered.
-                return std::make_shared<response_holder>(0x00);
+                _erased = false;
             }
 
-            _index.erase(_it);
-            return std::make_shared<response_holder>(0x01);
+            // LCOV_EXCL_START
+#ifndef NDEBUG
+            fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST purge key={} RESPONSE ok={}", std::chrono::system_clock::now(), _key.key_, _erased);
+#endif
+            // LCOV_EXCL_STOP
+
+            if (_erased) // LCOV_EXCL_LINE Note: Partially tested.
+                _index.erase(_it);
+
+            return std::make_shared<response_holder>(static_cast<uint8_t>(_erased));
         }
 
         /**
@@ -269,12 +301,29 @@ namespace throttr {
          * Cleanup expired entries
          */
         void collect_and_flush() {
+            // LCOV_EXCL_START
+#ifndef NDEBUG
+            fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULE collect started", std::chrono::system_clock::now());
+#endif
+            // LCOV_EXCL_STOP
+
             const auto _now = std::chrono::steady_clock::now();
             const auto _threshold = std::chrono::seconds(5);
 
             while (!expired_entries_.empty() && _now - expired_entries_.front().second > _threshold) { // LCOV_EXCL_LINE note: Partially covered.
+                // LCOV_EXCL_START
+#ifndef NDEBUG
+                fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULE removed key={}", std::chrono::system_clock::now(), std::string_view(reinterpret_cast<const char*>(expired_entries_.front().first.key_.data()), expired_entries_.front().first.key_.size())); // NOSONAR
+#endif
+                // LCOV_EXCL_STOP
                 expired_entries_.pop_front();
             }
+
+            // LCOV_EXCL_START
+#ifndef NDEBUG
+            fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULE collect finished", std::chrono::system_clock::now());
+#endif
+            // LCOV_EXCL_STOP
 
             expiration_timer_.expires_after(std::chrono::seconds(3));
             expiration_timer_.async_wait([self = shared_from_this()](const boost::system::error_code& ec) {
@@ -288,6 +337,12 @@ namespace throttr {
          * Schedule expiration
          */
         void schedule_expiration(const std::chrono::steady_clock::time_point proposed) {
+            // LCOV_EXCL_START
+#ifndef NDEBUG
+            fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULE expiration started", std::chrono::system_clock::now());
+#endif
+            // LCOV_EXCL_STOP
+
             auto &_schedule_index = storage_.get<tag_by_expiration>();
             if (_schedule_index.empty()) return;
 
@@ -296,6 +351,12 @@ namespace throttr {
             if (proposed > _entry.expires_at_) return;
 
             const auto _delay = _entry.expires_at_ - std::chrono::steady_clock::now();
+
+            // LCOV_EXCL_START
+#ifndef NDEBUG
+            fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULE expiration finished", std::chrono::system_clock::now());
+#endif
+            // LCOV_EXCL_STOP
 
             expiration_timer_.expires_after(_delay);
             expiration_timer_.async_wait([_self = shared_from_this()](const boost::system::error_code &ec) {
@@ -307,6 +368,13 @@ namespace throttr {
                 while (!_timer_index.empty() && _timer_index.begin()->entry_.expires_at_ <= _now) {
                     auto _it = _timer_index.begin();
                     entry_wrapper _scoped_entry = *_it;
+
+                    // LCOV_EXCL_START
+#ifndef NDEBUG
+                    fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULE quarantined key={}", std::chrono::system_clock::now(), std::string_view(reinterpret_cast<const char*>(_scoped_entry.key_.data()), _scoped_entry.key_.size())); // NOSONAR
+#endif
+                    // LCOV_EXCL_STOP
+
                     _self->expired_entries_.emplace_back(std::move(_scoped_entry), _now);
                     _timer_index.erase(_timer_index.begin());
                 }

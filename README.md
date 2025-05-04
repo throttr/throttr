@@ -54,25 +54,43 @@ The full specification of the Throttr binary protocol — including request form
 
 ## 🐳 Running as Container
 
-Pull the latest release:
+Pull and run the latest release:
 
 ```bash
-docker pull ghcr.io/throttr/throttr:4.0.1-release-UINT16
+docker run -p 9000:9000 ghcr.io/throttr/throttr:4.0.2-release-uint16
 ```
 
-Run it
+You can get the debug version (contains debugging output)
 
 ```bash
-docker run -p 9000:9000 ghcr.io/throttr/throttr:4.0.1-release-UINT16
+docker run -p 9000:9000 ghcr.io/throttr/throttr:4.0.2-debug-uint16
 ```
 
 Environment variables can also be passed to customize the behavior:
 
 ```bash
-docker run -e THREADS=4 -p 9000:9000 ghcr.io/throttr/throttr:4.0.1-release-UINT16
+docker run -e THREADS=4 -p 9000:9000 ghcr.io/throttr/throttr:4.0.2-release-uint16
 ```
 
+We have variants `release` and `debug` but also `uint8`, `uint16`, `uint32` and `uint64` ... 
+
+> Which I should use?
+>
+> If you're on development environments, debug will be helpful to see what is going on behind the scene but not recommended as uses I/O.
+> 
+> Also, you should analyse your rates...
+>
+> If you have rates like 60 usages per minute. UINT8 fit perfects to you.
+>
+> In other hand, if your scale is in bytes, and you're tracking petabytes ... UINT64 is for you ...
+>
+> It's just maths.
+
 ### 📝 Changelog
+
+### v4.0.2
+
+- Now we have fmt to print requests, responses, garbage collector and schedule activity.
 
 ### v4.0.1
 
@@ -82,16 +100,6 @@ docker run -e THREADS=4 -p 9000:9000 ghcr.io/throttr/throttr:4.0.1-release-UINT1
   - UINT16 to 65,535.
   - UINT32 to 4,294,967,295.
   - UINT64 to 18,446,744,073,709,551,615.
-
-> Which I should use?
-> 
-> You should analyse your rates... 
-> 
-> If you have rates like 60 usages per minute. UINT8 fit perfects to you.
-> 
-> In other hand, if your scale is in bytes, and you're tracking petabytes ... UINT64 is for you ... 
-> 
-> It's just maths. 
 
 ### v4.0.0
 
