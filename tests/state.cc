@@ -103,7 +103,7 @@ TEST(StateHelpersTest, CalculateExpirationPointSeconds) {
 
 TEST(StateHelpersTest, CalculateTTLRemainingNanosecondsNotExpired) {
     const auto _now = std::chrono::steady_clock::now();
-    const auto _expires = _now + std::chrono::nanoseconds(10'000'000);
+    const auto _expires = _now + std::chrono::nanoseconds(32);
 
     const auto _quota = get_ttl(_expires, ttl_types::nanoseconds);
     ASSERT_GT(_quota, 0);
@@ -188,9 +188,9 @@ TEST(State, TTLChange) {
     const std::string _key = "user";
 
     std::vector<std::tuple<ttl_types, change_types, nanoseconds>> _cases{
-        std::make_tuple(ttl_types::nanoseconds, change_types::patch, nanoseconds(100)),
-        std::make_tuple(ttl_types::nanoseconds, change_types::increase, nanoseconds(200)),
-        std::make_tuple(ttl_types::nanoseconds, change_types::decrease, nanoseconds(50)),
+        std::make_tuple(ttl_types::nanoseconds, change_types::patch, nanoseconds(32)),
+        std::make_tuple(ttl_types::nanoseconds, change_types::increase, nanoseconds(64)),
+        std::make_tuple(ttl_types::nanoseconds, change_types::decrease, nanoseconds(16)),
         std::make_tuple(ttl_types::milliseconds, change_types::patch, duration_cast<nanoseconds>(milliseconds(1))),
         std::make_tuple(ttl_types::milliseconds, change_types::increase, duration_cast<nanoseconds>(milliseconds(2))),
         std::make_tuple(ttl_types::milliseconds, change_types::decrease, duration_cast<nanoseconds>(milliseconds(1))),
