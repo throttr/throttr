@@ -201,10 +201,10 @@ namespace throttr {
                     return request_query_header_size + reinterpret_cast<const request_query_header *>(_buffer)->key_size_;
                 case request_types::update:
                     if (buffer.size() < request_update_header_size) return 0; // LCOV_EXCL_LINE note: Ignored.
-                    return request_update_header_size + reinterpret_cast<const request_query_header *>(_buffer)->key_size_;
+                    return request_update_header_size + reinterpret_cast<const request_update_header *>(_buffer)->key_size_;
                 case request_types::purge:
                     if (buffer.size() < request_purge_header_size) return 0; // LCOV_EXCL_LINE note: Ignored.
-                    return request_purge_header_size + reinterpret_cast<const request_query_header *>(_buffer)->key_size_;
+                    return request_purge_header_size + reinterpret_cast<const request_purge_header *>(_buffer)->key_size_;
                 // LCOV_EXCL_START
                 default:
                     return 0;

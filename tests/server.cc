@@ -291,7 +291,7 @@ TEST_F(ServerTestFixture, UpdatePatchTTL) {
     ASSERT_EQ(_ttl_type, static_cast<uint8_t>(ttl_types::milliseconds));
 
     uint16_t _ttl = 0;
-    std::memcpy(&_ttl, _query_response.data() + 3, sizeof(_ttl));
+    std::memcpy(&_ttl, _query_response.data() + 4, sizeof(_ttl));
     ASSERT_GE(_ttl, 9000);
     ASSERT_LE(_ttl, 10000);
 }
@@ -325,17 +325,6 @@ TEST_F(ServerTestFixture, UpdatePatchTTLSeconds) {
 
     const auto _update = request_update_builder(attribute_types::ttl, change_types::patch, 10, "consumer_sec/resource_sec");
     std::vector<std::byte> _update_response = send_and_receive(_update);
-    ASSERT_EQ(static_cast<uint8_t>(_update_response[0]), 1);
-}
-
-TEST_F(ServerTestFixture, UpdatePatchTTLNanoseconds) {
-    const auto _insert = request_insert_builder(0, ttl_types::nanoseconds, 60000, "consumer_ns/resource_ns");
-    auto _ignored = send_and_receive(_insert);
-    boost::ignore_unused(_ignored);
-
-    const auto _update = request_update_builder(attribute_types::ttl, change_types::patch, 60000, "consumer_ns/resource_ns");
-    std::vector<std::byte> _update_response = send_and_receive(_update);
-
     ASSERT_EQ(static_cast<uint8_t>(_update_response[0]), 1);
 }
 

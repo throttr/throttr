@@ -145,18 +145,20 @@ namespace throttr {
 
             using enum attribute_types;
 
-            const bool _was_modified = storage_.modify(_it, [&](entry_wrapper & object) {
+            bool modified = false;
+
+            storage_.modify(_it, [&](entry_wrapper & object) {
                 switch (request.header_->attribute_) {
                     case quota:
-                        apply_quota_change(object.entry_, request);
+                        modified = apply_quota_change(object.entry_, request);
                         break;
                     case ttl:
-                        apply_ttl_change(object.entry_, request, _now);
+                        modified = apply_ttl_change(object.entry_, request, _now);
                         break;
                 }
             });
 
-            return std::make_shared<response_holder>(static_cast<uint8_t>(_was_modified));
+            return std::make_shared<response_holder>(static_cast<uint8_t>(modified));
         }
 
         /**
