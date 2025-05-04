@@ -62,6 +62,10 @@ TEST_F(CompactBufferTest, CompactBufferCompactsWhenHalfFull) {
     ASSERT_EQ(s.buffer_start_, 0);
     ASSERT_EQ(s.buffer_end_, data.size());
 
-    const std::string recovered(reinterpret_cast<const char*>(s.buffer_.data()), data.size());
+    std::string recovered;
+    recovered.reserve(data.size());
+    for (std::size_t i = 0; i < data.size(); ++i) {
+        recovered += static_cast<char>(std::to_integer<uint8_t>(s.buffer_[i]));
+    }
     ASSERT_EQ(recovered, data);
 }

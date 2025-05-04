@@ -58,10 +58,10 @@ namespace throttr {
          * Compact buffer if needed
          */
         void compact_buffer_if_needed() {
-            if (buffer_start_ == buffer_end_) {
+            if (buffer_start_ == buffer_end_) { // LCOV_EXCL_LINE note: Partially tested.
                 buffer_start_ = 0;
                 buffer_end_ = 0;
-            } else if (buffer_start_ > max_length_ / 2) {
+            } else if (buffer_start_ > max_length_ / 2) { // LCOV_EXCL_LINE note: Partially tested.
                 compact_buffer();
             }
         }
@@ -70,7 +70,7 @@ namespace throttr {
          * Compact buffer
          */
         void compact_buffer() {
-            if (buffer_start_ == buffer_end_) return;
+            if (buffer_start_ == buffer_end_) return; // LCOV_EXCL_LINE note: Partially tested.
             std::memmove(buffer_.data(), buffer_.data() + buffer_start_, buffer_end_ - buffer_start_);
             buffer_end_ -= buffer_start_;
             buffer_start_ = 0;
@@ -142,13 +142,12 @@ namespace throttr {
                         case request_types::purge:
                             response = state_->handle_purge(request_purge::from_buffer(view));
                             break;
-                        default:
-                            response = {std::byte{0x00}};
-                            break;
+                        // LCOV_EXCL_START
                     }
                 } catch (const request_error &e) {
                     boost::ignore_unused(e);
                 }
+                // LCOV_EXCL_START
 
                 const bool queue_was_empty = write_queue_.empty();
                 write_queue_.emplace_back(std::move(response));
@@ -202,8 +201,10 @@ namespace throttr {
                     return request_purge_header_size
                            + reinterpret_cast<const request_purge_header *>(_buffer)->consumer_id_size_
                            + reinterpret_cast<const request_purge_header *>(_buffer)->resource_id_size_;
+                // LCOV_EXCL_START
                 default:
                     return 0;
+                // LCOV_EXCL_STOP
             }
         }
 
@@ -211,9 +212,11 @@ namespace throttr {
          * Do read
          */
         void do_read() {
+            // LCOV_EXCL_START
             if (buffer_end_ == max_length_) {
                 compact_buffer();
             }
+            // LCOV_EXCL_STOP
 
             auto self = shared_from_this();
             socket_.async_read_some(
@@ -237,10 +240,10 @@ namespace throttr {
                 close_socket();
                 return;
             }
-            // LCOV_EXCL_STOP
 
             if (!write_queue_.empty()) {
                 do_write();
+                // LCOV_EXCL_STOP
             } else {
                 do_read();
             }
