@@ -24,6 +24,7 @@
 #include <boost/multi_index/ordered_index.hpp>
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/member.hpp>
+#include <boost/multi_index/mem_fun.hpp>
 #include <boost/multi_index/tag.hpp>
 
 namespace throttr {
@@ -31,8 +32,16 @@ namespace throttr {
      * Entry wrapper
      */
     struct entry_wrapper {
-        request_key key_;
+        std::string consumer_id_;
+        std::string resource_id_;
         request_entry entry_;
+
+        request_key key() const {
+            return request_key{consumer_id_, resource_id_};
+        }
+
+        entry_wrapper(std::string c, std::string r, request_entry e)
+            : consumer_id_(std::move(c)), resource_id_(std::move(r)), entry_(std::move(e)) {}
     };
 
     /**
@@ -62,8 +71,9 @@ namespace throttr {
         boost::multi_index::indexed_by<
             boost::multi_index::hashed_unique<
                 boost::multi_index::tag<tag_by_key>,
-                boost::multi_index::member<entry_wrapper, request_key, &entry_wrapper::key_>,
-                request_key_hasher
+                boost::multi_index::const_mem_fun<entry_wrapper, request_key, &entry_wrapper::key>,
+                request_key_hasher,
+                std::equal_to<request_key>
             >,
             boost::multi_index::ordered_non_unique<
                 boost::multi_index::tag<tag_by_expiration>,
