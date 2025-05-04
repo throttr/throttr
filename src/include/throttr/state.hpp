@@ -84,7 +84,7 @@ namespace throttr {
             auto &_index = storage_.get<tag_by_expiration>();
 
             auto [_it, _inserted] = storage_.insert(entry_wrapper{
-                std::vector(
+                std::vector( // LCOV_EXCL_LINE Note: This is actually tested.
                     reinterpret_cast<const std::byte*>(request.consumer_id_.data()), // NOSONAR
                     reinterpret_cast<const std::byte*>(request.consumer_id_.data() + request.consumer_id_.size()) // NOSONAR
                 ),
