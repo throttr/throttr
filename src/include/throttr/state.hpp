@@ -84,8 +84,16 @@ namespace throttr {
             auto &_index = storage_.get<tag_by_expiration>();
 
             auto [_it, _inserted] = storage_.insert(entry_wrapper{
-                 _consumer_id, _resource_id, _scoped_entry
-             });
+                std::vector(
+                    reinterpret_cast<const std::byte*>(request.consumer_id_.data()),
+                    reinterpret_cast<const std::byte*>(request.consumer_id_.data() + request.consumer_id_.size())
+                ),
+                std::vector(
+                    reinterpret_cast<const std::byte*>(request.resource_id_.data()),
+                    reinterpret_cast<const std::byte*>(request.resource_id_.data() + request.resource_id_.size())
+                ),
+                _scoped_entry
+            });
 
             boost::ignore_unused(_it);
 
