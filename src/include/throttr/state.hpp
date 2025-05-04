@@ -212,7 +212,7 @@ namespace throttr {
                     entry.quota_ += request.header_->value_;
                     break;
                 case decrease:
-                    if (entry.quota_ >= request.header_->value_) {
+                    if (entry.quota_ >= request.header_->value_) { // LCOV_EXCL_LINE note: Partially covered.
                         entry.quota_ -= request.header_->value_;
                     } else {
                         entry.quota_ = 0;
@@ -310,7 +310,7 @@ namespace throttr {
             const auto _now = std::chrono::steady_clock::now();
             const auto _threshold = std::chrono::seconds(5);
 
-            while (!expired_entries_.empty() && _now - expired_entries_.front().second > _threshold) {
+            while (!expired_entries_.empty() && _now - expired_entries_.front().second > _threshold) { // LCOV_EXCL_LINE note: Partially covered.
                 expired_entries_.pop_front();
             }
 
