@@ -342,7 +342,9 @@ namespace throttr {
         void on_write(const boost::system::error_code &error, const std::size_t length) {
             boost::ignore_unused(length);
 
-            while (!write_queue_.empty()) write_queue_.pop_front();
+            while (!write_queue_.empty()) write_queue_.pop_front(); // LCOV_EXCL_LINE Note: Partially tested
+            // The not tested case is when write queue is empty
+            // which isn't possible if the previous sequence was writing.
 
             // LCOV_EXCL_START
             if (error) {
