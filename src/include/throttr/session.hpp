@@ -236,6 +236,7 @@ namespace throttr {
             }
 
             // LCOV_EXCL_START Note: Partially tested.
+            // The not tested case is when in-while break condition is triggered but no queue element exists.
             if (write_queue_.empty()) {
                 do_read();
             } else {
@@ -253,6 +254,7 @@ namespace throttr {
             std::vector<boost::asio::const_buffer> _batch;
 
             // LCOV_EXCL_START Note: Partially tested.
+            // The not tested case TBC is when execution reach this code but the queue or buffers are empty.
             for (const auto& _response : write_queue_) {
                 for (const auto& _buffer : _response->buffers_) {
                     _batch.emplace_back(_buffer);
@@ -351,13 +353,9 @@ namespace throttr {
                 close_socket();
                 return;
             }
+            // LCOV_EXCL_STOP
 
-            if (!write_queue_.empty()) {
-                do_write();
-                // LCOV_EXCL_STOP
-            } else {
-                do_read();
-            }
+            do_read();
         }
 
         void close_socket() {
