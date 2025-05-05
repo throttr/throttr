@@ -315,7 +315,7 @@ namespace throttr {
             // LCOV_EXCL_STOP
 
             const auto _now = std::chrono::steady_clock::now();
-            const auto _threshold = std::chrono::seconds(5);
+            const auto _threshold = std::chrono::seconds(10);
 
             while (!expired_entries_.empty() && _now - expired_entries_.front().second > _threshold) { // LCOV_EXCL_LINE note: Partially covered.
                 // LCOV_EXCL_START
@@ -332,7 +332,7 @@ namespace throttr {
 #endif
             // LCOV_EXCL_STOP
 
-            expiration_timer_.expires_after(std::chrono::seconds(3));
+            expiration_timer_.expires_after(std::chrono::seconds(30));
             expiration_timer_.async_wait([self = shared_from_this()](const boost::system::error_code& ec) {
                 if (!ec) {
                     self->collect_and_flush();

@@ -52,39 +52,75 @@ The full specification of the Throttr binary protocol — including request form
 
 👉 See: https://github.com/throttr/protocol
 
+## Running the distributed binaries
+
+👉 Download your favorite flavour on : https://github.com/throttr/throttr/releases
+
+> See the following sections to understand difference between debug and release or value sizes ...
+
+```
+unzip throttr-Debug-UINT16.zip
+./throttr --port=9000 --threads=4
+```
+
 ## 🐳 Running as Container
 
 Pull and run the latest release:
 
 ```bash
-docker run -p 9000:9000 ghcr.io/throttr/throttr:4.0.4-release-uint16
+docker run -p 9000:9000 ghcr.io/throttr/throttr:4.0.5-release-uint16
 ```
 
 You can get the debug version (contains debugging output)
 
 ```bash
-docker run -p 9000:9000 ghcr.io/throttr/throttr:4.0.4-debug-uint16
+docker run -p 9000:9000 ghcr.io/throttr/throttr:4.0.5-debug-uint16
 ```
 
 Environment variables can also be passed to customize the behavior:
 
 ```bash
-docker run -e THREADS=4 -p 9000:9000 ghcr.io/throttr/throttr:4.0.4-release-uint16
+docker run -e THREADS=4 -p 9000:9000 ghcr.io/throttr/throttr:4.0.5-release-uint16
 ```
 
-We have variants `release` and `debug` but also `uint8`, `uint16`, `uint32` and `uint64` ... 
+## ¿Debug or Release?
 
 > Which I should use?
 >
-> If you're on development environments, debug will be helpful to see what is going on behind the scene but not recommended as uses I/O.
+> If you're on development environments, debug will be helpful to see what is going on behind the scene but not recommended for benchmarks as it uses I/O.
+
+## ¿uint8, uint16, uint32 or uint64?
+
+
+> Those are unsigned integers (non-negative) sizes. 
 > 
-> Also, you should analyse your rates...
+> ¿Which is better for me?
+> 
+> 
+> You should analyse your rates...
 >
-> If you have rates like 60 usages per minute. UINT8 fit perfects to you.
+> If you have rates like 60 usages per minute. uint8 fit perfects to you.
 >
-> In other hand, if your scale is in bytes, and you're tracking petabytes ... UINT64 is for you ...
->
-> It's just maths.
+> In other hand, if your scale is in bytes, and you're tracking petabytes ... uint64 is for you ...
+> 
+> Use the following reference:
+
+| Type   | Max        |
+|--------|------------|
+| uint8  | 255        |
+| uint16 | 65535      |
+| uint32 | 4294967295 |
+| uint64 | 2^64 - 1   |
+
+> ¿What is the impact if I choose one of them?
+> 
+> Fields like TTL and Quota will increase the memory and bandwidth usage per transaction.
+> 
+> It means 1, 3, 5 and 7 bytes of difference per field impacted. In an example:
+> 
+> INSERT operation use, at least, 3 bytes plus two dynamic fields sizes (Quota and TTL) and I'm not considering the `key` field ... 
+> 
+> If you use uint8, you'll use 5 bytes but if you use the biggest one (uint64), you'll use 19 bytes only for fixed size fields.
 
 ### 📝 Changelog
 

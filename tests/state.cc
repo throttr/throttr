@@ -118,52 +118,6 @@ TEST(State, TTLChange) {
     }
 }
 
-TEST_F(StateTestFixture, CollectAndFlush) {
-    using namespace std::chrono;
-
-    auto &_expired = state_->expired_entries_;
-
-    const auto _now = steady_clock::now();
-
-    _expired.emplace_back(entry_wrapper{to_bytes("ab"), {0, ttl_types::seconds, _now - seconds(10)}}, _now - seconds(10));
-    _expired.emplace_back(entry_wrapper{to_bytes("ab"), {0, ttl_types::seconds, _now - seconds(6)}}, _now - seconds(6));
-    _expired.emplace_back(entry_wrapper{to_bytes("ab"), {0, ttl_types::seconds, _now - seconds(1)}}, _now - seconds(1));
-
-    state_->collect_and_flush();
-
-    ioc_.restart();
-    ioc_.run_for(seconds(10));
-
-    ASSERT_EQ(_expired.size(), 0);
-}
-
-TEST_F(StateTestFixture, ScheduleExpiration_ReprogramsIfNextEntryExists) {
-    using namespace std::chrono;
-
-    auto &_storage = state_->storage_;
-    auto &_index = _storage.get<tag_by_key>();
-
-    const auto _now = steady_clock::now();
-
-    request_entry _entry1;
-    _entry1.quota_ = 1;
-    _entry1.expires_at_ = _now;
-
-    request_entry _entry2;
-    _entry2.quota_ = 1;
-    _entry2.expires_at_ = _now + seconds(5);
-
-    _index.insert(entry_wrapper{to_bytes("c1r1"), _entry1});
-    _index.insert(entry_wrapper{to_bytes("c2r2"), _entry2});
-
-    state_->schedule_expiration(_now);
-
-    ioc_.restart();
-    ioc_.run_for(seconds(6));
-
-    EXPECT_TRUE(_index.empty());
-}
-
 TEST(StateHelpersTest, CalculateExpirationPointNanoseconds) {
     const auto _now = std::chrono::steady_clock::now();
     const auto _expires = get_expiration_point(_now, ttl_types::nanoseconds, 32);
@@ -252,4 +206,51 @@ TEST(State, QuotaChange) {
     request_update_header _dec_lt_header{request_types::update, attribute_types::quota, change_types::decrease, 10, 0};
     request_update _dec_lt_req{&_dec_lt_header, ""};
     EXPECT_FALSE(state::apply_quota_change(_entry, _dec_lt_req));
+}
+
+TEST_F(StateTestFixture, ScheduleExpiration_ReprogramsIfNextEntryExists) {
+    using namespace std::chrono;
+
+    auto &_storage = state_->storage_;
+    auto &_index = _storage.get<tag_by_key>();
+
+    const auto _now = steady_clock::now();
+
+    request_entry _entry1;
+    _entry1.quota_ = 1;
+    _entry1.expires_at_ = _now;
+
+    request_entry _entry2;
+    _entry2.quota_ = 1;
+    _entry2.expires_at_ = _now + seconds(5);
+
+    _index.insert(entry_wrapper{to_bytes("c1r1"), _entry1});
+    _index.insert(entry_wrapper{to_bytes("c2r2"), _entry2});
+
+    state_->schedule_expiration(_now);
+
+    ioc_.restart();
+    ioc_.run_for(seconds(6));
+
+    EXPECT_TRUE(_index.empty());
+}
+
+
+TEST_F(StateTestFixture, CollectAndFlush) {
+    using namespace std::chrono;
+
+    auto &_expired = state_->expired_entries_;
+
+    const auto _now = steady_clock::now();
+
+    _expired.emplace_back(entry_wrapper{to_bytes("ab"), {0, ttl_types::seconds, _now - seconds(10)}}, _now - seconds(10));
+    _expired.emplace_back(entry_wrapper{to_bytes("ab"), {0, ttl_types::seconds, _now - seconds(6)}}, _now - seconds(6));
+    _expired.emplace_back(entry_wrapper{to_bytes("ab"), {0, ttl_types::seconds, _now - seconds(1)}}, _now - seconds(1));
+
+    state_->collect_and_flush();
+
+    ioc_.restart();
+    ioc_.run_for(seconds(90));
+
+    ASSERT_EQ(_expired.size(), 0);
 }
