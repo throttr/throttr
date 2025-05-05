@@ -51,19 +51,9 @@ protected:
         }
     }
 
-    static void print_hex(const std::vector<std::byte> &data, const std::string &label) {
-        fmt::print("{}: ", label);
-        for (const auto &_byte : data) {
-            fmt::print("{:02x} ", std::to_integer<uint8_t>(_byte));
-        }
-        fmt::print("\n");
-    }
-
     [[nodiscard]] static std::vector<std::byte> send_and_receive(const std::vector<std::byte> &message, const int length = 1) {
         boost::asio::io_context _io_context;
         tcp::resolver _resolver(_io_context);
-
-        print_hex(message, "Request");
 
         const auto _endpoints = _resolver.resolve("127.0.0.1", std::to_string(1337));
 
@@ -74,8 +64,6 @@ protected:
 
         std::vector<std::byte> _response(length);
         boost::asio::read(_socket, boost::asio::buffer(_response.data(), _response.size()));
-
-        print_hex(_response, "Response");
 
         return _response;
     }

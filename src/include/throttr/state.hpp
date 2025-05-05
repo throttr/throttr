@@ -105,7 +105,7 @@ namespace throttr {
 
             // LCOV_EXCL_START
 #ifndef NDEBUG
-            fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST insert key={} quota={} ttl_type={} ttl={} RESPONSE ok={}", std::chrono::system_clock::now(), _key, request.header_->quota_, static_cast<uint8_t>(request.header_->ttl_type_), request.header_->ttl_, _inserted);
+            fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST INSERT key={} quota={} ttl_type={} ttl={} RESPONSE ok={}", std::chrono::system_clock::now(), _key, request.header_->quota_, static_cast<uint8_t>(request.header_->ttl_type_), request.header_->ttl_, _inserted);
 #endif
             // LCOV_EXCL_STOP
 
@@ -126,6 +126,13 @@ namespace throttr {
             const auto _it = _index.find(_key);
 
             if (_it == _index.end() || _now >= _it->entry_.expires_at_) { // LCOV_EXCL_LINE note: Partially covered.
+
+                // LCOV_EXCL_START
+#ifndef NDEBUG
+                fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST QUERY key={} RESPONSE ok={}", std::chrono::system_clock::now(), _key.key_, false);
+#endif
+                // LCOV_EXCL_STOP
+
                 return std::make_shared<response_holder>(0x00);
             }
 
@@ -134,7 +141,7 @@ namespace throttr {
 
             // LCOV_EXCL_START
 #ifndef NDEBUG
-            fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST query key={} RESPONSE quota={} ttl_type={} ttl={}", std::chrono::system_clock::now(), _key.key_, _entry.quota_, static_cast<uint8_t>(_entry.ttl_type_), _ttl);
+            fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST QUERY key={} RESPONSE ok={} quota={} ttl_type={} ttl={}", std::chrono::system_clock::now(), _key.key_, true, _entry.quota_, static_cast<uint8_t>(_entry.ttl_type_), _ttl);
 #endif
             // LCOV_EXCL_STOP
 
@@ -175,7 +182,7 @@ namespace throttr {
 
             // LCOV_EXCL_START
 #ifndef NDEBUG
-            fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST update key={} attribute={} change={} value={} RESPONSE ok={}", std::chrono::system_clock::now(), _key.key_, static_cast<uint8_t>(request.header_->attribute_), static_cast<uint8_t>(request.header_->change_), request.header_->value_, _modified);
+            fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST UPDATE key={} attribute={} change={} value={} RESPONSE ok={}", std::chrono::system_clock::now(), _key.key_, static_cast<uint8_t>(request.header_->attribute_), static_cast<uint8_t>(request.header_->change_), request.header_->value_, _modified);
 #endif
             // LCOV_EXCL_STOP
 
@@ -273,7 +280,7 @@ namespace throttr {
 
             // LCOV_EXCL_START
 #ifndef NDEBUG
-            fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST purge key={} RESPONSE ok={}", std::chrono::system_clock::now(), _key.key_, _erased);
+            fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST PURGE key={} RESPONSE ok={}", std::chrono::system_clock::now(), _key.key_, _erased);
 #endif
             // LCOV_EXCL_STOP
 
@@ -303,7 +310,7 @@ namespace throttr {
         void collect_and_flush() {
             // LCOV_EXCL_START
 #ifndef NDEBUG
-            fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULE collect started", std::chrono::system_clock::now());
+            fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULER GARBAGE PURGE STARTED", std::chrono::system_clock::now());
 #endif
             // LCOV_EXCL_STOP
 
@@ -313,7 +320,7 @@ namespace throttr {
             while (!expired_entries_.empty() && _now - expired_entries_.front().second > _threshold) { // LCOV_EXCL_LINE note: Partially covered.
                 // LCOV_EXCL_START
 #ifndef NDEBUG
-                fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULE removed key={}", std::chrono::system_clock::now(), std::string_view(reinterpret_cast<const char*>(expired_entries_.front().first.key_.data()), expired_entries_.front().first.key_.size())); // NOSONAR
+                fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULER PURGED key={}", std::chrono::system_clock::now(), std::string_view(reinterpret_cast<const char*>(expired_entries_.front().first.key_.data()), expired_entries_.front().first.key_.size())); // NOSONAR
 #endif
                 // LCOV_EXCL_STOP
                 expired_entries_.pop_front();
@@ -321,7 +328,7 @@ namespace throttr {
 
             // LCOV_EXCL_START
 #ifndef NDEBUG
-            fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULE collect finished", std::chrono::system_clock::now());
+            fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULER GARBAGE PURGE FINISHED", std::chrono::system_clock::now());
 #endif
             // LCOV_EXCL_STOP
 
@@ -339,7 +346,7 @@ namespace throttr {
         void schedule_expiration(const std::chrono::steady_clock::time_point proposed) {
             // LCOV_EXCL_START
 #ifndef NDEBUG
-            fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULE expiration started", std::chrono::system_clock::now());
+            fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULER GARBAGE COLLECTION STARTED", std::chrono::system_clock::now());
 #endif
             // LCOV_EXCL_STOP
 
@@ -354,7 +361,7 @@ namespace throttr {
 
             // LCOV_EXCL_START
 #ifndef NDEBUG
-            fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULE expiration finished", std::chrono::system_clock::now());
+            fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULER GARBAGE COLLECTION STARTED", std::chrono::system_clock::now());
 #endif
             // LCOV_EXCL_STOP
 
@@ -371,7 +378,7 @@ namespace throttr {
 
                     // LCOV_EXCL_START
 #ifndef NDEBUG
-                    fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULE quarantined key={}", std::chrono::system_clock::now(), std::string_view(reinterpret_cast<const char*>(_scoped_entry.key_.data()), _scoped_entry.key_.size())); // NOSONAR
+                    fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULER GARBAGE MARKED key={}", std::chrono::system_clock::now(), std::string_view(reinterpret_cast<const char*>(_scoped_entry.key_.data()), _scoped_entry.key_.size())); // NOSONAR
 #endif
                     // LCOV_EXCL_STOP
 
