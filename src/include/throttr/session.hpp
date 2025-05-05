@@ -342,11 +342,7 @@ namespace throttr {
         void on_write(const boost::system::error_code &error, const std::size_t length) {
             boost::ignore_unused(length);
 
-            const auto _count = write_queue_.size();
-
-            for (std::size_t i = 0; i < _count && !write_queue_.empty(); ++i) {
-                write_queue_.pop_front();
-            }
+            while (!write_queue_.empty()) write_queue_.pop_front();
 
             // LCOV_EXCL_START
             if (error) {
