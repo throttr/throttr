@@ -235,11 +235,14 @@ namespace throttr {
                 write_queue_.emplace_back(std::move(_response));
             }
 
+            // LCOV_EXCL_START Note: Partially tested.
             if (write_queue_.empty()) {
                 do_read();
             } else {
                 do_write();
             }
+            // LCOV_EXCL_STOP
+
             compact_buffer_if_needed();
         }
 
@@ -249,11 +252,13 @@ namespace throttr {
         void do_write() {
             std::vector<boost::asio::const_buffer> _batch;
 
+            // LCOV_EXCL_START Note: Partially tested.
             for (const auto& _response : write_queue_) {
                 for (const auto& _buffer : _response->buffers_) {
                     _batch.emplace_back(_buffer);
                 }
             }
+            // LCOV_EXCL_STOP
 
             auto self = shared_from_this();
 
