@@ -230,7 +230,7 @@ namespace throttr {
                 } catch (const request_error &e) {
                     boost::ignore_unused(e);
                 }
-                // LCOV_EXCL_START
+                // LCOV_EXCL_STOP
 
                 const bool queue_was_empty = write_queue_.empty();
                 write_queue_.emplace_back(std::move(_response));
