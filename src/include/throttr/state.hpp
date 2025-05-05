@@ -21,6 +21,7 @@
 #include <throttr/storage.hpp>
 #include <throttr/response.hpp>
 #include <throttr/time.hpp>
+#include <throttr/utils.hpp>
 
 #include <throttr/protocol_wrapper.hpp>
 
@@ -105,7 +106,7 @@ namespace throttr {
 
             // LCOV_EXCL_START
 #ifndef NDEBUG
-            fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST INSERT key={} quota={} ttl_type={} ttl={} RESPONSE ok={}", std::chrono::system_clock::now(), _key, request.header_->quota_, static_cast<uint8_t>(request.header_->ttl_type_), request.header_->ttl_, _inserted);
+            fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST INSERT key={} quota={} ttl_type={} ttl={} RESPONSE ok={}", std::chrono::system_clock::now(), _key, request.header_->quota_, to_string(request.header_->ttl_type_), request.header_->ttl_, _inserted);
 #endif
             // LCOV_EXCL_STOP
 
@@ -141,7 +142,7 @@ namespace throttr {
 
             // LCOV_EXCL_START
 #ifndef NDEBUG
-            fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST QUERY key={} RESPONSE ok={} quota={} ttl_type={} ttl={}", std::chrono::system_clock::now(), _key.key_, true, _entry.quota_, static_cast<uint8_t>(_entry.ttl_type_), _ttl);
+            fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST QUERY key={} RESPONSE ok={} quota={} ttl_type={} ttl={}", std::chrono::system_clock::now(), _key.key_, true, _entry.quota_, to_string(_entry.ttl_type_), _ttl);
 #endif
             // LCOV_EXCL_STOP
 
@@ -182,7 +183,7 @@ namespace throttr {
 
             // LCOV_EXCL_START
 #ifndef NDEBUG
-            fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST UPDATE key={} attribute={} change={} value={} RESPONSE ok={}", std::chrono::system_clock::now(), _key.key_, static_cast<uint8_t>(request.header_->attribute_), static_cast<uint8_t>(request.header_->change_), request.header_->value_, _modified);
+            fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST UPDATE key={} attribute={} change={} value={} RESPONSE ok={}", std::chrono::system_clock::now(), _key.key_, to_string(request.header_->attribute_), to_string(request.header_->change_), request.header_->value_, _modified);
 #endif
             // LCOV_EXCL_STOP
 
@@ -361,7 +362,7 @@ namespace throttr {
 
             // LCOV_EXCL_START
 #ifndef NDEBUG
-            fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULER GARBAGE COLLECTION STARTED", std::chrono::system_clock::now());
+            fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULER GARBAGE COLLECTION FINISHED", std::chrono::system_clock::now());
 #endif
             // LCOV_EXCL_STOP
 
