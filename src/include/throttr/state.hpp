@@ -310,7 +310,7 @@ namespace throttr {
         void collect_and_flush() {
             // LCOV_EXCL_START
 #ifndef NDEBUG
-            fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULE collect started", std::chrono::system_clock::now());
+            fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULER GARBAGE PURGE STARTED", std::chrono::system_clock::now());
 #endif
             // LCOV_EXCL_STOP
 
@@ -320,7 +320,7 @@ namespace throttr {
             while (!expired_entries_.empty() && _now - expired_entries_.front().second > _threshold) { // LCOV_EXCL_LINE note: Partially covered.
                 // LCOV_EXCL_START
 #ifndef NDEBUG
-                fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULE removed key={}", std::chrono::system_clock::now(), std::string_view(reinterpret_cast<const char*>(expired_entries_.front().first.key_.data()), expired_entries_.front().first.key_.size())); // NOSONAR
+                fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULER PURGED key={}", std::chrono::system_clock::now(), std::string_view(reinterpret_cast<const char*>(expired_entries_.front().first.key_.data()), expired_entries_.front().first.key_.size())); // NOSONAR
 #endif
                 // LCOV_EXCL_STOP
                 expired_entries_.pop_front();
@@ -328,7 +328,7 @@ namespace throttr {
 
             // LCOV_EXCL_START
 #ifndef NDEBUG
-            fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULE collect finished", std::chrono::system_clock::now());
+            fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULER GARBAGE PURGE FINISHED", std::chrono::system_clock::now());
 #endif
             // LCOV_EXCL_STOP
 
@@ -346,7 +346,7 @@ namespace throttr {
         void schedule_expiration(const std::chrono::steady_clock::time_point proposed) {
             // LCOV_EXCL_START
 #ifndef NDEBUG
-            fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULE expiration started", std::chrono::system_clock::now());
+            fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULER GARBAGE COLLECTION STARTED", std::chrono::system_clock::now());
 #endif
             // LCOV_EXCL_STOP
 
@@ -361,7 +361,7 @@ namespace throttr {
 
             // LCOV_EXCL_START
 #ifndef NDEBUG
-            fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULE expiration finished", std::chrono::system_clock::now());
+            fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULER GARBAGE COLLECTION STARTED", std::chrono::system_clock::now());
 #endif
             // LCOV_EXCL_STOP
 
@@ -378,7 +378,7 @@ namespace throttr {
 
                     // LCOV_EXCL_START
 #ifndef NDEBUG
-                    fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULE quarantined key={}", std::chrono::system_clock::now(), std::string_view(reinterpret_cast<const char*>(_scoped_entry.key_.data()), _scoped_entry.key_.size())); // NOSONAR
+                    fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULER GARBAGE MARKED key={}", std::chrono::system_clock::now(), std::string_view(reinterpret_cast<const char*>(_scoped_entry.key_.data()), _scoped_entry.key_.size())); // NOSONAR
 #endif
                     // LCOV_EXCL_STOP
 
