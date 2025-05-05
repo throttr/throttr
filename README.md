@@ -52,33 +52,48 @@ The full specification of the Throttr binary protocol — including request form
 
 👉 See: https://github.com/throttr/protocol
 
+## Running the distributed binaries
+
+👉 Download your favorite flavour on : https://github.com/throttr/throttr/releases
+
+> See the following sections to understand difference between debug and release or value sizes ...
+
+```
+unzip throttr-Release-UINT16.zip
+./throttr --port=9000 --threads=4
+```
+
 ## 🐳 Running as Container
 
 Pull and run the latest release:
 
 ```bash
-docker run -p 9000:9000 ghcr.io/throttr/throttr:4.0.4-release-uint16
+docker run -p 9000:9000 ghcr.io/throttr/throttr:4.0.5-release-uint16
 ```
 
 You can get the debug version (contains debugging output)
 
 ```bash
-docker run -p 9000:9000 ghcr.io/throttr/throttr:4.0.4-debug-uint16
+docker run -p 9000:9000 ghcr.io/throttr/throttr:4.0.5-debug-uint16
 ```
 
 Environment variables can also be passed to customize the behavior:
 
 ```bash
-docker run -e THREADS=4 -p 9000:9000 ghcr.io/throttr/throttr:4.0.4-release-uint16
+docker run -e THREADS=4 -p 9000:9000 ghcr.io/throttr/throttr:4.0.5-release-uint16
 ```
 
-We have variants `release` and `debug` but also `uint8`, `uint16`, `uint32` and `uint64` ... 
+## ¿Debug or Release?
 
 > Which I should use?
 >
-> If you're on development environments, debug will be helpful to see what is going on behind the scene but not recommended as uses I/O.
+> If you're on development environments, debug will be helpful to see what is going on behind the scene but not recommended for benchmarks as it uses I/O.
+
+## ¿UINT8, UINT16, UINT32 or UINT64?
+
+> ¿Which is better for me?
 > 
-> Also, you should analyse your rates...
+> You should analyse your rates...
 >
 > If you have rates like 60 usages per minute. UINT8 fit perfects to you.
 >
