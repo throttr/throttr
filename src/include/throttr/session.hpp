@@ -30,6 +30,8 @@
 #include <boost/core/ignore_unused.hpp>
 #include <boost/asio/bind_allocator.hpp>
 
+#include <fmt/chrono.h>
+
 namespace throttr {
     /**
      * Session
@@ -46,12 +48,36 @@ namespace throttr {
             boost::asio::ip::tcp::socket socket,
             const std::shared_ptr<state> &state
         ) : socket_(std::move(socket)), state_(state) {
+            // LCOV_EXCL_START
+#ifndef NDEBUG
+            if (socket_.is_open()) {
+                ip_ = socket_.remote_endpoint().address().to_string();
+                port_ = socket_.remote_endpoint().port();
+            }
+#endif
+            // LCOV_EXCL_STOP
+        }
+
+        /**
+         * Destructor
+         */
+        ~session() {
+            // LCOV_EXCL_START
+#ifndef NDEBUG
+            fmt::println("{:%Y-%m-%d %H:%M:%S} SESSION CLOSED ip={} port={}", std::chrono::system_clock::now(), ip_, port_);
+#endif
+            // LCOV_EXCL_STOP
         }
 
         /**
          * Start
          */
         void start() {
+            // LCOV_EXCL_START
+#ifndef NDEBUG
+            fmt::println("{:%Y-%m-%d %H:%M:%S} SESSION ESTABLISHED ip={} port={}", std::chrono::system_clock::now(), ip_, port_);
+#endif
+            // LCOV_EXCL_STOP
             do_read();
         }
 
@@ -97,6 +123,18 @@ namespace throttr {
          * Buffer end
          */
         std::size_t buffer_end_ = 0;
+
+#ifndef NDEBUG
+        /**
+         * IP
+         */
+        std::string ip_ = "127.0.0.1";
+
+        /**
+         * Port
+         */
+        std::uint16_t port_ = 13579;
+#endif
     private:
         /**
          * Handler memory
@@ -120,33 +158,72 @@ namespace throttr {
             // LCOV_EXCL_STOP
         }
 
+        // LCOV_EXCL_START
+        /**
+         * Buffers to hex
+         *
+         * @param buffers
+         * @return std::string
+         */
+        static std::string buffers_to_hex(const std::vector<boost::asio::const_buffer>& buffers) {
+            std::string result;
+            for (const auto& buf : buffers) {
+                const auto* data = static_cast<const uint8_t*>(buf.data());
+                for (std::size_t i = 0; i < buf.size(); ++i) {
+                    fmt::format_to(std::back_inserter(result), "{:02X} ", data[i]);
+                }
+            }
+            return result;
+        }
+
+        /**
+         * Span to hex
+         *
+         * @param buffer
+         * @return std::string
+         */
+        static std::string span_to_hex(std::span<const std::byte> buffer) {
+            std::string out;
+            for (auto b : buffer) {
+                fmt::format_to(std::back_inserter(out), "{:02X} ", std::to_integer<uint8_t>(b));
+            }
+            return out;
+        }
+        // LCOV_EXCL_STOP
+
         /**
          * Try process next
          */
         void try_process_next() {
             while (true) {
-                std::span<const std::byte> span(buffer_.data() + buffer_start_, buffer_end_ - buffer_start_);
-                const std::size_t msg_size = get_message_size(span);
-                if (msg_size == 0 || span.size() < msg_size) break; // LCOV_EXCL_LINE note: Ignored.
+                std::span<const std::byte> _span(buffer_.data() + buffer_start_, buffer_end_ - buffer_start_);
+                const std::size_t _msg_size = get_message_size(_span);
+                if (_msg_size == 0 || _span.size() < _msg_size) break; // LCOV_EXCL_LINE note: Ignored.
 
-                std::span<const std::byte> view(buffer_.data() + buffer_start_, msg_size);
-                buffer_start_ += msg_size;
+                std::span<const std::byte> _view(buffer_.data() + buffer_start_, _msg_size);
+                buffer_start_ += _msg_size;
+
+                // LCOV_EXCL_START
+#ifndef NDEBUG
+                fmt::println("{:%Y-%m-%d %H:%M:%S} SESSION READ ip={} port={} buffer={}", std::chrono::system_clock::now(), ip_, port_, span_to_hex(_view));
+#endif
+            // LCOV_EXCL_STOP
 
                 auto _response = std::make_shared<response_holder>(0x00);
 
                 try {
-                    switch (const auto type = static_cast<request_types>(std::to_integer<uint8_t>(view[0])); type) {
+                    switch (const auto type = static_cast<request_types>(std::to_integer<uint8_t>(_view[0])); type) {
                         case request_types::insert:
-                            _response = state_->handle_insert(request_insert::from_buffer(view));
+                            _response = state_->handle_insert(request_insert::from_buffer(_view));
                             break;
                         case request_types::query:
-                            _response = state_->handle_query(request_query::from_buffer(view));
+                            _response = state_->handle_query(request_query::from_buffer(_view));
                             break;
                         case request_types::update:
-                            _response = state_->handle_update(request_update::from_buffer(view));
+                            _response = state_->handle_update(request_update::from_buffer(_view));
                             break;
                         case request_types::purge:
-                            _response = state_->handle_purge(request_purge::from_buffer(view));
+                            _response = state_->handle_purge(request_purge::from_buffer(_view));
                             break;
                         // LCOV_EXCL_START
                     }
@@ -173,6 +250,13 @@ namespace throttr {
         void do_write() {
             const auto &response = write_queue_.front();
             auto self = shared_from_this();
+
+            // LCOV_EXCL_START
+#ifndef NDEBUG
+            fmt::println("{:%Y-%m-%d %H:%M:%S} SESSION WRITE ip={} port={} buffer={}", std::chrono::system_clock::now(), ip_, port_, buffers_to_hex(response->buffers_));
+#endif
+            // LCOV_EXCL_STOP
+
             boost::asio::async_write(
                 socket_,
                 response->buffers_,
