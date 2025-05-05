@@ -37,4 +37,4 @@ jobs:
       - name: Upload release asset
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/throttr-${{ matrix.size }}.zip
+          files: dist/throttr-${{ matrix.type }}-${{ matrix.size }}.zip
