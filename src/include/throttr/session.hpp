@@ -232,15 +232,14 @@ namespace throttr {
                 }
                 // LCOV_EXCL_STOP
 
-                const bool queue_was_empty = write_queue_.empty();
                 write_queue_.emplace_back(std::move(_response));
-
-                if (queue_was_empty) { // LCOV_EXCL_LINE note: Ignored.
-                    do_write();
-                }
             }
 
-            if (write_queue_.empty()) do_read(); // LCOV_EXCL_LINE note: Ignored.
+            if (write_queue_.empty()) {
+                do_read();
+            } else {
+                do_write();
+            }
             compact_buffer_if_needed();
         }
 
@@ -248,18 +247,25 @@ namespace throttr {
          * Do write
          */
         void do_write() {
-            const auto &response = write_queue_.front();
+            std::vector<boost::asio::const_buffer> _batch;
+
+            for (const auto& _response : write_queue_) {
+                for (const auto& _buffer : _response->buffers_) {
+                    _batch.emplace_back(_buffer);
+                }
+            }
+
             auto self = shared_from_this();
 
             // LCOV_EXCL_START
 #ifndef NDEBUG
-            fmt::println("{:%Y-%m-%d %H:%M:%S} SESSION WRITE ip={} port={} buffer={}", std::chrono::system_clock::now(), ip_, port_, buffers_to_hex(response->buffers_));
+            fmt::println("{:%Y-%m-%d %H:%M:%S} SESSION WRITE ip={} port={} buffer={}", std::chrono::system_clock::now(), ip_, port_, buffers_to_hex(_batch));
 #endif
             // LCOV_EXCL_STOP
 
             boost::asio::async_write(
                 socket_,
-                response->buffers_,
+                    _batch,
                     boost::asio::bind_allocator(
                         handler_allocator<int>(handler_memory_),
                         [self] (const boost::system::error_code& ec, const std::size_t length) {
@@ -328,7 +334,12 @@ namespace throttr {
          */
         void on_write(const boost::system::error_code &error, const std::size_t length) {
             boost::ignore_unused(length);
-            write_queue_.pop_front();
+
+            const auto _count = write_queue_.size();
+
+            for (std::size_t i = 0; i < _count && !write_queue_.empty(); ++i) {
+                write_queue_.pop_front();
+            }
 
             // LCOV_EXCL_START
             if (error) {
