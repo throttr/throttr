@@ -68,19 +68,19 @@ unzip throttr-Debug-UINT16.zip
 Pull and run the latest release:
 
 ```bash
-docker run -p 9000:9000 ghcr.io/throttr/throttr:4.0.5-release-uint16
+docker run -p 9000:9000 ghcr.io/throttr/throttr:4.0.6-release-uint16
 ```
 
 You can get the debug version (contains debugging output)
 
 ```bash
-docker run -p 9000:9000 ghcr.io/throttr/throttr:4.0.5-debug-uint16
+docker run -p 9000:9000 ghcr.io/throttr/throttr:4.0.6-debug-uint16
 ```
 
 Environment variables can also be passed to customize the behavior:
 
 ```bash
-docker run -e THREADS=4 -p 9000:9000 ghcr.io/throttr/throttr:4.0.5-release-uint16
+docker run -e THREADS=4 -p 9000:9000 ghcr.io/throttr/throttr:4.0.6-release-uint16
 ```
 
 ## ¿Debug or Release?

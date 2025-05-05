@@ -1,3 +1,13 @@
+### v4.0.6
+
+- Now we have beauty logs for enums.
+- TTL type issue fixed.
+
+### v4.0.5
+
+- Pipeline fixed.
+- Debug binaries are now published.
+
 ### v4.0.4
 
 - Now we support responses on batch.
