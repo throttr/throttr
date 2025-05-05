@@ -57,19 +57,19 @@ The full specification of the Throttr binary protocol — including request form
 Pull and run the latest release:
 
 ```bash
-docker run -p 9000:9000 ghcr.io/throttr/throttr:4.0.2-release-uint16
+docker run -p 9000:9000 ghcr.io/throttr/throttr:4.0.3-release-uint16
 ```
 
 You can get the debug version (contains debugging output)
 
 ```bash
-docker run -p 9000:9000 ghcr.io/throttr/throttr:4.0.2-debug-uint16
+docker run -p 9000:9000 ghcr.io/throttr/throttr:4.0.3-debug-uint16
 ```
 
 Environment variables can also be passed to customize the behavior:
 
 ```bash
-docker run -e THREADS=4 -p 9000:9000 ghcr.io/throttr/throttr:4.0.2-release-uint16
+docker run -e THREADS=4 -p 9000:9000 ghcr.io/throttr/throttr:4.0.3-release-uint16
 ```
 
 We have variants `release` and `debug` but also `uint8`, `uint16`, `uint32` and `uint64` ... 
@@ -88,9 +88,13 @@ We have variants `release` and `debug` but also `uint8`, `uint16`, `uint32` and 
 
 ### 📝 Changelog
 
+### v4.0.3
+
+- Now we have prints on connected/disconnected and read/write operations (debug-only).
+
 ### v4.0.2
 
-- Now we have fmt to print requests, responses, garbage collector and schedule activity.
+- Now we have fmt to print requests, responses, garbage collector and schedule activity (debug-only).
 
 ### v4.0.1
 
