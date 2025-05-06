@@ -1,3 +1,7 @@
+### v4.0.8
+
+- Now update TTL makes effects on the schedule side.
+
 ### v4.0.7
 
 - No delay added.

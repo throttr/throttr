@@ -62,6 +62,11 @@ namespace throttr {
         boost::asio::strand<boost::asio::io_context::executor_type> strand_;
 
         /**
+         * Scheduled key
+         */
+        std::span<const std::byte> scheduled_key_;
+
+        /**
          * Constructor
          *
          * @param ioc
@@ -176,7 +181,7 @@ namespace throttr {
                         _modified = apply_quota_change(object.entry_, request);
                         break;
                     case ttl:
-                        _modified = apply_ttl_change(object.entry_, request, _now);
+                        _modified = apply_ttl_change(object.entry_, request, _now, object.key_);
                         break;
                 }
             });
@@ -223,11 +228,14 @@ namespace throttr {
          *
          * @param entry
          * @param request
-         * @param _now
+         * @param now
+         * @param key
          * @return bool
          */
-        static bool apply_ttl_change(request_entry &entry, const request_update &request,
-                                     const std::chrono::steady_clock::time_point &_now) {
+        bool apply_ttl_change(request_entry &entry,
+                              const request_update &request,
+                              const std::chrono::steady_clock::time_point &now,
+                              std::span<const std::byte> key) {
             using enum ttl_types;
             std::chrono::nanoseconds _duration;
 
@@ -246,7 +254,7 @@ namespace throttr {
 
             switch (request.header_->change_) {
                 case change_types::patch:
-                    entry.expires_at_ = _now + _duration;
+                    entry.expires_at_ = now + _duration;
                     break;
                 case change_types::increase:
                     entry.expires_at_ += _duration;
@@ -254,6 +262,12 @@ namespace throttr {
                 case change_types::decrease:
                     entry.expires_at_ -= _duration;
                     break;
+            }
+
+            if (scheduled_key_.size() == key.size() && std::equal(scheduled_key_.begin(), scheduled_key_.end(), key.begin())) { // LCOV_EXCL_LINE Note: Partially tested
+                boost::asio::post(strand_, [_self = shared_from_this(), _expires_at = entry.expires_at_] {
+                               _self->schedule_expiration(_expires_at);
+                });
             }
 
             return true;
@@ -354,11 +368,14 @@ namespace throttr {
             auto &_schedule_index = storage_.get<tag_by_expiration>();
             if (_schedule_index.empty()) return;
 
-            const auto &_entry = _schedule_index.begin()->entry_;
+            const auto &_item = _schedule_index.begin();
+            const auto &_entry = _item->entry_;
 
             if (proposed > _entry.expires_at_) return;
 
             const auto _delay = _entry.expires_at_ - std::chrono::steady_clock::now();
+
+            scheduled_key_ = std::span(_item->key_);
 
             // LCOV_EXCL_START
 #ifndef NDEBUG
