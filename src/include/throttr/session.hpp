@@ -49,12 +49,14 @@ namespace throttr {
             const std::shared_ptr<state> &state
         ) : socket_(std::move(socket)), state_(state) {
             // LCOV_EXCL_START
-#ifndef NDEBUG
             if (socket_.is_open()) {
+                const boost::asio::ip::tcp::no_delay no_delay_option(true);
+                socket_.set_option(no_delay_option);
+#ifndef NDEBUG
                 ip_ = socket_.remote_endpoint().address().to_string();
                 port_ = socket_.remote_endpoint().port();
-            }
 #endif
+            }
             // LCOV_EXCL_STOP
         }
 

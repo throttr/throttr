@@ -1,3 +1,7 @@
+### v4.0.7
+
+- No delay added.
+
 ### v4.0.6
 
 - Now we have beauty logs for enums.
