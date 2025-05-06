@@ -232,9 +232,10 @@ namespace throttr {
          * @param key
          * @return bool
          */
-        bool apply_ttl_change(request_entry &entry, const request_update &request,
-                                     const std::chrono::steady_clock::time_point &now,
-                                     std::span<const std::byte> key) {
+        bool apply_ttl_change(request_entry &entry,
+                              const request_update &request,
+                              const std::chrono::steady_clock::time_point &now,
+                              std::span<const std::byte> key) {
             using enum ttl_types;
             std::chrono::nanoseconds _duration;
 
