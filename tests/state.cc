@@ -41,6 +41,7 @@ auto to_bytes = [](const char* str) {
 
 template <typename T>
 void test_ttl_change(
+    state& _state,
     request_entry& _entry,
     const std::string& _key,
     const ttl_types _ttl_type,
@@ -62,7 +63,13 @@ void test_ttl_change(
     const auto _now = steady_clock::now();
     const auto _before = _entry.expires_at_;
 
-    ASSERT_TRUE(state::apply_ttl_change(_entry, _request, _now));
+    const auto _key_bytes = std::vector<std::byte>{
+        reinterpret_cast<const std::byte*>(_key.data()),
+        reinterpret_cast<const std::byte*>(_key.data() + _key.size())
+    };
+    const std::span _span_key{_key_bytes};
+
+    ASSERT_TRUE(_state.apply_ttl_change(_entry, _request, _now, _span_key));
 
     switch (_change_type) {
         case change_types::patch:
@@ -94,7 +101,7 @@ TEST(State, TTLChange) {
             std::make_tuple(ttl_types::nanoseconds, change_types::decrease, nanoseconds(16)),
         };
         for (const auto& [t, c, e] : cases)
-            test_ttl_change<nanoseconds>(_entry, _key, t, c, e);
+            test_ttl_change<nanoseconds>(_state, _entry, _key, t, c, e);
     }
 
     {
@@ -104,7 +111,7 @@ TEST(State, TTLChange) {
             std::make_tuple(ttl_types::milliseconds, change_types::decrease, milliseconds(32)),
         };
         for (const auto& [t, c, e] : cases)
-            test_ttl_change<milliseconds>(_entry, _key, t, c, e);
+            test_ttl_change<milliseconds>(_state, _entry, _key, t, c, e);
     }
 
     {
@@ -114,7 +121,7 @@ TEST(State, TTLChange) {
             std::make_tuple(ttl_types::seconds, change_types::decrease, seconds(1)),
         };
         for (const auto& [t, c, e] : cases)
-            test_ttl_change<seconds>(_entry, _key, t, c, e);
+            test_ttl_change<seconds>(_state, _entry, _key, t, c, e);
     }
 }
 
