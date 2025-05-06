@@ -48,6 +48,9 @@ namespace throttr {
             boost::asio::ip::tcp::socket socket,
             const std::shared_ptr<state> &state
         ) : socket_(std::move(socket)), state_(state) {
+            const boost::asio::ip::tcp::no_delay no_delay_option(true);
+            socket_.set_option(no_delay_option);
+
             // LCOV_EXCL_START
 #ifndef NDEBUG
             if (socket_.is_open()) {
