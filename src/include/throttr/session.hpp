@@ -186,7 +186,7 @@ namespace throttr {
          */
         static std::string span_to_hex(std::span<const std::byte> buffer) {
             std::string out;
-            for (auto b : buffer) {
+            for (const auto b : buffer) {
                 fmt::format_to(std::back_inserter(out), "{:02X} ", std::to_integer<uint8_t>(b));
             }
             return out;
@@ -239,9 +239,7 @@ namespace throttr {
 
             // LCOV_EXCL_START Note: Partially tested.
             // The not tested case is when in-while break condition is triggered but no queue element exists.
-            if (write_queue_.empty()) {
-                do_read();
-            } else {
+            if (!write_queue_.empty()) {
                 do_write();
             }
             // LCOV_EXCL_STOP

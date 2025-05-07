@@ -35,4 +35,4 @@ EXPOSE 9000
 
 ENV THREADS=1
 
-CMD ["throttr", "--port=9000"]
+CMD ["throttr"]

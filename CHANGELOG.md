@@ -1,3 +1,9 @@
+### v4.0.9
+
+- Now throttr has been fully tested against Typescript SDK including batching mode.
+- Read and write ops uses now a better synchronized algorithm.
+- This version can be considered as **staging** but **not recommended** to be used **on production** environments, yet.
+
 ### v4.0.8
 
 - Now update TTL makes effects on the schedule side.

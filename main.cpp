@@ -32,7 +32,7 @@ int main(const int argc, const char* argv[]) {
     }
 
     _options.add_options()
-        ("port", boost::program_options::value<short>()->default_value(8000), "Assigned port.")
+        ("port", boost::program_options::value<short>()->default_value(9000), "Assigned port.")
         ("threads", boost::program_options::value<int>()->default_value(default_threads), "Assigned threads.");
 
     boost::program_options::variables_map _vm;
