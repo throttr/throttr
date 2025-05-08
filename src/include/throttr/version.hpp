@@ -27,7 +27,7 @@ namespace throttr {
      * @return string_view
      */
     inline std::string_view get_version() {
-        return "4.0.10";
+        return "4.0.11";
     }
 }
 

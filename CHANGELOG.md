@@ -1,3 +1,7 @@
+### v4.0.11
+
+- Fixed early access without full size check.
+
 ### v4.0.10
 
 - Broken read sequence fixed.

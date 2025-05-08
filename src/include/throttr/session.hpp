@@ -299,15 +299,19 @@ namespace throttr {
             switch (const auto *_buffer = buffer.data(); static_cast<request_types>(std::to_integer<uint8_t>(_buffer[0]))) {
                 case request_types::insert:
                     if (buffer.size() < request_insert_header_size) return 0; // LCOV_EXCL_LINE note: Ignored.
+                    if (buffer.size() < request_insert_header_size + reinterpret_cast<const request_insert_header *>(_buffer)->key_size_) return 0; // LCOV_EXCL_LINE note: Ignored.
                     return request_insert_header_size + reinterpret_cast<const request_insert_header *>(_buffer)->key_size_;
                 case request_types::query:
                     if (buffer.size() < request_query_header_size) return 0; // LCOV_EXCL_LINE note: Ignored.
+                    if (buffer.size() < request_query_header_size + reinterpret_cast<const request_query_header *>(_buffer)->key_size_) return 0; // LCOV_EXCL_LINE note: Ignored
                     return request_query_header_size + reinterpret_cast<const request_query_header *>(_buffer)->key_size_;
                 case request_types::update:
                     if (buffer.size() < request_update_header_size) return 0; // LCOV_EXCL_LINE note: Ignored.
+                    if (buffer.size() < request_update_header_size + reinterpret_cast<const request_update_header *>(_buffer)->key_size_) return 0; // LCOV_EXCL_LINE note: Ignored
                     return request_update_header_size + reinterpret_cast<const request_update_header *>(_buffer)->key_size_;
                 case request_types::purge:
                     if (buffer.size() < request_purge_header_size) return 0; // LCOV_EXCL_LINE note: Ignored.
+                    if (buffer.size() < request_purge_header_size + reinterpret_cast<const request_purge_header *>(_buffer)->key_size_) return 0; // LCOV_EXCL_LINE note: Ignored
                     return request_purge_header_size + reinterpret_cast<const request_purge_header *>(_buffer)->key_size_;
                 // LCOV_EXCL_START
                 default:
