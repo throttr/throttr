@@ -251,6 +251,7 @@ namespace throttr {
         void do_write() {
             if (write_queue_.empty()) {
                 do_read();
+                return;
             }
 
             std::vector<boost::asio::const_buffer> _batch;
