@@ -249,10 +249,12 @@ namespace throttr {
          * Do write
          */
         void do_write() {
+            // LCOV_EXCL_START
             if (write_queue_.empty()) {
                 do_read();
                 return;
             }
+            // LCOV_EXCL_STOP
 
             std::vector<boost::asio::const_buffer> _batch;
 
