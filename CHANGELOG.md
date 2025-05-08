@@ -1,3 +1,7 @@
+### v4.0.10
+
+- Broken read sequence fixed.
+
 ### v4.0.9
 
 - Now throttr has been fully tested against Typescript SDK including batching mode.
@@ -63,25 +67,25 @@
 
 - Requests now can be sent on batch.
 
-#### v2.1.2
+### v2.1.2
 
 - Connections are not closed by unhandled cases.
 - Pipeline added.
 
-#### v2.1.1
+### v2.1.1
 
 - Threads variable recovered.
 
-#### v2.1.0
+### v2.1.0
 
 - [Protocol](https://github.com/throttr/protocol) is now a external dependency.
 
-#### v2.0.1
+### v2.0.1
 
 - Static link added by default.
 - Container now uses `FROM scratch`.
 
-#### v2.0.0
+### v2.0.0
 
 - Redesigned protocol with Consumer ID and Resource ID.
 - Added Query, Update and Purge requests.
@@ -89,6 +93,6 @@
 - 100% Unit Test Coverage.
 - Zero Sonar issues.
 
-#### v1.0.0
+### v1.0.0
 
 - Minimum viable product released.
