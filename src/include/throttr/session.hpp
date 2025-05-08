@@ -33,23 +33,6 @@
 #include <fmt/chrono.h>
 
 namespace throttr {
-    template<typename Header>
-    constexpr std::size_t get_key_size(const std::byte* data) {
-        return reinterpret_cast<const Header*>(data)->key_size_;
-    }
-
-    struct RequestMeta {
-        std::size_t header_size;
-        std::size_t (*key_size_fn)(const std::byte*);
-    };
-
-    constexpr RequestMeta request_meta[] = {
-        {request_insert_header_size, get_key_size<request_insert_header>},
-        {request_query_header_size,  get_key_size<request_query_header>},
-        {request_update_header_size, get_key_size<request_update_header>},
-        {request_purge_header_size,  get_key_size<request_purge_header>}
-    };
-
     /**
      * Session
      */
