@@ -239,9 +239,7 @@ namespace throttr {
 
             // LCOV_EXCL_START Note: Partially tested.
             // The not tested case is when in-while break condition is triggered but no queue element exists.
-            if (!write_queue_.empty()) {
-                do_write();
-            }
+            do_write();
             // LCOV_EXCL_STOP
 
             compact_buffer_if_needed();
@@ -251,6 +249,13 @@ namespace throttr {
          * Do write
          */
         void do_write() {
+            // LCOV_EXCL_START
+            if (write_queue_.empty()) {
+                do_read();
+                return;
+            }
+            // LCOV_EXCL_STOP
+
             std::vector<boost::asio::const_buffer> _batch;
 
             // LCOV_EXCL_START Note: Partially tested.
