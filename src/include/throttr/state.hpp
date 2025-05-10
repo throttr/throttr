@@ -78,23 +78,30 @@ namespace throttr {
         /**
          * Handle insert
          *
-         * @param request
+         * @param view
          * @return std::shared_ptr<response_holder>
          */
-        std::shared_ptr<response_holder> handle_insert(const request_insert &request) {
-            const std::string _key{request.key_};
+        std::shared_ptr<response_holder> handle_insert(const std::span<const std::byte> view) {
+            const auto _request = request_insert::from_buffer(view);
+
+            const std::string _key{_request.key_};
 
             const auto _now = std::chrono::steady_clock::now();
-            const auto _expires_at = get_expiration_point(_now, request.header_->ttl_type_, request.header_->ttl_);
+            const auto _expires_at = get_expiration_point(_now, _request.header_->ttl_type_, _request.header_->ttl_);
 
-            const request_entry _scoped_entry{request.header_->quota_, request.header_->ttl_type_, _expires_at};
+            const request_entry _scoped_entry{
+                entry_types::counter,
+                std::vector(view.begin() + 1, view.begin() + 1 + sizeof(value_type)),
+                _request.header_->ttl_type_,
+                _expires_at
+            };
 
             auto &_index = storage_.get<tag_by_expiration>();
 
             auto [_it, _inserted] = storage_.insert(entry_wrapper{
                 std::vector( // LCOV_EXCL_LINE Note: This is actually tested.
-                    reinterpret_cast<const std::byte*>(request.key_.data()), // NOSONAR
-                    reinterpret_cast<const std::byte*>(request.key_.data() + request.key_.size()) // NOSONAR
+                    reinterpret_cast<const std::byte*>(_request.key_.data()), // NOSONAR
+                    reinterpret_cast<const std::byte*>(_request.key_.data() + _request.key_.size()) // NOSONAR
                 ),
                 _scoped_entry
             });
@@ -111,7 +118,7 @@ namespace throttr {
 
             // LCOV_EXCL_START
 #ifndef NDEBUG
-            fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST INSERT key={} quota={} ttl_type={} ttl={} RESPONSE ok={}", std::chrono::system_clock::now(), _key, request.header_->quota_, to_string(request.header_->ttl_type_), request.header_->ttl_, _inserted);
+            fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST INSERT key={} quota={} ttl_type={} ttl={} RESPONSE ok={}", std::chrono::system_clock::now(), _key, _request.header_->quota_, to_string(_request.header_->ttl_type_), _request.header_->ttl_, _inserted);
 #endif
             // LCOV_EXCL_STOP
 
@@ -147,7 +154,8 @@ namespace throttr {
 
             // LCOV_EXCL_START
 #ifndef NDEBUG
-            fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST QUERY key={} RESPONSE ok={} quota={} ttl_type={} ttl={}", std::chrono::system_clock::now(), _key.key_, true, _entry.quota_, to_string(_entry.ttl_type_), _ttl);
+            auto * _quota = reinterpret_cast<const value_type *>(_entry.value_.data());
+            fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST QUERY key={} RESPONSE ok={} quota={} ttl_type={} ttl={}", std::chrono::system_clock::now(), _key.key_, true, *_quota, to_string(_entry.ttl_type_), _ttl);
 #endif
             // LCOV_EXCL_STOP
 
@@ -205,16 +213,18 @@ namespace throttr {
         static bool apply_quota_change(request_entry &entry, const request_update &request) {
             using enum change_types;
 
+            auto * _quota = reinterpret_cast<value_type *>(entry.value_.data());
+
             switch (request.header_->change_) {
                 case patch:
-                    entry.quota_ = request.header_->value_;
+                    *_quota = request.header_->value_;
                     break;
                 case increase:
-                    entry.quota_ += request.header_->value_;
+                    *_quota += request.header_->value_;
                     break;
                 case decrease:
-                    if (entry.quota_ >= request.header_->value_) { // LCOV_EXCL_LINE note: Partially covered.
-                        entry.quota_ -= request.header_->value_;
+                    if (*_quota >= request.header_->value_) { // LCOV_EXCL_LINE note: Partially covered.
+                        *_quota -= request.header_->value_;
                     } else {
                         return false;
                     }

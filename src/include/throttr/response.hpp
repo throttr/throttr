@@ -30,17 +30,12 @@ namespace throttr {
         /**
          * Buffers
          */
-        std::vector<boost::asio::const_buffer> buffers_;
+        std::array<boost::asio::const_buffer, 4> buffers_;
 
         /**
          * Status
          */
         std::uint8_t status_ = 0;
-
-        /**
-         * Quota
-         */
-        value_type quota_ = 0;
 
         /**
          * TTL type
@@ -53,19 +48,23 @@ namespace throttr {
         value_type ttl_ = 0;
 
         /**
+         * Count
+         */
+        std::size_t count_ = 4;
+
+        /**
          * Constructor
          *
-         * @param e
+         * @param entry
          * @param ttl
          */
-        response_holder(const request_entry &e, const value_type ttl)
+        response_holder(const request_entry &entry, const value_type ttl)
             : status_(0x01),
-              quota_(e.quota_),
-              ttl_type_(static_cast<uint8_t>(e.ttl_type_)),
+              ttl_type_(static_cast<uint8_t>(entry.ttl_type_)),
               ttl_(ttl) {
             buffers_ = {
                 boost::asio::buffer(&status_, sizeof(status_)),
-                boost::asio::buffer(&quota_, sizeof(quota_)),
+                boost::asio::buffer(entry.value_.data(), entry.value_.size()),
                 boost::asio::buffer(&ttl_type_, sizeof(ttl_type_)),
                 boost::asio::buffer(&ttl_, sizeof(ttl_))
             };
@@ -77,7 +76,8 @@ namespace throttr {
          * @param status_code
          */
         explicit response_holder(const uint8_t status_code)
-            : status_(status_code) {
+        : status_(status_code),
+          count_(1) {
             buffers_ = {
                 boost::asio::buffer(&status_, sizeof(status_))
             };

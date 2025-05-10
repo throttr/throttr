@@ -216,7 +216,7 @@ namespace throttr {
                 try {
                     switch (const auto type = static_cast<request_types>(std::to_integer<uint8_t>(_view[0])); type) {
                         case request_types::insert:
-                            _response = state_->handle_insert(request_insert::from_buffer(_view));
+                            _response = state_->handle_insert(_view);
                             break;
                         case request_types::query:
                             _response = state_->handle_query(request_query::from_buffer(_view));
@@ -258,11 +258,13 @@ namespace throttr {
 
             std::vector<boost::asio::const_buffer> _batch;
 
+            _batch.reserve(write_queue_.size() * 4);
+
             // LCOV_EXCL_START Note: Partially tested.
             // The not tested case TBC is when execution reach this code but the queue or buffers are empty.
             for (const auto& _response : write_queue_) {
                 for (const auto& _buffer : _response->buffers_) {
-                    _batch.emplace_back(_buffer);
+                    if (boost::asio::buffer_size(_buffer) > 0) _batch.emplace_back(_buffer);
                 }
             }
             // LCOV_EXCL_STOP
