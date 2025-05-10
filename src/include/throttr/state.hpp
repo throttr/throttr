@@ -89,7 +89,7 @@ namespace throttr {
             const auto _now = std::chrono::steady_clock::now();
             const auto _expires_at = get_expiration_point(_now, _request.header_->ttl_type_, _request.header_->ttl_);
 
-            const request_entry _scoped_entry{
+            request_entry _scoped_entry{
                 entry_types::counter,
                 std::vector(view.begin() + 1, view.begin() + 1 + sizeof(value_type)),
                 _request.header_->ttl_type_,
@@ -103,7 +103,7 @@ namespace throttr {
                     reinterpret_cast<const std::byte*>(_request.key_.data()), // NOSONAR
                     reinterpret_cast<const std::byte*>(_request.key_.data() + _request.key_.size()) // NOSONAR
                 ),
-                _scoped_entry
+                std::move(_scoped_entry)
             });
 
             boost::ignore_unused(_it);

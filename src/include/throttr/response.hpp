@@ -48,11 +48,6 @@ namespace throttr {
         value_type ttl_ = 0;
 
         /**
-         * Count
-         */
-        std::size_t count_ = 4;
-
-        /**
          * Constructor
          *
          * @param entry
@@ -76,8 +71,7 @@ namespace throttr {
          * @param status_code
          */
         explicit response_holder(const uint8_t status_code)
-        : status_(status_code),
-          count_(1) {
+        : status_(status_code) {
             buffers_ = {
                 boost::asio::buffer(&status_, sizeof(status_))
             };

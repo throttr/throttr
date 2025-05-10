@@ -41,11 +41,6 @@ namespace throttr {
         }
     }
 
-    inline std::vector<std::byte> to_byte_vector(value_type value) {
-        auto ptr = reinterpret_cast<std::byte*>(&value);
-        return {ptr, ptr + sizeof(value)};
-    }
-
     /**
      * To string
      *
