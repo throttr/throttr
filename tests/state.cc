@@ -179,37 +179,38 @@ TEST(StateHelpersTest, CalculateTTLRemainingSecondsExpired) {
 
 TEST(State, QuotaChange) {
     request_entry _entry;
+    _entry.value_.resize(sizeof(value_type));
 
     // patch
-    _entry.quota_ = 0;
+    *reinterpret_cast<value_type *>(_entry.value_.data()) = 0;
     request_update_header _patch_header{request_types::update, attribute_types::quota, change_types::patch, 42, 0};
     request_update _patch_req{&_patch_header, ""};
     EXPECT_TRUE(state::apply_quota_change(_entry, _patch_req));
-    EXPECT_EQ(_entry.quota_, 42);
+    EXPECT_EQ(*reinterpret_cast<value_type *>(_entry.value_.data()), 42);
 
     // increase
-    _entry.quota_ = 10;
+    *reinterpret_cast<value_type *>(_entry.value_.data()) = 10;
     request_update_header _inc_header{request_types::update, attribute_types::quota, change_types::increase, 5, 0};
     request_update _inc_req{&_inc_header, ""};
     EXPECT_TRUE(state::apply_quota_change(_entry, _inc_req));
-    EXPECT_EQ(_entry.quota_, 15);
+    EXPECT_EQ(*reinterpret_cast<value_type *>(_entry.value_.data()), 15);
 
     // decrease (quota > value)
-    _entry.quota_ = 20;
+    *reinterpret_cast<value_type *>(_entry.value_.data()) = 20;
     request_update_header _dec_gt_header{request_types::update, attribute_types::quota, change_types::decrease, 10, 0};
     request_update _dec_gt_req{&_dec_gt_header, ""};
     EXPECT_TRUE(state::apply_quota_change(_entry, _dec_gt_req));
-    EXPECT_EQ(_entry.quota_, 10);
+    EXPECT_EQ(*reinterpret_cast<value_type *>(_entry.value_.data()), 10);
 
     // decrease (quota == value)
-    _entry.quota_ = 10;
+    *reinterpret_cast<value_type *>(_entry.value_.data()) = 10;
     request_update_header _dec_eq_header{request_types::update, attribute_types::quota, change_types::decrease, 10, 0};
     request_update _dec_eq_req{&_dec_eq_header, ""};
     EXPECT_TRUE(state::apply_quota_change(_entry, _dec_eq_req));
-    EXPECT_EQ(_entry.quota_, 0);
+    EXPECT_EQ(*reinterpret_cast<value_type *>(_entry.value_.data()), 0);
 
     // decrease (quota < value)
-    _entry.quota_ = 5;
+    *reinterpret_cast<value_type *>(_entry.value_.data()) = 5;
     request_update_header _dec_lt_header{request_types::update, attribute_types::quota, change_types::decrease, 10, 0};
     request_update _dec_lt_req{&_dec_lt_header, ""};
     EXPECT_FALSE(state::apply_quota_change(_entry, _dec_lt_req));
@@ -224,11 +225,13 @@ TEST_F(StateTestFixture, ScheduleExpiration_ReprogramsIfNextEntryExists) {
     const auto _now = steady_clock::now();
 
     request_entry _entry1;
-    _entry1.quota_ = 1;
+    _entry1.type_ = entry_types::counter;
+    _entry1.value_ = { std::byte{1} };
     _entry1.expires_at_ = _now;
 
     request_entry _entry2;
-    _entry2.quota_ = 1;
+    _entry2.type_ = entry_types::counter;
+    _entry2.value_ = { std::byte{1} };
     _entry2.expires_at_ = _now + seconds(5);
 
     _index.insert(entry_wrapper{to_bytes("c1r1"), _entry1});
@@ -250,9 +253,16 @@ TEST_F(StateTestFixture, CollectAndFlush) {
 
     const auto _now = steady_clock::now();
 
-    _expired.emplace_back(entry_wrapper{to_bytes("ab"), {0, ttl_types::seconds, _now - seconds(10)}}, _now - seconds(10));
-    _expired.emplace_back(entry_wrapper{to_bytes("ab"), {0, ttl_types::seconds, _now - seconds(6)}}, _now - seconds(6));
-    _expired.emplace_back(entry_wrapper{to_bytes("ab"), {0, ttl_types::seconds, _now - seconds(1)}}, _now - seconds(1));
+    constexpr value_type _value = 0;
+    std::vector<std::byte> _value_vector(sizeof(value_type));
+    std::memcpy(_value_vector.data(), &_value, sizeof(value_type));
+
+    _expired.emplace_back(entry_wrapper{to_bytes("ab"), {
+        entry_types::counter, _value_vector, ttl_types::seconds, _now - seconds(10)}}, _now - seconds(10));
+    _expired.emplace_back(entry_wrapper{to_bytes("ab"), {
+        entry_types::counter, _value_vector, ttl_types::seconds, _now - seconds(6)}}, _now - seconds(6));
+    _expired.emplace_back(entry_wrapper{to_bytes("ab"), {
+        entry_types::counter, _value_vector, ttl_types::seconds, _now - seconds(1)}}, _now - seconds(1));
 
     state_->collect_and_flush();
 
