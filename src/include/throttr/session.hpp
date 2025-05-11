@@ -269,35 +269,44 @@ namespace throttr {
         static std::size_t get_message_size(std::span<const std::byte> buffer) {
             if (buffer.empty()) return 0;
 
-            switch (const auto *_buffer = buffer.data(); static_cast<request_types>(std::to_integer<uint8_t>(_buffer[0]))) {
-                case request_types::insert:
-                    if (buffer.size() < request_insert_header_size) return 0; // LCOV_EXCL_LINE note: Ignored.
-                    if (buffer.size() < request_insert_header_size + reinterpret_cast<const request_insert_header *>(_buffer)->key_size_) return 0; // LCOV_EXCL_LINE note: Ignored.
-                    return request_insert_header_size + reinterpret_cast<const request_insert_header *>(_buffer)->key_size_;
-                case request_types::query:
-                    if (buffer.size() < request_query_header_size) return 0; // LCOV_EXCL_LINE note: Ignored.
-                    if (buffer.size() < request_query_header_size + reinterpret_cast<const request_query_header *>(_buffer)->key_size_) return 0; // LCOV_EXCL_LINE note: Ignored
-                    return request_query_header_size + reinterpret_cast<const request_query_header *>(_buffer)->key_size_;
-                case request_types::update:
-                    if (buffer.size() < request_update_header_size) return 0; // LCOV_EXCL_LINE note: Ignored.
-                    if (buffer.size() < request_update_header_size + reinterpret_cast<const request_update_header *>(_buffer)->key_size_) return 0; // LCOV_EXCL_LINE note: Ignored
-                    return request_update_header_size + reinterpret_cast<const request_update_header *>(_buffer)->key_size_;
-                case request_types::purge:
-                    if (buffer.size() < request_purge_header_size) return 0; // LCOV_EXCL_LINE note: Ignored.
-                    if (buffer.size() < request_purge_header_size + reinterpret_cast<const request_purge_header *>(_buffer)->key_size_) return 0; // LCOV_EXCL_LINE note: Ignored
-                    return request_purge_header_size + reinterpret_cast<const request_purge_header *>(_buffer)->key_size_;
-                case request_types::set:
-                    if (buffer.size() < request_set_header_size) return 0; // LCOV_EXCL_LINE note: Ignored.
-                    if (buffer.size() < request_set_header_size + reinterpret_cast<const request_set_header *>(_buffer)->key_size_ + reinterpret_cast<const request_set_header *>(_buffer)->value_size_) return 0; // LCOV_EXCL_LINE note: Ignored
-                    return request_set_header_size + reinterpret_cast<const request_set_header *>(_buffer)->key_size_ + reinterpret_cast<const request_set_header *>(_buffer)->value_size_;
-                case request_types::get:
-                    if (buffer.size() < request_get_header_size) return 0; // LCOV_EXCL_LINE note: Ignored.
-                    if (buffer.size() < request_get_header_size + reinterpret_cast<const request_get_header *>(_buffer)->key_size_) return 0; // LCOV_EXCL_LINE note: Ignored
-                    return request_get_header_size + reinterpret_cast<const request_get_header *>(_buffer)->key_size_;
-                // LCOV_EXCL_START
+            const auto *_buffer = buffer.data();
+            const auto _type = static_cast<request_types>(std::to_integer<uint8_t>(_buffer[0])); // NOSONAR
+
+            auto _check_and_return = [&](const std::size_t header_size, const std::size_t extra = 0) -> std::size_t {
+                if (buffer.size() < header_size) return 0;
+                if (buffer.size() < header_size + extra) return 0;
+                return header_size + extra;
+            };
+
+            switch (_type) {
+                case request_types::insert: {
+                    auto *_h = reinterpret_cast<const request_insert_header *>(_buffer); // NOSONAR
+                    return _check_and_return(request_insert_header_size, _h->key_size_);
+                }
+                case request_types::query: {
+                    auto *_h = reinterpret_cast<const request_query_header *>(_buffer); // NOSONAR
+                    return _check_and_return(request_query_header_size, _h->key_size_);
+                }
+                case request_types::update: {
+                    auto *_h = reinterpret_cast<const request_update_header *>(_buffer); // NOSONAR
+                    return _check_and_return(request_update_header_size, _h->key_size_);
+                }
+                case request_types::purge: {
+                    auto *_h = reinterpret_cast<const request_purge_header *>(_buffer); // NOSONAR
+                    return _check_and_return(request_purge_header_size, _h->key_size_);
+                }
+                case request_types::set: {
+                    auto *_h = reinterpret_cast<const request_set_header *>(_buffer); // NOSONAR
+                    return _check_and_return(request_set_header_size, _h->key_size_ + _h->value_size_);
+                }
+                case request_types::get: {
+                    auto *_h = reinterpret_cast<const request_get_header *>(_buffer); // NOSONAR
+                    return _check_and_return(request_get_header_size, _h->key_size_);
+                }
+                    // LCOV_EXCL_START
                 default:
                     return 0;
-                // LCOV_EXCL_STOP
+                    // LCOV_EXCL_STOP
             }
         }
 
