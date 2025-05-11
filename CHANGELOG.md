@@ -1,3 +1,7 @@
+### v4.0.14
+
+- Now we have a security mechanism to avoid UPDATE quota operations to raw. 
+
 ### v4.0.13
 
 - Now we have a security mechanism for cross operations (GET to counter or QUERY to raw).
