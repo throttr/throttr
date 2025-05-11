@@ -167,7 +167,12 @@ namespace throttr {
             auto &_index = storage_.get<tag_by_key_and_valid>();
             const auto _it = _index.find(std::make_tuple(_key, false));
 
-            if (_it == _index.end()) { // LCOV_EXCL_LINE note: Partially covered.
+            // LCOV_EXCL_START
+            const auto _is_resource_compliant =
+                as_query ? _it->entry_.type_ == entry_types::counter : _it->entry_.type_ == entry_types::raw;
+            // LCOV_EXCL_STOP
+
+            if (_it == _index.end() || !_is_resource_compliant) { // LCOV_EXCL_LINE note: Partially covered.
 
                 // LCOV_EXCL_START
 #ifndef NDEBUG
