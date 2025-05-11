@@ -133,12 +133,11 @@ namespace throttr {
          */
         std::shared_ptr<response_holder> handle_query(const request_query &request) {
             const request_key _key{request.key_};
-            const auto _now = std::chrono::steady_clock::now();
 
-            auto &_index = storage_.get<tag_by_key>();
-            const auto _it = _index.find(_key);
+            auto &_index = storage_.get<tag_by_key_and_valid>();
+            const auto _it = _index.find(std::make_tuple(_key, false));
 
-            if (_it == _index.end() || _now >= _it->entry_.expires_at_) { // LCOV_EXCL_LINE note: Partially covered.
+            if (_it == _index.end()) { // LCOV_EXCL_LINE note: Partially covered.
 
                 // LCOV_EXCL_START
 #ifndef NDEBUG
@@ -172,10 +171,10 @@ namespace throttr {
             const request_key _key{request.key_};
             const auto _now = std::chrono::steady_clock::now();
 
-            auto &_index = storage_.get<tag_by_key>();
-            const auto _it = _index.find(_key);
+            auto &_index = storage_.get<tag_by_key_and_valid>();
+            const auto _it = _index.find(std::make_tuple(_key, false));
 
-            if (_it == _index.end() || _now >= _it->entry_.expires_at_) { // LCOV_EXCL_LINE note: Partially covered.
+            if (_it == _index.end()) { // LCOV_EXCL_LINE note: Partially covered.
                 return std::make_shared<response_holder>(0x00);
             }
 
@@ -291,15 +290,13 @@ namespace throttr {
          */
         std::shared_ptr<response_holder> handle_purge(const request_purge &request) {
             const request_key _key{request.key_};
-            const auto _now = std::chrono::steady_clock::now();
 
-            auto &_index = storage_.get<tag_by_key>();
-            const auto _it = _index.find(_key);
-
+            auto &_index = storage_.get<tag_by_key_and_valid>();
+            const auto _it = _index.find(std::make_tuple(_key, false));
 
             bool _erased = true;
 
-            if (_it == _index.end() || _now >= _it->entry_.expires_at_) {// LCOV_EXCL_LINE note: Partially covered.
+            if (_it == _index.end()) {// LCOV_EXCL_LINE note: Partially covered.
                 _erased = false;
             }
 
