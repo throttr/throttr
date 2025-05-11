@@ -185,20 +185,18 @@ namespace throttr {
                         case request_types::insert:
                             _response = state_->handle_insert(_view);
                             break;
+                        case request_types::set:
+                            _response = state_->handle_set(_view);
+                            break;
                         case request_types::query:
-                            _response = state_->handle_query(request_query::from_buffer(_view));
+                        case request_types::get:
+                            _response = state_->handle_query(request_query::from_buffer(_view), type == request_types::query);
                             break;
                         case request_types::update:
                             _response = state_->handle_update(request_update::from_buffer(_view));
                             break;
                         case request_types::purge:
                             _response = state_->handle_purge(request_purge::from_buffer(_view));
-                            break;
-                        case request_types::set:
-                            _response = state_->handle_set(_view);
-                            break;
-                        case request_types::get:
-                            _response = state_->handle_get(request_get::from_buffer(_view));
                             break;
                         // LCOV_EXCL_START
                     }

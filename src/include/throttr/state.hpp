@@ -74,6 +74,65 @@ namespace throttr {
         explicit state(boost::asio::io_context &ioc) : expiration_timer_(ioc), strand_(ioc.get_executor()) {
         }
 
+        /**
+         * Handle entry
+         *
+         * @param key
+         * @param value
+         * @param ttl_type
+         * @param ttl
+         * @param type
+         * @return
+         */
+        std::shared_ptr<response_holder> handle_entry(
+            const std::string_view& key,
+            const std::vector<std::byte>& value,
+            const ttl_types ttl_type,
+            uint64_t ttl,
+            const entry_types type
+        ) {
+            const auto _now = std::chrono::steady_clock::now();
+            const auto _expires_at = get_expiration_point(_now, ttl_type, ttl);
+
+            request_entry scopedEntry{
+                type,
+                value,
+                ttl_type,
+                _expires_at
+            };
+
+            auto& index = storage_.get<tag_by_key_and_valid>();
+            auto [it, inserted] = storage_.insert(entry_wrapper{
+                std::vector(
+                    reinterpret_cast<const std::byte*>(key.data()),
+                    reinterpret_cast<const std::byte*>(key.data() + key.size())
+                ),
+                std::move(scopedEntry)
+            });
+
+            boost::ignore_unused(it);
+
+            if (inserted) {
+                if (const auto& entry = index.begin()->entry_; _expires_at <= entry.expires_at_) {
+                    boost::asio::post(strand_, [self = shared_from_this(), _expires_at] {
+                        self->schedule_expiration(_expires_at);
+                    });
+                }
+            }
+
+#ifndef NDEBUG
+            fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST ENTRY key={} value={} ttl_type={} ttl={} RESPONSE ok={}",
+                         std::chrono::system_clock::now(),
+                         key,
+                         span_to_hex(value),
+                         to_string(ttl_type),
+                         ttl,
+                         inserted);
+#endif
+
+            return std::make_shared<response_holder>(static_cast<uint8_t>(inserted));
+        }
+
 
         /**
          * Handle insert
@@ -83,46 +142,8 @@ namespace throttr {
          */
         std::shared_ptr<response_holder> handle_insert(const std::span<const std::byte> view) {
             const auto _request = request_insert::from_buffer(view);
-
-            const std::string _key{_request.key_};
-
-            const auto _now = std::chrono::steady_clock::now();
-            const auto _expires_at = get_expiration_point(_now, _request.header_->ttl_type_, _request.header_->ttl_);
-
-            request_entry _scoped_entry{
-                entry_types::counter,
-                std::vector(view.begin() + 1, view.begin() + 1 + sizeof(value_type)),
-                _request.header_->ttl_type_,
-                _expires_at
-            };
-
-            auto &_index = storage_.get<tag_by_key_and_valid>();
-
-            auto [_it, _inserted] = storage_.insert(entry_wrapper{
-                std::vector( // LCOV_EXCL_LINE Note: This is actually tested.
-                    reinterpret_cast<const std::byte*>(_request.key_.data()), // NOSONAR
-                    reinterpret_cast<const std::byte*>(_request.key_.data() + _request.key_.size()) // NOSONAR
-                ),
-                std::move(_scoped_entry)
-            });
-
-            boost::ignore_unused(_it);
-
-            if (_inserted) { // LCOV_EXCL_LINE note: Partially covered.
-                if (const auto &_entry = _index.begin()->entry_; _expires_at <= _entry.expires_at_) { // LCOV_EXCL_LINE note: Partially covered.
-                    boost::asio::post(strand_, [_self = shared_from_this(), _expires_at] {
-                        _self->schedule_expiration(_expires_at);
-                    });
-                }
-            }
-
-            // LCOV_EXCL_START
-#ifndef NDEBUG
-            fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST INSERT key={} quota={} ttl_type={} ttl={} RESPONSE ok={}", std::chrono::system_clock::now(), _key, _request.header_->quota_, to_string(_request.header_->ttl_type_), _request.header_->ttl_, _inserted);
-#endif
-            // LCOV_EXCL_STOP
-
-            return std::make_shared<response_holder>(static_cast<uint8_t>(_inserted));
+            const std::vector value(view.begin() + 1, view.begin() + 1 + sizeof(value_type));
+            return handle_entry(_request.key_, value, _request.header_->ttl_type_, _request.header_->ttl_, entry_types::counter);
         }
 
         /**
@@ -133,55 +154,17 @@ namespace throttr {
          */
         std::shared_ptr<response_holder> handle_set(const std::span<const std::byte> view) {
             const auto _request = request_set::from_buffer(view);
-
-            const std::string _key{_request.key_};
-
-            const auto _now = std::chrono::steady_clock::now();
-            const auto _expires_at = get_expiration_point(_now, _request.header_->ttl_type_, _request.header_->ttl_);
-
-            request_entry _scoped_entry{
-                entry_types::raw,
-                _request.value_,
-                _request.header_->ttl_type_,
-                _expires_at
-            };
-
-            auto &_index = storage_.get<tag_by_key_and_valid>();
-
-            auto [_it, _inserted] = storage_.insert(entry_wrapper{
-                std::vector( // LCOV_EXCL_LINE Note: This is actually tested.
-                    reinterpret_cast<const std::byte*>(_request.key_.data()), // NOSONAR
-                    reinterpret_cast<const std::byte*>(_request.key_.data() + _request.key_.size()) // NOSONAR
-                ),
-                std::move(_scoped_entry)
-            });
-
-            boost::ignore_unused(_it);
-
-            if (_inserted) { // LCOV_EXCL_LINE note: Partially covered.
-                if (const auto &_entry = _index.begin()->entry_; _expires_at <= _entry.expires_at_) { // LCOV_EXCL_LINE note: Partially covered.
-                    boost::asio::post(strand_, [_self = shared_from_this(), _expires_at] {
-                        _self->schedule_expiration(_expires_at);
-                    });
-                }
-            }
-
-            // LCOV_EXCL_START
-#ifndef NDEBUG
-            fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST SET key={} value={}ttl_type={} ttl={} RESPONSE ok={}", std::chrono::system_clock::now(), _key, span_to_hex(_request.value_), to_string(_request.header_->ttl_type_), _request.header_->ttl_, _inserted);
-#endif
-            // LCOV_EXCL_STOP
-
-            return std::make_shared<response_holder>(static_cast<uint8_t>(_inserted));
+            return handle_entry(_request.key_, _request.value_, _request.header_->ttl_type_, _request.header_->ttl_, entry_types::raw);
         }
 
         /**
          * Handle query
          *
          * @param request
+         * @param as_query
          * @return std::shared_ptr<response_holder>
          */
-        std::shared_ptr<response_holder> handle_query(const request_query &request) {
+        std::shared_ptr<response_holder> handle_query(const request_query &request, bool as_query) {
             const request_key _key{request.key_};
 
             auto &_index = storage_.get<tag_by_key_and_valid>();
@@ -191,7 +174,11 @@ namespace throttr {
 
                 // LCOV_EXCL_START
 #ifndef NDEBUG
-                fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST QUERY key={} RESPONSE ok={}", std::chrono::system_clock::now(), _key.key_, false);
+                if (as_query) {
+                    fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST QUERY key={} RESPONSE ok={}", std::chrono::system_clock::now(), _key.key_, false);
+                } else {
+                    fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST GET key={} RESPONSE ok={}", std::chrono::system_clock::now(), _key.key_, false);
+                }
 #endif
                 // LCOV_EXCL_STOP
 
@@ -204,11 +191,15 @@ namespace throttr {
             // LCOV_EXCL_START
 #ifndef NDEBUG
             auto * _quota = reinterpret_cast<const value_type *>(_entry.value_.data());
-            fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST QUERY key={} RESPONSE ok={} quota={} ttl_type={} ttl={}", std::chrono::system_clock::now(), _key.key_, true, *_quota, to_string(_entry.ttl_type_), _ttl);
+            if (as_query) {
+                fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST QUERY key={} RESPONSE ok={} quota={} ttl_type={} ttl={}", std::chrono::system_clock::now(), _key.key_, true, *_quota, to_string(_entry.ttl_type_), _ttl);
+            } else {
+                fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST GET key={} RESPONSE ok={} value={}ttl_type={} ttl={}", std::chrono::system_clock::now(), _key.key_, true, span_to_hex(_entry.value_), to_string(_entry.ttl_type_), _ttl);
+            }
 #endif
             // LCOV_EXCL_STOP
 
-            return std::make_shared<response_holder>(_entry, _ttl, false);
+            return std::make_shared<response_holder>(_entry, _ttl, as_query);
         }
 
         /**

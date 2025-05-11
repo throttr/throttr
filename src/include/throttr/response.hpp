@@ -57,27 +57,27 @@ namespace throttr {
          *
          * @param entry
          * @param ttl
-         * @param as_get
+         * @param as_query
          */
-        response_holder(const request_entry &entry, const value_type ttl, bool as_get = false)
+        response_holder(const request_entry &entry, const value_type ttl, const bool as_query = false)
             : status_(0x01),
               ttl_type_(static_cast<uint8_t>(entry.ttl_type_)),
               ttl_(ttl),
               value_size_(static_cast<value_type>(entry.value_.size())) {
-            if (as_get) {
+            if (as_query) {
+                buffers_ = {
+                    boost::asio::buffer(&status_, sizeof(status_)),
+                    boost::asio::buffer(entry.value_.data(), entry.value_.size()),
+                    boost::asio::buffer(&ttl_type_, sizeof(ttl_type_)),
+                    boost::asio::buffer(&ttl_, sizeof(ttl_))
+                };
+            } else {
                 buffers_ = {
                     boost::asio::buffer(&status_, sizeof(status_)),
                     boost::asio::buffer(&ttl_type_, sizeof(ttl_type_)),
                     boost::asio::buffer(&ttl_, sizeof(ttl_)),
                     boost::asio::buffer(&value_size_, sizeof(value_size_)),
                     boost::asio::buffer(entry.value_.data(), entry.value_.size()),
-                };
-            } else {
-                buffers_ = {
-                    boost::asio::buffer(&status_, sizeof(status_)),
-                    boost::asio::buffer(entry.value_.data(), entry.value_.size()),
-                    boost::asio::buffer(&ttl_type_, sizeof(ttl_type_)),
-                    boost::asio::buffer(&ttl_, sizeof(ttl_))
                 };
             }
         }
