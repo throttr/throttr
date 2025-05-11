@@ -121,16 +121,11 @@ namespace throttr {
             }
             // LCOV_EXCL_STOP
 
+            // LCOV_EXCL_START
 #ifndef NDEBUG
-            fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST {} key={} value={} ttl_type={} ttl={} RESPONSE ok={}",
-                         std::chrono::system_clock::now(),
-                         as_insert ? "INSERT" : "SET",
-                         key,
-                         span_to_hex(value),
-                         to_string(ttl_type),
-                         ttl,
-                         _inserted);
+            fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST {} key={} value={} ttl_type={} ttl={} RESPONSE ok={}", std::chrono::system_clock::now(), as_insert ? "INSERT" : "SET", key, span_to_hex(value), to_string(ttl_type), ttl, _inserted);
 #endif
+            // LCOV_EXCL_STOP
 
             return std::make_shared<response_holder>(static_cast<uint8_t>(_inserted));
         }
