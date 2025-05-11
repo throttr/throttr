@@ -46,7 +46,7 @@ namespace throttr {
         /**
          * Expired
          */
-        bool expired_;
+        bool expired_ = false;
 
         /**
          * Key
@@ -67,12 +67,6 @@ namespace throttr {
          */
         entry_wrapper(std::vector<std::byte> k, const request_entry e) : key_(std::move(k)), entry_(e) {
         }
-    };
-
-    /**
-     * Tag: access by key
-     */
-    struct tag_by_key {
     };
 
     /**
@@ -120,13 +114,6 @@ namespace throttr {
                 >
             >,
             // Find by key
-            boost::multi_index::hashed_unique<
-                boost::multi_index::tag<tag_by_key>,
-                boost::multi_index::const_mem_fun<entry_wrapper, request_key, &entry_wrapper::key>,
-                request_key_hasher,
-                std::equal_to<request_key>
-            >,
-            // Find by expiration
             boost::multi_index::ordered_non_unique<
                 boost::multi_index::tag<tag_by_expiration>,
                 boost::multi_index::member<entry_wrapper, request_entry, &entry_wrapper::entry_>,

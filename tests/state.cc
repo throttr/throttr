@@ -220,7 +220,7 @@ TEST_F(StateTestFixture, ScheduleExpiration_ReprogramsIfNextEntryExists) {
     using namespace std::chrono;
 
     auto &_storage = state_->storage_;
-    auto &_index = _storage.get<tag_by_key>();
+    auto &_index = _storage.get<tag_by_key_and_valid>();
 
     const auto _now = steady_clock::now();
 
@@ -243,31 +243,4 @@ TEST_F(StateTestFixture, ScheduleExpiration_ReprogramsIfNextEntryExists) {
     ioc_.run_for(seconds(6));
 
     EXPECT_TRUE(_index.empty());
-}
-
-
-TEST_F(StateTestFixture, CollectAndFlush) {
-    using namespace std::chrono;
-
-    auto &_expired = state_->expired_entries_;
-
-    const auto _now = steady_clock::now();
-
-    constexpr value_type _value = 0;
-    std::vector<std::byte> _value_vector(sizeof(value_type));
-    std::memcpy(_value_vector.data(), &_value, sizeof(value_type));
-
-    _expired.emplace_back(entry_wrapper{to_bytes("ab"), {
-        entry_types::counter, _value_vector, ttl_types::seconds, _now - seconds(10)}}, _now - seconds(10));
-    _expired.emplace_back(entry_wrapper{to_bytes("ab"), {
-        entry_types::counter, _value_vector, ttl_types::seconds, _now - seconds(6)}}, _now - seconds(6));
-    _expired.emplace_back(entry_wrapper{to_bytes("ab"), {
-        entry_types::counter, _value_vector, ttl_types::seconds, _now - seconds(1)}}, _now - seconds(1));
-
-    state_->collect_and_flush();
-
-    ioc_.restart();
-    ioc_.run_for(seconds(90));
-
-    ASSERT_EQ(_expired.size(), 0);
 }

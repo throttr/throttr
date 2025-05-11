@@ -96,7 +96,7 @@ namespace throttr {
                 _expires_at
             };
 
-            auto &_index = storage_.get<tag_by_expiration>();
+            auto &_index = storage_.get<tag_by_key_and_valid>();
 
             auto [_it, _inserted] = storage_.insert(entry_wrapper{
                 std::vector( // LCOV_EXCL_LINE Note: This is actually tested.
@@ -313,54 +313,9 @@ namespace throttr {
         }
 
         /**
-         * Start garbage collector
-         */
-        void start_garbage_collector() {
-            boost::asio::post(strand_, [self = shared_from_this()] {
-                self->collect_and_flush();
-            });
-        }
-
-        /**
          * Expired entries
          */
         std::deque<std::pair<entry_wrapper, std::chrono::steady_clock::time_point>> expired_entries_;
-
-        /**
-         * Cleanup expired entries
-         */
-        void collect_and_flush() {
-            // LCOV_EXCL_START
-#ifndef NDEBUG
-            fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULER GARBAGE PURGE STARTED", std::chrono::system_clock::now());
-#endif
-            // LCOV_EXCL_STOP
-
-            const auto _now = std::chrono::steady_clock::now();
-            const auto _threshold = std::chrono::seconds(10);
-
-            while (!expired_entries_.empty() && _now - expired_entries_.front().second > _threshold) { // LCOV_EXCL_LINE note: Partially covered.
-                // LCOV_EXCL_START
-#ifndef NDEBUG
-                fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULER PURGED key={}", std::chrono::system_clock::now(), std::string_view(reinterpret_cast<const char*>(expired_entries_.front().first.key_.data()), expired_entries_.front().first.key_.size())); // NOSONAR
-#endif
-                // LCOV_EXCL_STOP
-                expired_entries_.pop_front();
-            }
-
-            // LCOV_EXCL_START
-#ifndef NDEBUG
-            fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULER GARBAGE PURGE FINISHED", std::chrono::system_clock::now());
-#endif
-            // LCOV_EXCL_STOP
-
-            expiration_timer_.expires_after(std::chrono::seconds(30));
-            expiration_timer_.async_wait([self = shared_from_this()](const boost::system::error_code& ec) {
-                if (!ec) {
-                    self->collect_and_flush();
-                }
-            });
-        }
 
         /**
          * Schedule expiration
@@ -381,7 +336,6 @@ namespace throttr {
             if (proposed > _entry.expires_at_) return;
 
             const auto _delay = _entry.expires_at_ - std::chrono::steady_clock::now();
-
             scheduled_key_ = std::span(_item->key_);
 
             // LCOV_EXCL_START
@@ -394,21 +348,33 @@ namespace throttr {
             expiration_timer_.async_wait([_self = shared_from_this()](const boost::system::error_code &ec) {
                 if (ec) return;
 
+                const auto _now = std::chrono::steady_clock::now();
                 auto &_timer_index = _self->storage_.get<tag_by_expiration>();
 
-                const auto _now = std::chrono::steady_clock::now();
-                while (!_timer_index.empty() && _timer_index.begin()->entry_.expires_at_ <= _now) {
-                    auto _it = _timer_index.begin();
-                    entry_wrapper _scoped_entry = *_it;
+                std::vector<request_key> to_expire;
+                for (const auto &item : _timer_index) {
+                    if (item.entry_.expires_at_ > _now) break;
+                    to_expire.emplace_back(item.key());
+                }
 
-                    // LCOV_EXCL_START
+                auto &_valid_index = _self->storage_.get<tag_by_key_and_valid>();
+
+                for (const auto &k : to_expire) {
+                    if (auto it = _valid_index.find(std::make_tuple(k, false)); it != _valid_index.end()) {
+                        _valid_index.modify(it, [](entry_wrapper &ew) {
+// LCOV_EXCL_START
 #ifndef NDEBUG
-                    fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULER GARBAGE MARKED key={}", std::chrono::system_clock::now(), std::string_view(reinterpret_cast<const char*>(_scoped_entry.key_.data()), _scoped_entry.key_.size())); // NOSONAR
+fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULER GARBAGE MARKED key={}", std::chrono::system_clock::now(), std::string_view(reinterpret_cast<const char*>(ew.key_.data()), ew.key_.size())); // NOSONAR
 #endif
-                    // LCOV_EXCL_STOP
+// LCOV_EXCL_STOP
+                            ew.expired_ = true;
+                        });
+                    }
 
-                    _self->expired_entries_.emplace_back(std::move(_scoped_entry), _now);
-                    _timer_index.erase(_timer_index.begin());
+                    if (auto it = _valid_index.find(std::make_tuple(k, true)); it != _valid_index.end()) {
+                        if (auto projected = _self->storage_.project<tag_by_expiration>(it); projected != _timer_index.end())
+                            _timer_index.erase(projected);
+                    }
                 }
 
                 if (!_timer_index.empty()) {

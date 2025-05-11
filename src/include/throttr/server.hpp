@@ -44,7 +44,6 @@ namespace throttr {
             state_(state)
         {
             state->acceptor_ready_ = true;
-            state->start_garbage_collector();
             do_accept();
         };
 
