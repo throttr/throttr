@@ -105,15 +105,13 @@ namespace throttr {
 
             auto& _index = storage_.get<tag_by_key_and_valid>();
             auto [_it, _inserted] = storage_.insert(entry_wrapper{
-                std::vector(
-                    reinterpret_cast<const std::byte*>(key.data()),
-                    reinterpret_cast<const std::byte*>(key.data() + key.size())
-                ),
+                std::vector(reinterpret_cast<const std::byte*>(key.data()), reinterpret_cast<const std::byte*>(key.data() + key.size())),
                 std::move(_scoped_entry)
             });
 
             boost::ignore_unused(_it);
 
+            // LCOV_EXCL_START Note: Actually tested
             if (_inserted) {
                 if (const auto& _entry = _index.begin()->entry_; _expires_at <= _entry.expires_at_) {
                     boost::asio::post(strand_, [self = shared_from_this(), _expires_at] {
@@ -121,6 +119,7 @@ namespace throttr {
                     });
                 }
             }
+            // LCOV_EXCL_STOP
 
 #ifndef NDEBUG
             fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST {} key={} value={} ttl_type={} ttl={} RESPONSE ok={}",

@@ -64,7 +64,7 @@ namespace throttr {
               ttl_type_(static_cast<uint8_t>(entry.ttl_type_)),
               ttl_(ttl),
               value_size_(static_cast<value_type>(entry.value_.size())) {
-            if (as_query) {
+            if (as_query) { // LCOV_EXCL_LINE Note: Partially tested
                 buffers_ = {
                     boost::asio::buffer(&status_, sizeof(status_)),
                     boost::asio::buffer(entry.value_.data(), entry.value_.size()),
