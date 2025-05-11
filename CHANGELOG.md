@@ -1,3 +1,14 @@
+### v4.0.12
+
+- Now throttr server uses protocol 5.0.0 and that's complete compatible with protocol 4.0.1 (doesn't break SDK's).
+- Now we have GET and SET requests.
+- Now the expiration mechanism is more simple and safe for concurrent operations.
+- Now the container is more specialized so:
+  - Read operations now only can be done on non-expired keys.
+  - Expired keys are marked using container API modify method.
+  - Only entries marked as expired will be removed.
+- Now the get message size function is more simple to understand.
+
 ### v4.0.11
 
 - Fixed early access without full size check.
