@@ -24,19 +24,20 @@
 
 ## ❓ What is 
 
-**Throttr** is a high-performance TCP server designed to manage and control request rates at the network level with minimal latency.
+**Throttr** is a high-performance TCP server designed to deal with [in-memory data objects](https://en.wikipedia.org/wiki/In-memory_database) and [rate limiting](https://en.wikipedia.org/wiki/Rate_limiting) operations with minimal latency.
 
 It implements a custom binary protocol where each client specifies:
 
 - The key. 
 - The maximum allowed quota.
 - The time window (TTL) and type (ns/ms/s).
-- The action: Insert, Query, Update or Purge.
+- The action: INSERT/SET, QUERY/GET, UPDATE or PURGE.
 
 Upon receiving a request, **Throttr**:
 
 - Parses the binary payload efficiently, zero-copy.
-- Manages quotas and expirations.
+- Manages:
+  - Quotas/Buffers and TTL.
 - Responds compactly whether the operation succeeded and the current state.
 
 **Throttr** is engineered to be:
@@ -48,7 +49,7 @@ Upon receiving a request, **Throttr**:
 
 ## 📜 About Protocol
 
-The full specification of the Throttr binary protocol — including request formats, field types, and usage rules — has been moved to a dedicated repository.
+The full specification of the Throttr protocol — including request formats, field types, and usage rules — has been moved to a dedicated repository.
 
 👉 See: https://github.com/throttr/protocol
 
@@ -68,19 +69,19 @@ unzip throttr-Debug-UINT16.zip
 Pull and run the latest release:
 
 ```bash
-docker run -p 9000:9000 ghcr.io/throttr/throttr:4.0.11-release-uint16
+docker run -p 9000:9000 ghcr.io/throttr/throttr:4.0.12-release-uint16
 ```
 
 You can get the debug version (contains debugging output)
 
 ```bash
-docker run -p 9000:9000 ghcr.io/throttr/throttr:4.0.11-debug-uint16
+docker run -p 9000:9000 ghcr.io/throttr/throttr:4.0.12-debug-uint16
 ```
 
 Environment variables can also be passed to customize the behavior:
 
 ```bash
-docker run -e THREADS=4 -p 9000:9000 ghcr.io/throttr/throttr:4.0.11-release-uint16
+docker run -e THREADS=4 -p 9000:9000 ghcr.io/throttr/throttr:4.0.12-release-uint16
 ```
 
 ## ¿Debug or Release?
@@ -97,11 +98,13 @@ docker run -e THREADS=4 -p 9000:9000 ghcr.io/throttr/throttr:4.0.11-release-uint
 > ¿Which is better for me?
 > 
 > 
-> You should analyse your rates...
+> You should analyse your rates and stored data size...
 >
 > If you have rates like 60 usages per minute. uint8 fit perfects to you.
 >
 > In other hand, if your scale is in bytes, and you're tracking petabytes ... uint64 is for you ...
+> 
+> In terms of SET/GET operations, that limit the size of the stored buffer.
 > 
 > Use the following reference:
 

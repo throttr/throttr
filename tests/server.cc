@@ -18,9 +18,6 @@
 #include <thread>
 #include <throttr/app.hpp>
 #include <throttr/state.hpp>
-#include <iomanip>
-#include <fmt/core.h>
-#include <iostream>
 
 using boost::asio::ip::tcp;
 using namespace throttr;
@@ -105,6 +102,61 @@ TEST_F(ServerTestFixture, HandlesTwoConcatenatedRequests) {
 
     ASSERT_EQ(static_cast<uint8_t>(responses[0]), 1);
     ASSERT_EQ(static_cast<uint8_t>(responses[1]), 1);
+}
+
+TEST_F(ServerTestFixture, HandleSetSimpleValue) {
+    const std::string _key = "consumer/set_value";
+    const std::vector _value = {
+        std::byte{0xBE}, std::byte{0xEF}, std::byte{0xCA}, std::byte{0xFE}
+    };
+
+    const auto _buffer = request_set_builder(_value, ttl_types::seconds, 10, _key);
+
+    auto _response = send_and_receive(_buffer);
+
+    ASSERT_EQ(_response.size(), 1);
+    ASSERT_EQ(static_cast<uint8_t>(_response[0]), 1);
+}
+
+TEST_F(ServerTestFixture, HandleGetReturnsCorrectValue) {
+    const std::string _key = "consumer/get_test";
+    const std::vector<std::byte> _value = {
+        std::byte{0xBA}, std::byte{0xAD}, std::byte{0xF0}, std::byte{0x0D}
+    };
+
+    // 1. SET
+    const auto _set_buffer = request_set_builder(_value, ttl_types::seconds, 3, _key);
+    const auto _set_response = send_and_receive(_set_buffer);
+    ASSERT_EQ(_set_response.size(), 1);
+    ASSERT_EQ(static_cast<uint8_t>(_set_response[0]), 1);
+
+    // 2. GET
+    const auto _get_buffer = request_get_builder(_key);
+    const auto _get_response = send_and_receive(_get_buffer, 1 + 1 + sizeof(value_type) * 2 + _value.size());
+
+    ASSERT_EQ(_get_response.size(), 1 + 1 + sizeof(value_type) * 2 + _value.size());
+
+    // Verifica status
+    ASSERT_EQ(static_cast<uint8_t>(_get_response[0]), 1);
+
+    // ttl_type
+    ASSERT_EQ(static_cast<uint8_t>(_get_response[1]), static_cast<uint8_t>(ttl_types::seconds));
+
+    // ttl
+    value_type _ttl;
+    std::memcpy(&_ttl, _get_response.data() + 2, sizeof(_ttl));
+    ASSERT_GT(_ttl, 0);
+
+    // value_size
+    value_type _value_size;
+    std::memcpy(&_value_size, _get_response.data() + 2 + sizeof(_ttl), sizeof(_value_size));
+    ASSERT_EQ(_value_size, _value.size());
+
+    // value
+    const auto *_value_ptr = _get_response.data() + 2 + sizeof(_ttl) + sizeof(_value_size);
+    for (std::size_t i = 0; i < _value.size(); ++i) {
+        ASSERT_EQ(_value_ptr[i], _value[i]);
+    }
 }
 
 TEST_F(ServerTestFixture, TTLExpiration) {

@@ -19,9 +19,41 @@
 #define THROTTR_UTILS_HPP
 
 #include <throttr/protocol_wrapper.hpp>
+#include <fmt/chrono.h>
 
 // LCOV_EXCL_START
 namespace throttr {
+    /**
+     * Buffers to hex
+     *
+     * @param buffers
+     * @return std::string
+     */
+    static std::string buffers_to_hex(const std::vector<boost::asio::const_buffer>& buffers) {
+        std::string result;
+        for (const auto& buf : buffers) {
+            const auto* data = static_cast<const uint8_t*>(buf.data());
+            for (std::size_t i = 0; i < buf.size(); ++i) {
+                fmt::format_to(std::back_inserter(result), "{:02X} ", data[i]);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Span to hex
+     *
+     * @param buffer
+     * @return std::string
+     */
+    static std::string span_to_hex(std::span<const std::byte> buffer) {
+        std::string out;
+        for (const auto b : buffer) {
+            fmt::format_to(std::back_inserter(out), "{:02X} ", std::to_integer<uint8_t>(b));
+        }
+        return out;
+    }
+
     /**
      * To string
      *
