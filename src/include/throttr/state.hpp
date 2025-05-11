@@ -82,6 +82,7 @@ namespace throttr {
          * @param ttl_type
          * @param ttl
          * @param type
+         * @param as_insert
          * @return
          */
         std::shared_ptr<response_holder> handle_entry(
@@ -89,31 +90,32 @@ namespace throttr {
             const std::vector<std::byte>& value,
             const ttl_types ttl_type,
             uint64_t ttl,
-            const entry_types type
+            const entry_types type,
+            bool as_insert = false
         ) {
             const auto _now = std::chrono::steady_clock::now();
             const auto _expires_at = get_expiration_point(_now, ttl_type, ttl);
 
-            request_entry scopedEntry{
+            request_entry _scoped_entry{
                 type,
                 value,
                 ttl_type,
                 _expires_at
             };
 
-            auto& index = storage_.get<tag_by_key_and_valid>();
-            auto [it, inserted] = storage_.insert(entry_wrapper{
+            auto& _index = storage_.get<tag_by_key_and_valid>();
+            auto [_it, _inserted] = storage_.insert(entry_wrapper{
                 std::vector(
                     reinterpret_cast<const std::byte*>(key.data()),
                     reinterpret_cast<const std::byte*>(key.data() + key.size())
                 ),
-                std::move(scopedEntry)
+                std::move(_scoped_entry)
             });
 
-            boost::ignore_unused(it);
+            boost::ignore_unused(_it);
 
-            if (inserted) {
-                if (const auto& entry = index.begin()->entry_; _expires_at <= entry.expires_at_) {
+            if (_inserted) {
+                if (const auto& _entry = _index.begin()->entry_; _expires_at <= _entry.expires_at_) {
                     boost::asio::post(strand_, [self = shared_from_this(), _expires_at] {
                         self->schedule_expiration(_expires_at);
                     });
@@ -121,16 +123,17 @@ namespace throttr {
             }
 
 #ifndef NDEBUG
-            fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST ENTRY key={} value={} ttl_type={} ttl={} RESPONSE ok={}",
+            fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST {} key={} value={} ttl_type={} ttl={} RESPONSE ok={}",
                          std::chrono::system_clock::now(),
+                         as_insert ? "INSERT" : "SET",
                          key,
                          span_to_hex(value),
                          to_string(ttl_type),
                          ttl,
-                         inserted);
+                         _inserted);
 #endif
 
-            return std::make_shared<response_holder>(static_cast<uint8_t>(inserted));
+            return std::make_shared<response_holder>(static_cast<uint8_t>(_inserted));
         }
 
 
@@ -143,7 +146,7 @@ namespace throttr {
         std::shared_ptr<response_holder> handle_insert(const std::span<const std::byte> view) {
             const auto _request = request_insert::from_buffer(view);
             const std::vector value(view.begin() + 1, view.begin() + 1 + sizeof(value_type));
-            return handle_entry(_request.key_, value, _request.header_->ttl_type_, _request.header_->ttl_, entry_types::counter);
+            return handle_entry(_request.key_, value, _request.header_->ttl_type_, _request.header_->ttl_, entry_types::counter, true);
         }
 
         /**
@@ -154,7 +157,7 @@ namespace throttr {
          */
         std::shared_ptr<response_holder> handle_set(const std::span<const std::byte> view) {
             const auto _request = request_set::from_buffer(view);
-            return handle_entry(_request.key_, _request.value_, _request.header_->ttl_type_, _request.header_->ttl_, entry_types::raw);
+            return handle_entry(_request.key_, _request.value_, _request.header_->ttl_type_, _request.header_->ttl_, entry_types::raw, false);
         }
 
         /**
