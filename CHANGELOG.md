@@ -1,3 +1,7 @@
+### v4.0.13
+
+- Now we have a security mechanism for cross operations (GET to counter or QUERY to raw).
+
 ### v4.0.12
 
 - Now throttr server uses protocol 5.0.0 and that's complete compatible with protocol 4.0.1 (doesn't break SDK's).
