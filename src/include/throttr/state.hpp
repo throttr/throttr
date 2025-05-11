@@ -205,41 +205,6 @@ namespace throttr {
         }
 
         /**
-         * Handle get
-         *
-         * @param request
-         * @return std::shared_ptr<response_holder>
-         */
-        std::shared_ptr<response_holder> handle_get(const request_get &request) {
-            const request_key _key{request.key_};
-
-            auto &_index = storage_.get<tag_by_key_and_valid>();
-            const auto _it = _index.find(std::make_tuple(_key, false));
-
-            if (_it == _index.end()) { // LCOV_EXCL_LINE note: Partially covered.
-
-                // LCOV_EXCL_START
-#ifndef NDEBUG
-                fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST GET key={} RESPONSE ok={}", std::chrono::system_clock::now(), _key.key_, false);
-#endif
-                // LCOV_EXCL_STOP
-
-                return std::make_shared<response_holder>(0x00);
-            }
-
-            const auto &_entry = _it->entry_;
-            const auto _ttl = get_ttl(_entry.expires_at_, _entry.ttl_type_);
-
-            // LCOV_EXCL_START
-#ifndef NDEBUG
-            fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST GET key={} RESPONSE ok={} value={}ttl_type={} ttl={}", std::chrono::system_clock::now(), _key.key_, true, span_to_hex(_entry.value_), to_string(_entry.ttl_type_), _ttl);
-#endif
-            // LCOV_EXCL_STOP
-
-            return std::make_shared<response_holder>(_entry, _ttl, true);
-        }
-
-        /**
          * Handle update
          *
          * @param request
@@ -263,7 +228,9 @@ namespace throttr {
             storage_.modify(_it, [&](entry_wrapper & object) {
                 switch (request.header_->attribute_) {
                     case quota:
-                        _modified = apply_quota_change(object.entry_, request);
+                        if (object.entry_.type_ == entry_types::counter) { // LCOV_EXCL_LINE Note: Partially tested
+                            _modified = apply_quota_change(object.entry_, request);
+                        }
                         break;
                     case ttl:
                         _modified = apply_ttl_change(object.entry_, request, _now, object.key_);
