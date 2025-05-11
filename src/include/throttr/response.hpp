@@ -30,7 +30,7 @@ namespace throttr {
         /**
          * Buffers
          */
-        std::array<boost::asio::const_buffer, 4> buffers_;
+        std::array<boost::asio::const_buffer, 5> buffers_;
 
         /**
          * Status
@@ -48,21 +48,38 @@ namespace throttr {
         value_type ttl_ = 0;
 
         /**
+         * Value size
+         */
+        value_type value_size_ = 0;
+
+        /**
          * Constructor
          *
          * @param entry
          * @param ttl
+         * @param as_get
          */
-        response_holder(const request_entry &entry, const value_type ttl)
+        response_holder(const request_entry &entry, const value_type ttl, bool as_get = false)
             : status_(0x01),
               ttl_type_(static_cast<uint8_t>(entry.ttl_type_)),
-              ttl_(ttl) {
-            buffers_ = {
-                boost::asio::buffer(&status_, sizeof(status_)),
-                boost::asio::buffer(entry.value_.data(), entry.value_.size()),
-                boost::asio::buffer(&ttl_type_, sizeof(ttl_type_)),
-                boost::asio::buffer(&ttl_, sizeof(ttl_))
-            };
+              ttl_(ttl),
+              value_size_(static_cast<value_type>(entry.value_.size())) {
+            if (as_get) {
+                buffers_ = {
+                    boost::asio::buffer(&status_, sizeof(status_)),
+                    boost::asio::buffer(&ttl_type_, sizeof(ttl_type_)),
+                    boost::asio::buffer(&ttl_, sizeof(ttl_)),
+                    boost::asio::buffer(&value_size_, sizeof(value_size_)),
+                    boost::asio::buffer(entry.value_.data(), entry.value_.size()),
+                };
+            } else {
+                buffers_ = {
+                    boost::asio::buffer(&status_, sizeof(status_)),
+                    boost::asio::buffer(entry.value_.data(), entry.value_.size()),
+                    boost::asio::buffer(&ttl_type_, sizeof(ttl_type_)),
+                    boost::asio::buffer(&ttl_, sizeof(ttl_))
+                };
+            }
         }
 
         /**

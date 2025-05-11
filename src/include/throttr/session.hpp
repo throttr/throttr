@@ -160,39 +160,6 @@ namespace throttr {
             // LCOV_EXCL_STOP
         }
 
-        // LCOV_EXCL_START
-        /**
-         * Buffers to hex
-         *
-         * @param buffers
-         * @return std::string
-         */
-        static std::string buffers_to_hex(const std::vector<boost::asio::const_buffer>& buffers) {
-            std::string result;
-            for (const auto& buf : buffers) {
-                const auto* data = static_cast<const uint8_t*>(buf.data());
-                for (std::size_t i = 0; i < buf.size(); ++i) {
-                    fmt::format_to(std::back_inserter(result), "{:02X} ", data[i]);
-                }
-            }
-            return result;
-        }
-
-        /**
-         * Span to hex
-         *
-         * @param buffer
-         * @return std::string
-         */
-        static std::string span_to_hex(std::span<const std::byte> buffer) {
-            std::string out;
-            for (const auto b : buffer) {
-                fmt::format_to(std::back_inserter(out), "{:02X} ", std::to_integer<uint8_t>(b));
-            }
-            return out;
-        }
-        // LCOV_EXCL_STOP
-
         /**
          * Try process next
          */
@@ -227,6 +194,12 @@ namespace throttr {
                         case request_types::purge:
                             _response = state_->handle_purge(request_purge::from_buffer(_view));
                             break;
+                        case request_types::set:
+                            _response = state_->handle_set(_view);
+                            break;
+                        case request_types::get:
+                            _response = state_->handle_get(request_get::from_buffer(_view));
+                            break;
                         // LCOV_EXCL_START
                     }
                 } catch (const request_error &e) {
@@ -258,7 +231,7 @@ namespace throttr {
 
             std::vector<boost::asio::const_buffer> _batch;
 
-            _batch.reserve(write_queue_.size() * 4);
+            _batch.reserve(write_queue_.size() * 5);
 
             // LCOV_EXCL_START Note: Partially tested.
             // The not tested case TBC is when execution reach this code but the queue or buffers are empty.
@@ -315,6 +288,14 @@ namespace throttr {
                     if (buffer.size() < request_purge_header_size) return 0; // LCOV_EXCL_LINE note: Ignored.
                     if (buffer.size() < request_purge_header_size + reinterpret_cast<const request_purge_header *>(_buffer)->key_size_) return 0; // LCOV_EXCL_LINE note: Ignored
                     return request_purge_header_size + reinterpret_cast<const request_purge_header *>(_buffer)->key_size_;
+                case request_types::set:
+                    if (buffer.size() < request_set_header_size) return 0; // LCOV_EXCL_LINE note: Ignored.
+                    if (buffer.size() < request_set_header_size + reinterpret_cast<const request_set_header *>(_buffer)->key_size_ + reinterpret_cast<const request_set_header *>(_buffer)->value_size_) return 0; // LCOV_EXCL_LINE note: Ignored
+                    return request_set_header_size + reinterpret_cast<const request_set_header *>(_buffer)->key_size_ + reinterpret_cast<const request_set_header *>(_buffer)->value_size_;
+                case request_types::get:
+                    if (buffer.size() < request_get_header_size) return 0; // LCOV_EXCL_LINE note: Ignored.
+                    if (buffer.size() < request_get_header_size + reinterpret_cast<const request_get_header *>(_buffer)->key_size_) return 0; // LCOV_EXCL_LINE note: Ignored
+                    return request_get_header_size + reinterpret_cast<const request_get_header *>(_buffer)->key_size_;
                 // LCOV_EXCL_START
                 default:
                     return 0;

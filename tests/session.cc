@@ -18,8 +18,6 @@
 #include <thread>
 #include <throttr/app.hpp>
 #include <throttr/state.hpp>
-#include <iomanip>
-#include <fmt/core.h>
 
 using boost::asio::ip::tcp;
 using namespace throttr;
