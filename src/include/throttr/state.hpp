@@ -318,6 +318,51 @@ namespace throttr {
         std::deque<std::pair<entry_wrapper, std::chrono::steady_clock::time_point>> expired_entries_;
 
         /**
+         * Expiration timer
+         */
+        void expiration_timer() {
+            const auto _now = std::chrono::steady_clock::now();
+            auto &_timer_index = storage_.get<tag_by_expiration>();
+
+            std::vector<request_key> _to_expire;
+            for (const auto &_item : _timer_index) {
+                if (_item.entry_.expires_at_ > _now) break;
+                _to_expire.emplace_back(_item.key());
+            }
+
+            auto &_valid_index = storage_.get<tag_by_key_and_valid>();
+
+            for (const auto &_key : _to_expire) {
+                if (auto _it = _valid_index.find(std::make_tuple(_key, false)); _it != _valid_index.end()) {
+                    _valid_index.modify(_it, [](entry_wrapper &entry) {
+// LCOV_EXCL_START
+#ifndef NDEBUG
+fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULER KEY EXPIRED key={}", std::chrono::system_clock::now(), std::string_view(reinterpret_cast<const char*>(entry.key_.data()), entry.key_.size())); // NOSONAR
+#endif
+// LCOV_EXCL_STOP
+                        entry.expired_ = true;
+                    });
+                }
+
+                if (auto _it = _valid_index.find(std::make_tuple(_key, true)); _it != _valid_index.end()) {
+                    if (auto _projected = storage_.project<tag_by_expiration>(_it); _projected != _timer_index.end()) {
+                        // LCOV_EXCL_START
+#ifndef NDEBUG
+                        fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULER KEY ERASED key={}", std::chrono::system_clock::now(), std::string_view(reinterpret_cast<const char*>(_it->key_.data()), _it->key_.size())); // NOSONAR
+#endif
+                        // LCOV_EXCL_STOP
+                        _timer_index.erase(_projected);
+                    }
+                }
+            }
+
+            if (!_timer_index.empty()) {
+                const auto _next = _timer_index.begin()->entry_.expires_at_;
+                schedule_expiration(_next);
+            }
+        }
+
+        /**
          * Schedule expiration
          */
         void schedule_expiration(const std::chrono::steady_clock::time_point proposed) {
@@ -346,41 +391,7 @@ namespace throttr {
 
             expiration_timer_.expires_after(_delay);
             expiration_timer_.async_wait([_self = shared_from_this()](const boost::system::error_code &ec) {
-                if (ec) return;
-
-                const auto _now = std::chrono::steady_clock::now();
-                auto &_timer_index = _self->storage_.get<tag_by_expiration>();
-
-                std::vector<request_key> to_expire;
-                for (const auto &item : _timer_index) {
-                    if (item.entry_.expires_at_ > _now) break;
-                    to_expire.emplace_back(item.key());
-                }
-
-                auto &_valid_index = _self->storage_.get<tag_by_key_and_valid>();
-
-                for (const auto &k : to_expire) {
-                    if (auto it = _valid_index.find(std::make_tuple(k, false)); it != _valid_index.end()) {
-                        _valid_index.modify(it, [](entry_wrapper &ew) {
-// LCOV_EXCL_START
-#ifndef NDEBUG
-fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULER GARBAGE MARKED key={}", std::chrono::system_clock::now(), std::string_view(reinterpret_cast<const char*>(ew.key_.data()), ew.key_.size())); // NOSONAR
-#endif
-// LCOV_EXCL_STOP
-                            ew.expired_ = true;
-                        });
-                    }
-
-                    if (auto it = _valid_index.find(std::make_tuple(k, true)); it != _valid_index.end()) {
-                        if (auto projected = _self->storage_.project<tag_by_expiration>(it); projected != _timer_index.end())
-                            _timer_index.erase(projected);
-                    }
-                }
-
-                if (!_timer_index.empty()) {
-                    const auto next = _timer_index.begin()->entry_.expires_at_;
-                    _self->schedule_expiration(next);
-                }
+                if (!ec) _self->expiration_timer();
             });
         }
     };
