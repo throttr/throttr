@@ -65,7 +65,7 @@ namespace throttr {
          * @param k
          * @param e
          */
-        entry_wrapper(std::vector<std::byte> k, entry&& e) : key_(std::move(k)), entry_(std::move(e)) {
+        entry_wrapper(std::vector<std::byte> k, entry e) : key_(std::move(k)), entry_(std::move(e)) {
         }
     };
 
