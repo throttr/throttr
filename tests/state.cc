@@ -180,7 +180,7 @@ TEST(StateHelpersTest, CalculateTTLRemainingSecondsExpired) {
 TEST(State, QuotaChange) {
     std::array<std::byte, sizeof(value_type)> buffer;
     entry _entry;
-    _entry.value_ = { reinterpret_cast<char*>(buffer.data()), buffer.size() };
+    _entry.value_ = { reinterpret_cast<char*>(buffer.data()), buffer.size() }; // NOSONAR
 
     auto* raw = reinterpret_cast<value_type*>(_entry.value_.data_.get());
 
@@ -231,12 +231,12 @@ TEST_F(StateTestFixture, ScheduleExpiration_ReprogramsIfNextEntryExists) {
 
     entry _entry1;
     _entry1.type_ = entry_types::counter;
-    _entry1.value_ = { reinterpret_cast<char*>(buffer1.data()), buffer1.size() };
+    _entry1.value_ = { reinterpret_cast<char*>(buffer1.data()), buffer1.size() }; // NOSONAR
     _entry1.expires_at_ = _now;
 
     entry _entry2;
     _entry2.type_ = entry_types::counter;
-    _entry2.value_ = { reinterpret_cast<char*>(buffer2.data()), buffer2.size() };
+    _entry2.value_ = { reinterpret_cast<char*>(buffer2.data()), buffer2.size() }; // NOSONAR
     _entry2.expires_at_ = _now + seconds(5);
 
     _index.insert(entry_wrapper{to_bytes("c1r1"), (std::move(_entry1))});

@@ -98,7 +98,7 @@ namespace throttr {
 
             entry _scoped_entry{
                 type,
-                value_owned{ reinterpret_cast<const char*>(value.data()), value.size() },
+                value_owned{ reinterpret_cast<const char*>(value.data()), value.size() },  // NOSONAR
                 ttl_type,
                 _expires_at
             };
@@ -202,7 +202,7 @@ namespace throttr {
 #endif
             // LCOV_EXCL_STOP
 
-            return response_holder(_entry, _ttl, as_query);
+            return response_holder { _entry, _ttl, as_query };
         }
 
         /**

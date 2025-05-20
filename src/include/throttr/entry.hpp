@@ -26,7 +26,7 @@ namespace throttr {
         /**
          * Data
          */
-        std::unique_ptr<char[]> data_;
+        std::unique_ptr<char[]> data_; // NOSONAR
 
         /**
          * Size
