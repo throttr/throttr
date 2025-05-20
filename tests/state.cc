@@ -42,7 +42,7 @@ auto to_bytes = [](const char* str) {
 template <typename T>
 void test_ttl_change(
     state& _state,
-    request_entry& _entry,
+    entry& _entry,
     const std::string& _key,
     const ttl_types _ttl_type,
     const change_types _change_type,
@@ -90,7 +90,7 @@ TEST(State, TTLChange) {
 
     boost::asio::io_context _ioc;
     state _state(_ioc);
-    request_entry _entry;
+    entry _entry;
     _entry.expires_at_ = steady_clock::now();
     const std::string _key = "user";
 
@@ -178,39 +178,42 @@ TEST(StateHelpersTest, CalculateTTLRemainingSecondsExpired) {
 }
 
 TEST(State, QuotaChange) {
-    request_entry _entry;
-    _entry.value_.resize(sizeof(value_type));
+    std::array<std::byte, sizeof(value_type)> buffer;
+    entry _entry;
+    _entry.value_ = { reinterpret_cast<char*>(buffer.data()), buffer.size() };
+
+    auto* raw = reinterpret_cast<value_type*>(_entry.value_.data_.get());
 
     // patch
-    *reinterpret_cast<value_type *>(_entry.value_.data()) = 0;
+    *raw = 0;
     request_update_header _patch_header{request_types::update, attribute_types::quota, change_types::patch, 42, 0};
     request_update _patch_req{&_patch_header, ""};
     EXPECT_TRUE(state::apply_quota_change(_entry, _patch_req));
-    EXPECT_EQ(*reinterpret_cast<value_type *>(_entry.value_.data()), 42);
+    EXPECT_EQ(*raw, 42);
 
     // increase
-    *reinterpret_cast<value_type *>(_entry.value_.data()) = 10;
+    *raw = 10;
     request_update_header _inc_header{request_types::update, attribute_types::quota, change_types::increase, 5, 0};
     request_update _inc_req{&_inc_header, ""};
     EXPECT_TRUE(state::apply_quota_change(_entry, _inc_req));
-    EXPECT_EQ(*reinterpret_cast<value_type *>(_entry.value_.data()), 15);
+    EXPECT_EQ(*raw, 15);
 
     // decrease (quota > value)
-    *reinterpret_cast<value_type *>(_entry.value_.data()) = 20;
+    *raw = 20;
     request_update_header _dec_gt_header{request_types::update, attribute_types::quota, change_types::decrease, 10, 0};
     request_update _dec_gt_req{&_dec_gt_header, ""};
     EXPECT_TRUE(state::apply_quota_change(_entry, _dec_gt_req));
-    EXPECT_EQ(*reinterpret_cast<value_type *>(_entry.value_.data()), 10);
+    EXPECT_EQ(*raw, 10);
 
     // decrease (quota == value)
-    *reinterpret_cast<value_type *>(_entry.value_.data()) = 10;
+    *raw = 10;
     request_update_header _dec_eq_header{request_types::update, attribute_types::quota, change_types::decrease, 10, 0};
     request_update _dec_eq_req{&_dec_eq_header, ""};
     EXPECT_TRUE(state::apply_quota_change(_entry, _dec_eq_req));
-    EXPECT_EQ(*reinterpret_cast<value_type *>(_entry.value_.data()), 0);
+    EXPECT_EQ(*raw, 0);
 
     // decrease (quota < value)
-    *reinterpret_cast<value_type *>(_entry.value_.data()) = 5;
+    *raw = 5;
     request_update_header _dec_lt_header{request_types::update, attribute_types::quota, change_types::decrease, 10, 0};
     request_update _dec_lt_req{&_dec_lt_header, ""};
     EXPECT_FALSE(state::apply_quota_change(_entry, _dec_lt_req));
@@ -218,24 +221,26 @@ TEST(State, QuotaChange) {
 
 TEST_F(StateTestFixture, ScheduleExpiration_ReprogramsIfNextEntryExists) {
     using namespace std::chrono;
+    std::array buffer1{ std::byte{1} };
+    std::array buffer2{ std::byte{1} };
 
     auto &_storage = state_->storage_;
     auto &_index = _storage.get<tag_by_key_and_valid>();
 
     const auto _now = steady_clock::now();
 
-    request_entry _entry1;
+    entry _entry1;
     _entry1.type_ = entry_types::counter;
-    _entry1.value_ = { std::byte{1} };
+    _entry1.value_ = { reinterpret_cast<char*>(buffer1.data()), buffer1.size() };
     _entry1.expires_at_ = _now;
 
-    request_entry _entry2;
+    entry _entry2;
     _entry2.type_ = entry_types::counter;
-    _entry2.value_ = { std::byte{1} };
+    _entry2.value_ = { reinterpret_cast<char*>(buffer2.data()), buffer2.size() };
     _entry2.expires_at_ = _now + seconds(5);
 
-    _index.insert(entry_wrapper{to_bytes("c1r1"), _entry1});
-    _index.insert(entry_wrapper{to_bytes("c2r2"), _entry2});
+    _index.insert(entry_wrapper{to_bytes("c1r1"), (std::move(_entry1))});
+    _index.insert(entry_wrapper{to_bytes("c2r2"), (std::move(_entry2))});
 
     state_->schedule_expiration(_now);
 

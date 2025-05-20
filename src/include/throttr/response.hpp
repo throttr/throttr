@@ -19,6 +19,7 @@
 #define THROTTR_RESPONSE_HPP
 
 #include <throttr/protocol_wrapper.hpp>
+#include <throttr/entry.hpp>
 
 #include <boost/asio/buffer.hpp>
 
@@ -59,15 +60,16 @@ namespace throttr {
          * @param ttl
          * @param as_query
          */
-        response_holder(const request_entry &entry, const value_type ttl, const bool as_query = false)
+        response_holder(const entry &entry, const value_type ttl, const bool as_query = false)
             : status_(0x01),
               ttl_type_(static_cast<uint8_t>(entry.ttl_type_)),
               ttl_(ttl),
-              value_size_(static_cast<value_type>(entry.value_.size())) {
+              value_size_(static_cast<value_type>(entry.value_.view().size_)) {
+            const auto _view = entry.value_.view();
             if (as_query) { // LCOV_EXCL_LINE Note: Partially tested
                 buffers_ = {
                     boost::asio::buffer(&status_, sizeof(status_)),
-                    boost::asio::buffer(entry.value_.data(), entry.value_.size()),
+                    boost::asio::buffer(_view.pointer_, _view.size_),
                     boost::asio::buffer(&ttl_type_, sizeof(ttl_type_)),
                     boost::asio::buffer(&ttl_, sizeof(ttl_))
                 };
@@ -77,7 +79,7 @@ namespace throttr {
                     boost::asio::buffer(&ttl_type_, sizeof(ttl_type_)),
                     boost::asio::buffer(&ttl_, sizeof(ttl_)),
                     boost::asio::buffer(&value_size_, sizeof(value_size_)),
-                    boost::asio::buffer(entry.value_.data(), entry.value_.size()),
+                    boost::asio::buffer(_view.pointer_, _view.size_),
                 };
             }
         }

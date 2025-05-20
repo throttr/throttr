@@ -91,14 +91,14 @@ namespace throttr {
             const ttl_types ttl_type,
             uint64_t ttl,
             const entry_types type,
-            bool as_insert = false
+            const bool as_insert = false
         ) {
             const auto _now = std::chrono::steady_clock::now();
             const auto _expires_at = get_expiration_point(_now, ttl_type, ttl);
 
-            request_entry _scoped_entry{
+            entry _scoped_entry{
                 type,
-                value,
+                value_owned{ reinterpret_cast<const char*>(value.data()), value.size() },
                 ttl_type,
                 _expires_at
             };
@@ -192,11 +192,12 @@ namespace throttr {
 
             // LCOV_EXCL_START
 #ifndef NDEBUG
-            auto * _quota = reinterpret_cast<const value_type *>(_entry.value_.data());
+            const auto _view = _entry.value_.view();
+            auto * _quota = reinterpret_cast<const value_type *>(_view.pointer_);
             if (as_query) {
                 fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST QUERY key={} RESPONSE ok={} quota={} ttl_type={} ttl={}", std::chrono::system_clock::now(), _key.key_, true, *_quota, to_string(_entry.ttl_type_), _ttl);
             } else {
-                fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST GET key={} RESPONSE ok={} value={}ttl_type={} ttl={}", std::chrono::system_clock::now(), _key.key_, true, span_to_hex(_entry.value_), to_string(_entry.ttl_type_), _ttl);
+                fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST GET key={} RESPONSE ok={} value={}ttl_type={} ttl={}", std::chrono::system_clock::now(), _key.key_, true, span_to_hex(std::span(reinterpret_cast<const std::byte*>(_view.pointer_), _view.size_)), to_string(_entry.ttl_type_), _ttl);
             }
 #endif
             // LCOV_EXCL_STOP
@@ -254,10 +255,11 @@ namespace throttr {
          * @param request
          * @return bool
          */
-        static bool apply_quota_change(request_entry &entry, const request_update &request) {
+        static bool apply_quota_change(const entry &entry, const request_update &request) {
             using enum change_types;
 
-            auto * _quota = reinterpret_cast<value_type *>(entry.value_.data());
+            auto _view = entry.value_.view();
+            auto * _quota = reinterpret_cast<value_type *>(_view.pointer_);
 
             switch (request.header_->change_) {
                 case patch:
@@ -286,7 +288,7 @@ namespace throttr {
          * @param key
          * @return bool
          */
-        bool apply_ttl_change(request_entry &entry,
+        bool apply_ttl_change(entry &entry,
                               const request_update &request,
                               const std::chrono::steady_clock::time_point &now,
                               std::span<const std::byte> key) {
