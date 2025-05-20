@@ -178,7 +178,7 @@ namespace throttr {
 #endif
             // LCOV_EXCL_STOP
 
-                auto _response = std::make_shared<response_holder>(0x00);
+                auto _response = response_holder(0x00);
 
                 try {
                     switch (const auto type = static_cast<request_types>(std::to_integer<uint8_t>(_view[0])); type) {
@@ -205,7 +205,7 @@ namespace throttr {
                 }
                 // LCOV_EXCL_STOP
 
-                write_queue_.emplace_back(std::move(_response));
+                write_queue_.emplace_back(_response);
             }
 
             // LCOV_EXCL_START Note: Partially tested.
@@ -234,7 +234,7 @@ namespace throttr {
             // LCOV_EXCL_START Note: Partially tested.
             // The not tested case TBC is when execution reach this code but the queue or buffers are empty.
             for (const auto& _response : write_queue_) {
-                for (const auto& _buffer : _response->buffers_) {
+                for (const auto& _buffer : _response.buffers_) {
                     if (boost::asio::buffer_size(_buffer) > 0) _batch.emplace_back(_buffer);
                 }
             }
@@ -374,7 +374,7 @@ namespace throttr {
         /**
          * Write queue
          */
-        std::deque<std::shared_ptr<response_holder>> write_queue_;
+        std::deque<response_holder> write_queue_;
     };
 }
 
