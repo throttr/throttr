@@ -1,3 +1,7 @@
+### v4.0.15
+
+- Update are now using replace instead of modify.
+
 ### v4.0.14
 
 - Now we have a security mechanism to avoid UPDATE quota operations to raw. 

@@ -18,7 +18,7 @@
 #ifndef THROTTR_STORAGE_HPP
 #define THROTTR_STORAGE_HPP
 
-#include <throttr/protocol_wrapper.hpp>
+#include <throttr/entry.hpp>
 
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/ordered_index.hpp>
@@ -41,7 +41,7 @@ namespace throttr {
         /**
          * Entry
          */
-        request_entry entry_;
+        entry entry_;
 
         /**
          * Expired
@@ -65,7 +65,7 @@ namespace throttr {
          * @param k
          * @param e
          */
-        entry_wrapper(std::vector<std::byte> k, const request_entry e) : key_(std::move(k)), entry_(e) {
+        entry_wrapper(std::vector<std::byte> k, entry e) : key_(std::move(k)), entry_(std::move(e)) {
         }
     };
 
@@ -85,7 +85,7 @@ namespace throttr {
      * Request entry by expiration
      */
     struct request_entry_by_expiration {
-        bool operator()(const request_entry &a, const request_entry &b) const {
+        bool operator()(const entry &a, const entry &b) const {
             return a.expires_at_ < b.expires_at_;
         }
     };
@@ -116,7 +116,7 @@ namespace throttr {
             // Find by key
             boost::multi_index::ordered_non_unique<
                 boost::multi_index::tag<tag_by_expiration>,
-                boost::multi_index::member<entry_wrapper, request_entry, &entry_wrapper::entry_>,
+                boost::multi_index::member<entry_wrapper, entry, &entry_wrapper::entry_>,
                 request_entry_by_expiration
             >
         >

@@ -178,25 +178,25 @@ namespace throttr {
 #endif
             // LCOV_EXCL_STOP
 
-                auto _response = std::make_shared<response_holder>(0x00);
+                auto _response = response_holder(0x00);
 
                 try {
                     switch (const auto type = static_cast<request_types>(std::to_integer<uint8_t>(_view[0])); type) {
                         case request_types::insert:
-                            _response = state_->handle_insert(_view);
+                            _response = std::move(state_->handle_insert(_view));
                             break;
                         case request_types::set:
-                            _response = state_->handle_set(_view);
+                            _response = std::move(state_->handle_set(_view));
                             break;
                         case request_types::query:
                         case request_types::get:
-                            _response = state_->handle_query(request_query::from_buffer(_view), type == request_types::query);
+                            _response = std::move(state_->handle_query(request_query::from_buffer(_view), type == request_types::query));
                             break;
                         case request_types::update:
-                            _response = state_->handle_update(request_update::from_buffer(_view));
+                            _response = std::move(state_->handle_update(request_update::from_buffer(_view)));
                             break;
                         case request_types::purge:
-                            _response = state_->handle_purge(request_purge::from_buffer(_view));
+                            _response = std::move(state_->handle_purge(request_purge::from_buffer(_view)));
                             break;
                         // LCOV_EXCL_START
                     }
@@ -234,7 +234,7 @@ namespace throttr {
             // LCOV_EXCL_START Note: Partially tested.
             // The not tested case TBC is when execution reach this code but the queue or buffers are empty.
             for (const auto& _response : write_queue_) {
-                for (const auto& _buffer : _response->buffers_) {
+                for (const auto& _buffer : _response.buffers_) {
                     if (boost::asio::buffer_size(_buffer) > 0) _batch.emplace_back(_buffer);
                 }
             }
@@ -374,7 +374,7 @@ namespace throttr {
         /**
          * Write queue
          */
-        std::deque<std::shared_ptr<response_holder>> write_queue_;
+        std::deque<response_holder> write_queue_;
     };
 }
 

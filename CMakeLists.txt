@@ -18,8 +18,16 @@ message(STATUS "Using RUNTIME_VALUE_SIZE = ${RUNTIME_VALUE_SIZE}")
 
 set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g --coverage -fprofile-arcs -ftest-coverage")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
-set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native -DNDEBUG")
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -march=native -fno-rtti -flto -static -static-libgcc -DNDEBUG")
+set(CMAKE_C_FLAGS_RELEASE "-O3 -march=native -fno-rtti -flto -static -static-libgcc -DNDEBUG")
+
+add_definitions(
+        -DBOOST_ASIO_DISABLE_HANDLER_TRACKING
+        -DBOOST_ASIO_NO_DEPRECATED
+        -DBOOST_ASIO_NO_DYNAMIC_BUFFER_V1
+        -DBOOST_ASIO_DISABLE_BUFFER_DEBUGGING
+        -DBOOST_ASIO_DISABLE_IPV6
+)
 
 set(ZLIB_USE_STATIC_LIBS ON)
 

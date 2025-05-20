@@ -85,20 +85,20 @@ namespace throttr {
          * @param as_insert
          * @return
          */
-        std::shared_ptr<response_holder> handle_entry(
+        response_holder handle_entry(
             const std::string_view& key,
             const std::vector<std::byte>& value,
             const ttl_types ttl_type,
             uint64_t ttl,
             const entry_types type,
-            bool as_insert = false
+            const bool as_insert = false
         ) {
             const auto _now = std::chrono::steady_clock::now();
             const auto _expires_at = get_expiration_point(_now, ttl_type, ttl);
 
-            request_entry _scoped_entry{
+            entry _scoped_entry{
                 type,
-                value,
+                value_owned{ reinterpret_cast<const char*>(value.data()), value.size() },  // NOSONAR
                 ttl_type,
                 _expires_at
             };
@@ -127,7 +127,7 @@ namespace throttr {
 #endif
             // LCOV_EXCL_STOP
 
-            return std::make_shared<response_holder>(static_cast<uint8_t>(_inserted));
+            return response_holder(_inserted);
         }
 
 
@@ -135,9 +135,9 @@ namespace throttr {
          * Handle insert
          *
          * @param view
-         * @return std::shared_ptr<response_holder>
+         * @return response_holder
          */
-        std::shared_ptr<response_holder> handle_insert(const std::span<const std::byte> view) {
+        response_holder handle_insert(const std::span<const std::byte> view) {
             const auto _request = request_insert::from_buffer(view);
             const std::vector value(view.begin() + 1, view.begin() + 1 + sizeof(value_type));
             return handle_entry(_request.key_, value, _request.header_->ttl_type_, _request.header_->ttl_, entry_types::counter, true);
@@ -147,9 +147,9 @@ namespace throttr {
          * Handle set
          *
          * @param view
-         * @return std::shared_ptr<response_holder>
+         * @return response_holder
          */
-        std::shared_ptr<response_holder> handle_set(const std::span<const std::byte> view) {
+        response_holder handle_set(const std::span<const std::byte> view) {
             const auto _request = request_set::from_buffer(view);
             return handle_entry(_request.key_, _request.value_, _request.header_->ttl_type_, _request.header_->ttl_, entry_types::raw, false);
         }
@@ -159,9 +159,9 @@ namespace throttr {
          *
          * @param request
          * @param as_query
-         * @return std::shared_ptr<response_holder>
+         * @return response_holder
          */
-        std::shared_ptr<response_holder> handle_query(const request_query &request, bool as_query) {
+        response_holder handle_query(const request_query &request, bool as_query) {
             const request_key _key{request.key_};
 
             auto &_index = storage_.get<tag_by_key_and_valid>();
@@ -184,7 +184,7 @@ namespace throttr {
 #endif
                 // LCOV_EXCL_STOP
 
-                return std::make_shared<response_holder>(0x00);
+                return response_holder(0x00);
             }
 
             const auto &_entry = _it->entry_;
@@ -192,25 +192,26 @@ namespace throttr {
 
             // LCOV_EXCL_START
 #ifndef NDEBUG
-            auto * _quota = reinterpret_cast<const value_type *>(_entry.value_.data());
+            const auto _view = _entry.value_.view();
+            auto * _quota = reinterpret_cast<const value_type *>(_view.pointer_);
             if (as_query) {
                 fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST QUERY key={} RESPONSE ok={} quota={} ttl_type={} ttl={}", std::chrono::system_clock::now(), _key.key_, true, *_quota, to_string(_entry.ttl_type_), _ttl);
             } else {
-                fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST GET key={} RESPONSE ok={} value={}ttl_type={} ttl={}", std::chrono::system_clock::now(), _key.key_, true, span_to_hex(_entry.value_), to_string(_entry.ttl_type_), _ttl);
+                fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST GET key={} RESPONSE ok={} value={}ttl_type={} ttl={}", std::chrono::system_clock::now(), _key.key_, true, span_to_hex(std::span(reinterpret_cast<const std::byte*>(_view.pointer_), _view.size_)), to_string(_entry.ttl_type_), _ttl);
             }
 #endif
             // LCOV_EXCL_STOP
 
-            return std::make_shared<response_holder>(_entry, _ttl, as_query);
+            return response_holder { _entry, _ttl, as_query };
         }
 
         /**
          * Handle update
          *
          * @param request
-         * @return std::shared_ptr<response_holder>
+         * @return response_holder
          */
-        std::shared_ptr<response_holder> handle_update(const request_update &request) {
+        response_holder handle_update(const request_update &request) {
             const request_key _key{request.key_};
             const auto _now = std::chrono::steady_clock::now();
 
@@ -218,7 +219,7 @@ namespace throttr {
             const auto _it = _index.find(std::make_tuple(_key, false));
 
             if (_it == _index.end()) { // LCOV_EXCL_LINE note: Partially covered.
-                return std::make_shared<response_holder>(0x00);
+                return response_holder(0x00);
             }
 
             using enum attribute_types;
@@ -244,7 +245,7 @@ namespace throttr {
 #endif
             // LCOV_EXCL_STOP
 
-            return std::make_shared<response_holder>(static_cast<uint8_t>(_modified));
+            return response_holder(_modified);
         }
 
         /**
@@ -254,10 +255,11 @@ namespace throttr {
          * @param request
          * @return bool
          */
-        static bool apply_quota_change(request_entry &entry, const request_update &request) {
+        static bool apply_quota_change(const entry &entry, const request_update &request) {
             using enum change_types;
 
-            auto * _quota = reinterpret_cast<value_type *>(entry.value_.data());
+            auto _view = entry.value_.view();
+            auto * _quota = reinterpret_cast<value_type *>(_view.pointer_);
 
             switch (request.header_->change_) {
                 case patch:
@@ -286,7 +288,7 @@ namespace throttr {
          * @param key
          * @return bool
          */
-        bool apply_ttl_change(request_entry &entry,
+        bool apply_ttl_change(entry &entry,
                               const request_update &request,
                               const std::chrono::steady_clock::time_point &now,
                               std::span<const std::byte> key) {
@@ -331,9 +333,9 @@ namespace throttr {
          * Handle purge
          *
          * @param request
-         * @return std::shared_ptr<response_holder>
+         * @return response_holder
          */
-        std::shared_ptr<response_holder> handle_purge(const request_purge &request) {
+        response_holder handle_purge(const request_purge &request) {
             const request_key _key{request.key_};
 
             auto &_index = storage_.get<tag_by_key_and_valid>();
@@ -354,7 +356,7 @@ namespace throttr {
             if (_erased) // LCOV_EXCL_LINE Note: Partially tested.
                 _index.erase(_it);
 
-            return std::make_shared<response_holder>(static_cast<uint8_t>(_erased));
+            return response_holder(_erased);
         }
 
         /**
