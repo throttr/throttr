@@ -54,6 +54,28 @@ namespace throttr {
         value_type value_size_ = 0;
 
         /**
+         * Disable copy
+         */
+        response_holder(const response_holder&) = delete;
+
+        /**
+         * Disable copy
+         * @return
+         */
+        response_holder& operator=(const response_holder&) = delete;
+
+        /**
+         * Disable assignment copy
+         */
+        response_holder(response_holder&&) noexcept = default;
+
+        /**
+         * Disable assignment copy
+         * @return
+         */
+        response_holder& operator=(response_holder&&) noexcept = default;
+
+        /**
          * Constructor
          *
          * @param entry

@@ -183,20 +183,20 @@ namespace throttr {
                 try {
                     switch (const auto type = static_cast<request_types>(std::to_integer<uint8_t>(_view[0])); type) {
                         case request_types::insert:
-                            _response = state_->handle_insert(_view);
+                            _response = std::move(state_->handle_insert(_view));
                             break;
                         case request_types::set:
-                            _response = state_->handle_set(_view);
+                            _response = std::move(state_->handle_set(_view));
                             break;
                         case request_types::query:
                         case request_types::get:
-                            _response = state_->handle_query(request_query::from_buffer(_view), type == request_types::query);
+                            _response = std::move(state_->handle_query(request_query::from_buffer(_view), type == request_types::query));
                             break;
                         case request_types::update:
-                            _response = state_->handle_update(request_update::from_buffer(_view));
+                            _response = std::move(state_->handle_update(request_update::from_buffer(_view)));
                             break;
                         case request_types::purge:
-                            _response = state_->handle_purge(request_purge::from_buffer(_view));
+                            _response = std::move(state_->handle_purge(request_purge::from_buffer(_view)));
                             break;
                         // LCOV_EXCL_START
                     }
@@ -205,7 +205,7 @@ namespace throttr {
                 }
                 // LCOV_EXCL_STOP
 
-                write_queue_.emplace_back(_response);
+                write_queue_.emplace_back(std::move(_response));
             }
 
             // LCOV_EXCL_START Note: Partially tested.
