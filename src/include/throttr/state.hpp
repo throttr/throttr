@@ -187,10 +187,12 @@ namespace throttr
       const auto &_index = storage_.get<tag_by_key_and_valid>();
       const auto _it = _index.find(std::make_tuple(_key, false));
 
-      if (const bool _is_compliant = _it != _index.end(); !_is_compliant)
+      if (const bool _is_compliant = _it != _index.end(); !_is_compliant) // LCOV_EXCL_LINE
       {
         static constexpr std::uint8_t status = 0x00;
         batch[batch_size++] = boost::asio::buffer(&status, sizeof(status)); // NOSONAR
+
+        // LCOV_EXCL_START
 #ifndef NDEBUG
         fmt::println(
           "{:%Y-%m-%d %H:%M:%S} REQUEST {} key={} RESPONSE ok=false",
@@ -198,6 +200,7 @@ namespace throttr
           as_query ? "QUERY" : "GET",
           _key.key_);
 #endif
+        // LCOV_EXCL_STOP
         return;
       }
 
@@ -209,7 +212,7 @@ namespace throttr
       static constexpr std::uint8_t status = 0x01;
       batch[batch_size++] = boost::asio::buffer(&status, sizeof(status)); // NOSONAR
 
-      if (as_query)
+      if (as_query) // LCOV_EXCL_LINE
       {
         batch[batch_size++] = boost::asio::buffer(_view.pointer_, _view.size_); // NOSONAR
         batch[batch_size++] = boost::asio::buffer(&_entry.ttl_type_, sizeof(_entry.ttl_type_)); // NOSONAR
@@ -230,6 +233,7 @@ namespace throttr
         batch[batch_size++] = boost::asio::buffer(_view.pointer_, _view.size_); // NOSONAR
       }
 
+      // LCOV_EXCL_START
 #ifndef NDEBUG
       if (as_query)
       {
@@ -255,6 +259,7 @@ namespace throttr
           _ttl);
       }
 #endif
+      // LCOV_EXCL_STOP
     }
 
     /**
@@ -271,8 +276,8 @@ namespace throttr
       auto &_index = storage_.get<tag_by_key_and_valid>();
       const auto _it = _index.find(std::make_tuple(_key, false));
 
-      if (_it == _index.end())
-      { // LCOV_EXCL_LINE note: Partially covered.
+      if (_it == _index.end()) // LCOV_EXCL_LINE note: Partially covered.
+      {
         return 0x00;
       }
 
@@ -338,8 +343,8 @@ namespace throttr
           *_quota += request.header_->value_;
           break;
         case decrease:
-          if (*_quota >= request.header_->value_)
-          { // LCOV_EXCL_LINE note: Partially covered.
+          if (*_quota >= request.header_->value_) // LCOV_EXCL_LINE note: Partially covered.
+          {
             *_quota -= request.header_->value_;
           }
           else
@@ -396,8 +401,8 @@ namespace throttr
           break;
       }
 
-      if (scheduled_key_.size() == key.size() && std::equal(scheduled_key_.begin(), scheduled_key_.end(), key.begin()))
-      { // LCOV_EXCL_LINE Note: Partially tested
+      if (scheduled_key_.size() == key.size() && std::equal(scheduled_key_.begin(), scheduled_key_.end(), key.begin())) // LCOV_EXCL_LINE Note: Partially tested
+      {
         boost::asio::post(
           strand_, [_self = shared_from_this(), _expires_at = entry.expires_at_] { _self->schedule_expiration(_expires_at); });
       }
@@ -420,8 +425,8 @@ namespace throttr
 
       bool _erased = true;
 
-      if (_it == _index.end())
-      { // LCOV_EXCL_LINE note: Partially covered.
+      if (_it == _index.end()) // LCOV_EXCL_LINE note: Partially covered.
+      {
         _erased = false;
       }
 

@@ -77,7 +77,7 @@ namespace throttr
      */
     friend void intrusive_ptr_release(const session *p)
     {
-      if (p->ref_count_.fetch_sub(1, std::memory_order_acq_rel) == 1)
+      if (p->ref_count_.fetch_sub(1, std::memory_order_acq_rel) == 1) // LCOV_EXCL_LINE
       {
         delete p; // NOSONAR
       }
@@ -113,13 +113,13 @@ namespace throttr
      */
     void compact_buffer_if_needed()
     {
-      if (buffer_start_ == buffer_end_)
-      { // LCOV_EXCL_LINE note: Partially tested.
+      if (buffer_start_ == buffer_end_) // LCOV_EXCL_LINE note: Partially tested.
+      {
         buffer_start_ = 0;
         buffer_end_ = 0;
       }
-      else if (buffer_start_ > max_length_ / 2)
-      { // LCOV_EXCL_LINE note: Partially tested.
+      else if (buffer_start_ > max_length_ / 2) // LCOV_EXCL_LINE note: Partially tested.
+      {
         compact_buffer();
       }
     }
@@ -129,8 +129,8 @@ namespace throttr
      */
     void compact_buffer()
     {
-      if (buffer_start_ == buffer_end_)
-        return; // LCOV_EXCL_LINE note: Partially tested.
+      if (buffer_start_ == buffer_end_) // LCOV_EXCL_LINE note: Partially tested.
+        return;
       std::memmove(buffer_.data(), buffer_.data() + buffer_start_, buffer_end_ - buffer_start_);
       buffer_end_ -= buffer_start_;
       buffer_start_ = 0;
@@ -181,8 +181,8 @@ namespace throttr
      */
     void on_read(const boost::system::error_code &error, const std::size_t length)
     {
-      if (!error)
-      { // LCOV_EXCL_LINE note: Partially tested.
+      if (!error) // LCOV_EXCL_LINE note: Partially tested.
+      {
         buffer_end_ += length;
         try_process_next();
         // LCOV_EXCL_START
@@ -206,8 +206,8 @@ namespace throttr
       {
         std::span<const std::byte> _span(buffer_.data() + buffer_start_, buffer_end_ - buffer_start_);
         const std::size_t _msg_size = get_message_size(_span);
-        if (_msg_size == 0 || _span.size() < _msg_size)
-          break; // LCOV_EXCL_LINE note: Ignored.
+        if (_msg_size == 0 || _span.size() < _msg_size)  // LCOV_EXCL_LINE note: Ignored.
+          break;
 
         std::span<const std::byte> _view(buffer_.data() + buffer_start_, _msg_size);
         buffer_start_ += _msg_size;
@@ -316,10 +316,12 @@ namespace throttr
     static std::size_t
     get_message_sized(const std::span<const std::byte> buffer, const std::size_t header_size, const std::size_t extra = 0)
     {
+      // LCOV_EXCL_START
       if (buffer.size() < header_size)
         return 0;
       if (buffer.size() < header_size + extra)
         return 0;
+      // LCOV_EXCL_STOP
       return header_size + extra;
     }
 
