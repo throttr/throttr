@@ -31,7 +31,7 @@ namespace throttr
    * @param buffers
    * @return std::string
    */
-  static std::string buffers_to_hex(const std::array<boost::asio::const_buffer, 64> &buffers)
+  static std::string buffers_to_hex(const std::array<boost::asio::const_buffer, 512> &buffers)
   {
     std::string result;
     for (const auto &buf : buffers)
