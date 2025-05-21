@@ -19,7 +19,6 @@
 #define THROTTR_STATE_HPP
 
 #include <throttr/storage.hpp>
-#include <throttr/response.hpp>
 #include <throttr/time.hpp>
 #include <throttr/utils.hpp>
 
@@ -135,7 +134,7 @@ namespace throttr {
          * Handle insert
          *
          * @param view
-         * @return response_holder
+         * @return uint8_t
          */
         std::uint8_t handle_insert(const std::span<const std::byte> view) {
             const auto _request = request_insert::from_buffer(view);
@@ -147,7 +146,7 @@ namespace throttr {
          * Handle set
          *
          * @param view
-         * @return response_holder
+         * @return uint8_t
          */
         std::uint8_t handle_set(const std::span<const std::byte> view) {
             const auto _request = request_set::from_buffer(view);
@@ -163,7 +162,7 @@ namespace throttr {
          * @param write_offset
          * @param batch
          * @param batch_size
-         * @return response_holder
+         * @return uint8_t
          */
         void handle_query(const request_query& request, bool as_query, std::array<boost::asio::const_buffer, 64>& batch, std::size_t& batch_size, std::uint8_t* write_buffer, std::size_t& write_offset) {
             const request_key _key{request.key_};
@@ -223,7 +222,7 @@ namespace throttr {
          * Handle update
          *
          * @param request
-         * @return response_holder
+         * @return uint8_t
          */
         std::uint8_t handle_update(const request_update &request) {
             const request_key _key{request.key_};
@@ -347,7 +346,7 @@ namespace throttr {
          * Handle purge
          *
          * @param request
-         * @return response_holder
+         * @return uint8_t
          */
         std::uint8_t handle_purge(const request_purge &request) {
             const request_key _key{request.key_};
