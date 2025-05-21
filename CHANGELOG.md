@@ -1,6 +1,8 @@
 ### v4.0.15
 
-- Update are now using replace instead of modify.
+- Now we uses shared_ptr on stored elements.
+- Now server can resist 2.5 millions request per seconds using pipelined requests.
+- Now we have a more optimized algorithm.
 
 ### v4.0.14
 
