@@ -29,7 +29,7 @@ namespace throttr {
      * @param buffers
      * @return std::string
      */
-    static std::string buffers_to_hex(const std::vector<boost::asio::const_buffer>& buffers) {
+    static std::string buffers_to_hex(const std::array<boost::asio::const_buffer, 64>& buffers) {
         std::string result;
         for (const auto& buf : buffers) {
             const auto* data = static_cast<const uint8_t*>(buf.data());

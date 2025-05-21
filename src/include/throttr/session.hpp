@@ -201,37 +201,48 @@ namespace throttr {
 #endif
             // LCOV_EXCL_STOP
 
-                status_buffer_[_batch_size++] = 0x00;
-                _batch[_batch_size] = boost::asio::buffer(&status_buffer_[_batch_size], 1);
-                // auto _response = response_holder(0x00);
-                //
-                //
-                // try {
-                //     switch (const auto type = static_cast<request_types>(std::to_integer<uint8_t>(_view[0])); type) {
-                //         case request_types::insert:
-                //             _response = std::move(state_->handle_insert(_view));
-                //             break;
-                //         case request_types::set:
-                //             _response = std::move(state_->handle_set(_view));
-                //             break;
-                //         case request_types::query:
-                //         case request_types::get:
-                //             _response = std::move(state_->handle_query(request_query::from_buffer(_view), type == request_types::query));
-                //             break;
-                //         case request_types::update:
-                //             _response = std::move(state_->handle_update(request_update::from_buffer(_view)));
-                //             break;
-                //         case request_types::purge:
-                //             _response = std::move(state_->handle_purge(request_purge::from_buffer(_view)));
-                //             break;
-                //         // LCOV_EXCL_START
-                //     }
-                // } catch (const request_error &e) {
-                //     boost::ignore_unused(e);
-                // }
-                // // LCOV_EXCL_STOP
-                //
-                // write_queue_.emplace_back(std::move(_response));
+                try {
+                    switch (const auto _type = static_cast<request_types>(std::to_integer<uint8_t>(_view[0])); _type) {
+                        case request_types::insert:
+                            write_buffer_[write_offset_] = state_->handle_insert(_view);
+                            _batch[_batch_size++] = boost::asio::buffer(write_buffer_.data() + write_offset_, 1);
+                            write_offset_ += 1;
+                            break;
+                        case request_types::set:
+                            write_buffer_[write_offset_] = state_->handle_set(_view);
+                            _batch[_batch_size++] = boost::asio::buffer(write_buffer_.data() + write_offset_, 1);
+                            write_offset_ += 1;
+                            break;
+                        case request_types::query:
+                        case request_types::get:
+                            state_->handle_query(
+                                request_query::from_buffer(_view),
+                                _type == request_types::query,
+                                _batch,
+                                _batch_size,
+                                write_buffer_.data(),
+                                write_offset_
+                            );
+                            break;
+                        case request_types::update:
+                            write_buffer_[write_offset_] = state_->handle_update(request_update::from_buffer(_view));
+                            _batch[_batch_size++] = boost::asio::buffer(write_buffer_.data() + write_offset_, 1);
+                            write_offset_ += 1;
+                            break;
+                        case request_types::purge:
+                            write_buffer_[write_offset_] = state_->handle_purge(request_purge::from_buffer(_view));
+                            _batch[_batch_size++] = boost::asio::buffer(write_buffer_.data() + write_offset_, 1);
+                            write_offset_ += 1;
+                            break;
+                        // LCOV_EXCL_START
+                    }
+                } catch (const request_error &e) {
+                    write_buffer_[write_offset_] = 0x00;
+                    _batch[_batch_size++] = boost::asio::buffer(write_buffer_.data() + write_offset_, 1);
+                    write_offset_ += 1;
+                    boost::ignore_unused(e);
+                }
+                // LCOV_EXCL_STOP
             }
 
             // LCOV_EXCL_START Note: Partially tested.
@@ -258,13 +269,13 @@ namespace throttr {
 
             // LCOV_EXCL_START
 #ifndef NDEBUG
-            fmt::println("{:%Y-%m-%d %H:%M:%S} SESSION WRITE ip={} port={} buffer={}", std::chrono::system_clock::now(), ip_, port_, buffers_to_hex(_batch));
+            fmt::println("{:%Y-%m-%d %H:%M:%S} SESSION WRITE ip={} port={} buffer={}", std::chrono::system_clock::now(), ip_, port_, buffers_to_hex(batch));
 #endif
             // LCOV_EXCL_STOP
 
             boost::asio::async_write(
                 socket_,
-                    boost::asio::buffer(batch.data(), batch_size),
+                    batch,
                     boost::asio::bind_allocator(
                         handler_allocator<int>(handler_memory_),
                         [_self] (const boost::system::error_code& ec, const std::size_t length) {
@@ -352,6 +363,8 @@ namespace throttr {
          * @param length
          */
         void on_write(const boost::system::error_code &error, const std::size_t length) {
+            write_offset_ = 0;
+
             boost::ignore_unused(length);
 
             // LCOV_EXCL_START
@@ -381,14 +394,14 @@ namespace throttr {
         std::shared_ptr<state> state_;
 
         /**
-         * Max responses per batch
+         * Write buffer
          */
-        static constexpr std::size_t max_responses_per_batch_ = 64;
+        std::array<uint8_t, max_length_> write_buffer_;
 
         /**
-         * Status buffers
+         * Write offset
          */
-        std::array<uint8_t, max_responses_per_batch_> status_buffer_;
+        std::size_t write_offset_ = 0;
     };
 }
 

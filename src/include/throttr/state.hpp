@@ -85,7 +85,7 @@ namespace throttr {
          * @param as_insert
          * @return
          */
-        response_holder handle_entry(
+        std::uint8_t handle_entry(
             const std::string_view& key,
             const std::span<const std::byte>& value,
             const ttl_types ttl_type,
@@ -127,7 +127,7 @@ namespace throttr {
 #endif
             // LCOV_EXCL_STOP
 
-            return response_holder(_inserted);
+            return _inserted ? 0x01 : 0x00;
         }
 
 
@@ -137,9 +137,9 @@ namespace throttr {
          * @param view
          * @return response_holder
          */
-        response_holder handle_insert(const std::span<const std::byte> view) {
+        std::uint8_t handle_insert(const std::span<const std::byte> view) {
             const auto _request = request_insert::from_buffer(view);
-            const std::vector value(view.begin() + 1, view.begin() + 1 + sizeof(value_type));
+            const std::span value(view.begin() + 1, view.begin() + 1 + sizeof(value_type));
             return handle_entry(_request.key_, value, _request.header_->ttl_type_, _request.header_->ttl_, entry_types::counter, true);
         }
 
@@ -149,7 +149,7 @@ namespace throttr {
          * @param view
          * @return response_holder
          */
-        response_holder handle_set(const std::span<const std::byte> view) {
+        std::uint8_t handle_set(const std::span<const std::byte> view) {
             const auto _request = request_set::from_buffer(view);
             return handle_entry(_request.key_, _request.value_, _request.header_->ttl_type_, _request.header_->ttl_, entry_types::raw, false);
         }
@@ -159,50 +159,64 @@ namespace throttr {
          *
          * @param request
          * @param as_query
+         * @param write_buffer
+         * @param write_offset
+         * @param batch
+         * @param batch_size
          * @return response_holder
          */
-        response_holder handle_query(const request_query &request, bool as_query) {
+        void handle_query(const request_query& request, bool as_query, std::array<boost::asio::const_buffer, 64>& batch, std::size_t& batch_size, std::uint8_t* write_buffer, std::size_t& write_offset) {
             const request_key _key{request.key_};
-
-            auto &_index = storage_.get<tag_by_key_and_valid>();
+            auto& _index = storage_.get<tag_by_key_and_valid>();
             const auto _it = _index.find(std::make_tuple(_key, false));
 
-            // LCOV_EXCL_START
-            const auto _is_resource_compliant =
-                as_query ? _it->entry_.type_ == entry_types::counter : _it->entry_.type_ == entry_types::raw;
-            // LCOV_EXCL_STOP
+            const bool _is_compliant = as_query
+                ? _it != _index.end() && _it->entry_.type_ == entry_types::counter
+                : _it != _index.end() && _it->entry_.type_ == entry_types::raw;
 
-            if (_it == _index.end() || !_is_resource_compliant) { // LCOV_EXCL_LINE note: Partially covered.
-
-                // LCOV_EXCL_START
-#ifndef NDEBUG
-                if (as_query) {
-                    fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST QUERY key={} RESPONSE ok={}", std::chrono::system_clock::now(), _key.key_, false);
-                } else {
-                    fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST GET key={} RESPONSE ok={}", std::chrono::system_clock::now(), _key.key_, false);
-                }
-#endif
-                // LCOV_EXCL_STOP
-
-                return response_holder(0x00);
+            if (!_is_compliant) {
+                static constexpr std::uint8_t status = 0x00;
+                batch[batch_size++] = boost::asio::buffer(&status, sizeof(status));
+        #ifndef NDEBUG
+                fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST {} key={} RESPONSE ok=false", std::chrono::system_clock::now(), as_query ? "QUERY" : "GET", _key.key_);
+        #endif
+                return;
             }
 
-            const auto &_entry = _it->entry_;
-            const auto _ttl = get_ttl(_entry.expires_at_, _entry.ttl_type_);
-
-            // LCOV_EXCL_START
-#ifndef NDEBUG
+            const auto& _entry = _it->entry_;
             const auto _view = _entry.value_.view();
-            auto * _quota = reinterpret_cast<const value_type *>(_view.pointer_);
+            const value_type _ttl = get_ttl(_entry.expires_at_, _entry.ttl_type_);
+
+            // status_
+            static constexpr std::uint8_t status = 0x01;
+            batch[batch_size++] = boost::asio::buffer(&status, sizeof(status));
+
             if (as_query) {
-                fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST QUERY key={} RESPONSE ok={} quota={} ttl_type={} ttl={}", std::chrono::system_clock::now(), _key.key_, true, *_quota, to_string(_entry.ttl_type_), _ttl);
+                batch[batch_size++] = boost::asio::buffer(_view.pointer_, _view.size_);
+                batch[batch_size++] = boost::asio::buffer(&_entry.ttl_type_, sizeof(_entry.ttl_type_));
+                std::memcpy(write_buffer + write_offset, &_ttl, sizeof(_ttl));
+                batch[batch_size++] = boost::asio::buffer(write_buffer + write_offset, sizeof(_ttl));
+                write_offset += sizeof(_ttl);
             } else {
-                fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST GET key={} RESPONSE ok={} value={}ttl_type={} ttl={}", std::chrono::system_clock::now(), _key.key_, true, span_to_hex(std::span(reinterpret_cast<const std::byte*>(_view.pointer_), _view.size_)), to_string(_entry.ttl_type_), _ttl);
+                batch[batch_size++] = boost::asio::buffer(&_entry.ttl_type_, sizeof(_entry.ttl_type_));
+                std::memcpy(write_buffer + write_offset, &_ttl, sizeof(_ttl));
+                batch[batch_size++] = boost::asio::buffer(write_buffer + write_offset, sizeof(_ttl));
+                write_offset += sizeof(_ttl);
+                const auto _size = static_cast<value_type>(_view.size_);
+                std::memcpy(write_buffer + write_offset, &_size, sizeof(_size));
+                batch[batch_size++] = boost::asio::buffer(write_buffer + write_offset, sizeof(_size));
+                write_offset += sizeof(_size);
+                batch[batch_size++] = boost::asio::buffer(_view.pointer_, _view.size_);
+            }
+
+#ifndef NDEBUG
+            if (as_query) {
+                auto* _quota = reinterpret_cast<const value_type*>(_view.pointer_);
+                fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST QUERY key={} RESPONSE ok=true quota={} ttl_type={} ttl={}", std::chrono::system_clock::now(), _key.key_, *_quota, to_string(_entry.ttl_type_), _ttl);
+            } else {
+                fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST GET key={} RESPONSE ok=true value={} ttl_type={} ttl={}", std::chrono::system_clock::now(), _key.key_, span_to_hex(std::span(reinterpret_cast<const std::byte*>(_view.pointer_), _view.size_)), to_string(_entry.ttl_type_), _ttl);
             }
 #endif
-            // LCOV_EXCL_STOP
-
-            return response_holder { _entry, _ttl, as_query };
         }
 
         /**
@@ -211,7 +225,7 @@ namespace throttr {
          * @param request
          * @return response_holder
          */
-        response_holder handle_update(const request_update &request) {
+        std::uint8_t handle_update(const request_update &request) {
             const request_key _key{request.key_};
             const auto _now = std::chrono::steady_clock::now();
 
@@ -219,7 +233,7 @@ namespace throttr {
             const auto _it = _index.find(std::make_tuple(_key, false));
 
             if (_it == _index.end()) { // LCOV_EXCL_LINE note: Partially covered.
-                return response_holder(0x00);
+                return 0x00;
             }
 
             using enum attribute_types;
@@ -245,7 +259,7 @@ namespace throttr {
 #endif
             // LCOV_EXCL_STOP
 
-            return response_holder(_modified);
+            return _modified ? 0x01 : 0x00;
         }
 
         /**
@@ -335,7 +349,7 @@ namespace throttr {
          * @param request
          * @return response_holder
          */
-        response_holder handle_purge(const request_purge &request) {
+        std::uint8_t handle_purge(const request_purge &request) {
             const request_key _key{request.key_};
 
             auto &_index = storage_.get<tag_by_key_and_valid>();
@@ -356,7 +370,7 @@ namespace throttr {
             if (_erased) // LCOV_EXCL_LINE Note: Partially tested.
                 _index.erase(_it);
 
-            return response_holder(_erased);
+            return _erased ? 0x01 : 0x00;
         }
 
         /**
