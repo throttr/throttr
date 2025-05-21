@@ -59,7 +59,7 @@ namespace throttr
       return {
         std::string_view(
           reinterpret_cast<const char *>(key_.data()), // NOSONAR
-          key_.size()), // NOSONAR
+          key_.size()),                                // NOSONAR
       };
     }
 
@@ -71,6 +71,30 @@ namespace throttr
      */
     entry_wrapper(std::vector<std::byte> k, entry e) : key_(std::move(k)), entry_(std::move(e))
     {
+    }
+
+    /**
+     * Expired flag
+     *
+     * @return
+     */
+    bool expired_flag() const
+    {
+      return expired_;
+    }
+
+    [[nodiscard]] std::shared_ptr<entry_wrapper> clone_and_mark_expired() const
+    {
+      entry copied_entry{
+        entry_.type_,
+        value_owned(entry_.value_.view().pointer_, entry_.value_.view().size_),
+        entry_.ttl_type_,
+        entry_.expires_at_,
+      };
+
+      auto out = std::make_shared<entry_wrapper>(key_, std::move(copied_entry));
+      out->expired_ = true;
+      return out;
     }
   };
 
@@ -103,7 +127,7 @@ namespace throttr
    * Multi-index container type for request storage
    */
   using storage_type = boost::multi_index::multi_index_container<
-    entry_wrapper,
+    std::shared_ptr<entry_wrapper>,
     boost::multi_index::indexed_by<
       // Find by key and valid
       boost::multi_index::hashed_unique<
@@ -111,7 +135,7 @@ namespace throttr
         boost::multi_index::composite_key<
           entry_wrapper,
           boost::multi_index::const_mem_fun<entry_wrapper, request_key, &entry_wrapper::key>,
-          boost::multi_index::member<entry_wrapper, bool, &entry_wrapper::expired_>>,
+          boost::multi_index::const_mem_fun<entry_wrapper, bool, &entry_wrapper::expired_flag>>,
         boost::multi_index::composite_key_hash<request_key_hasher, std::hash<bool>>,
         boost::multi_index::composite_key_equal_to<std::equal_to<request_key>, std::equal_to<bool>>>,
       // Find by key

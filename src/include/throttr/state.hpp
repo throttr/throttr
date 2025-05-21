@@ -103,17 +103,18 @@ namespace throttr
         _expires_at};
 
       auto &_index = storage_.get<tag_by_key_and_valid>();
-      auto [_it, _inserted] = storage_.insert(entry_wrapper{
+      const auto _entry_ptr = std::make_shared<entry_wrapper>(
         std::
           vector(reinterpret_cast<const std::byte *>(key.data()), reinterpret_cast<const std::byte *>(key.data() + key.size())),
-        std::move(_scoped_entry)});
+        std::move(_scoped_entry));
+      auto [_it, _inserted] = storage_.insert(_entry_ptr);
 
       boost::ignore_unused(_it);
 
       // LCOV_EXCL_START Note: Actually tested
       if (_inserted)
       {
-        if (const auto &_entry = _index.begin()->entry_; _expires_at <= _entry.expires_at_)
+        if (const auto &_entry = (*_index.begin())->entry_; _expires_at <= _entry.expires_at_)
         {
           boost::asio::post(strand_, [self = shared_from_this(), _expires_at] { self->schedule_expiration(_expires_at); });
         }
@@ -204,7 +205,8 @@ namespace throttr
         return;
       }
 
-      const auto &_entry = _it->entry_;
+      const std::shared_ptr<entry_wrapper> _safe_entry = *_it;
+      const auto &_entry = _safe_entry->entry_;
       const auto _view = _entry.value_.view();
       const value_type _ttl = get_ttl(_entry.expires_at_, _entry.ttl_type_);
 
@@ -214,7 +216,7 @@ namespace throttr
 
       if (as_query) // LCOV_EXCL_LINE
       {
-        batch[batch_size++] = boost::asio::buffer(_view.pointer_, _view.size_); // NOSONAR
+        batch[batch_size++] = boost::asio::buffer(_view.pointer_, _view.size_);                 // NOSONAR
         batch[batch_size++] = boost::asio::buffer(&_entry.ttl_type_, sizeof(_entry.ttl_type_)); // NOSONAR
         std::memcpy(write_buffer + write_offset, &_ttl, sizeof(_ttl));
         batch[batch_size++] = boost::asio::buffer(write_buffer + write_offset, sizeof(_ttl)); // NOSONAR
@@ -287,18 +289,18 @@ namespace throttr
 
       storage_.modify(
         _it,
-        [&](entry_wrapper &object)
+        [&](const std::shared_ptr<entry_wrapper> &object)
         {
           switch (request.header_->attribute_)
           {
             case quota:
-              if (object.entry_.type_ == entry_types::counter)
+              if (object->entry_.type_ == entry_types::counter)
               { // LCOV_EXCL_LINE Note: Partially tested
-                _modified = apply_quota_change(object.entry_, request);
+                _modified = apply_quota_change(object->entry_, request);
               }
               break;
             case ttl:
-              _modified = apply_ttl_change(object.entry_, request, _now, object.key_);
+              _modified = apply_ttl_change(object->entry_, request, _now, object->key_);
               break;
           }
         });
@@ -401,7 +403,10 @@ namespace throttr
           break;
       }
 
-      if (scheduled_key_.size() == key.size() && std::equal(scheduled_key_.begin(), scheduled_key_.end(), key.begin())) // LCOV_EXCL_LINE Note: Partially tested
+      if (scheduled_key_.size() == key.size() && std::equal(scheduled_key_.begin(), scheduled_key_.end(), key.begin())) // LCOV_EXCL_LINE
+                                                                                                                        // Note:
+                                                                                                                        // Partially
+                                                                                                                        // tested
       {
         boost::asio::post(
           strand_, [_self = shared_from_this(), _expires_at = entry.expires_at_] { _self->schedule_expiration(_expires_at); });
@@ -460,9 +465,10 @@ namespace throttr
       std::vector<request_key> _to_expire;
       for (const auto &_item : _timer_index)
       {
-        if (_item.entry_.expires_at_ > _now)
+        const std::shared_ptr<entry_wrapper> _safe_entry = _item;
+        if (_safe_entry->entry_.expires_at_ > _now)
           break;
-        _to_expire.emplace_back(_item.key());
+        _to_expire.emplace_back(_item->key());
       }
 
       auto &_valid_index = storage_.get<tag_by_key_and_valid>();
@@ -473,7 +479,7 @@ namespace throttr
         {
           _valid_index.modify(
             _it,
-            [](entry_wrapper &entry)
+            [](std::shared_ptr<entry_wrapper> &entry)
             {
 #ifndef NDEBUG
               fmt::println(
@@ -483,7 +489,7 @@ namespace throttr
                   reinterpret_cast<const char *>(entry.key_.data()),
                   entry.key_.size())); // NOSONAR
 #endif
-              entry.expired_ = true;
+              entry = entry->clone_and_mark_expired();
             });
         }
 
@@ -506,7 +512,7 @@ namespace throttr
 
       if (!_timer_index.empty())
       {
-        const auto _next = _timer_index.begin()->entry_.expires_at_;
+        const auto _next = (*_timer_index.begin())->entry_.expires_at_;
         schedule_expiration(_next);
       }
     }
@@ -525,13 +531,14 @@ namespace throttr
         return;
 
       const auto &_item = _schedule_index.begin();
-      const auto &_entry = _item->entry_;
+      const std::shared_ptr<entry_wrapper> _safe_entry = *_item;
+      const auto &_entry = _safe_entry->entry_;
 
       if (proposed > _entry.expires_at_)
         return;
 
       const auto _delay = _entry.expires_at_ - std::chrono::steady_clock::now();
-      scheduled_key_ = std::span(_item->key_);
+      scheduled_key_ = std::span(_safe_entry->key_);
 
 #ifndef NDEBUG
       fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULER GARBAGE COLLECTION FINISHED", std::chrono::system_clock::now());

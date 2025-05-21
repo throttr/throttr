@@ -130,7 +130,7 @@ namespace throttr
     void compact_buffer()
     {
       if (buffer_start_ == buffer_end_) // LCOV_EXCL_LINE note: Partially tested.
-        return; // LCOV_EXCL_LINE note: Partially tested.
+        return;                         // LCOV_EXCL_LINE note: Partially tested.
       std::memmove(buffer_.data(), buffer_.data() + buffer_start_, buffer_end_ - buffer_start_);
       buffer_end_ -= buffer_start_;
       buffer_start_ = 0;
@@ -206,7 +206,7 @@ namespace throttr
       {
         std::span<const std::byte> _span(buffer_.data() + buffer_start_, buffer_end_ - buffer_start_);
         const std::size_t _msg_size = get_message_size(_span);
-        if (_msg_size == 0 || _span.size() < _msg_size)  // LCOV_EXCL_LINE note: Ignored.
+        if (_msg_size == 0 || _span.size() < _msg_size) // LCOV_EXCL_LINE note: Ignored.
           break;
 
         std::span<const std::byte> _view(buffer_.data() + buffer_start_, _msg_size);

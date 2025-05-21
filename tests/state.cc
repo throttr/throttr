@@ -252,8 +252,8 @@ TEST_F(StateTestFixture, ScheduleExpiration_ReprogramsIfNextEntryExists)
   _entry2.value_ = {reinterpret_cast<char *>(buffer2.data()), buffer2.size()}; // NOSONAR
   _entry2.expires_at_ = _now + seconds(5);
 
-  _index.insert(entry_wrapper{to_bytes("c1r1"), (std::move(_entry1))});
-  _index.insert(entry_wrapper{to_bytes("c2r2"), (std::move(_entry2))});
+  _index.insert(std::make_shared<entry_wrapper>(to_bytes("c1r1"), std::move(_entry1)));
+  _index.insert(std::make_shared<entry_wrapper>(to_bytes("c2r2"), std::move(_entry2)));
 
   state_->schedule_expiration(_now);
 
