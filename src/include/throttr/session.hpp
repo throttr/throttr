@@ -199,7 +199,7 @@ namespace throttr
      */
     void try_process_next()
     {
-      auto _batch = std::make_unique<std::array<boost::asio::const_buffer, 512>>();
+      const auto _batch = std::make_unique<std::array<boost::asio::const_buffer, 512>>();
       std::size_t _batch_size = 0;
 
       while (true)
