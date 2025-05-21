@@ -130,7 +130,7 @@ namespace throttr
     void compact_buffer()
     {
       if (buffer_start_ == buffer_end_) // LCOV_EXCL_LINE note: Partially tested.
-        return;
+        return; // LCOV_EXCL_LINE note: Partially tested.
       std::memmove(buffer_.data(), buffer_.data() + buffer_start_, buffer_end_ - buffer_start_);
       buffer_end_ -= buffer_start_;
       buffer_start_ = 0;

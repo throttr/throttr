@@ -58,7 +58,7 @@ namespace throttr
     {
       return {
         std::string_view(
-          reinterpret_cast<const char *>(key_.data()),
+          reinterpret_cast<const char *>(key_.data()), // NOSONAR
           key_.size()), // NOSONAR
       };
     }
