@@ -1,0 +1,52 @@
+---
+Language: Cpp
+
+# Sangrías
+IndentWidth: 2
+ObjCBlockIndentWidth: 2
+ContinuationIndentWidth: 2
+IndentCaseLabels: true
+UseTab: Never
+NamespaceIndentation: All
+
+# Columnas
+ColumnLimit: 130
+PenaltyBreakBeforeFirstCallParameter: 1000
+PenaltyReturnTypeOnItsOwnLine: 200
+
+# Declaraciones y llamadas
+BinPackArguments: false
+BinPackParameters: false
+AllowAllParametersOfDeclarationOnNextLine: false
+AlignAfterOpenBracket: AlwaysBreak
+AlwaysBreakAfterReturnType: TopLevel
+AllowShortBlocksOnASingleLine: Always
+AllowShortFunctionsOnASingleLine: None
+
+# Inicializadores
+ConstructorInitializerAllOnOneLineOrOnePerLine: true
+BreakConstructorInitializers: AfterColon
+
+# Llaves
+BreakBeforeBraces: Allman
+BraceWrapping:
+  AfterFunction: false
+  AfterClass: false
+  AfterStruct: false
+  AfterNamespace: false
+  BeforeElse: false
+  BeforeCatch: false
+  SplitEmptyFunction: true
+  SplitEmptyRecord: true
+  SplitEmptyNamespace: true
+
+# Espaciado
+SpaceAfterCStyleCast: true
+SpaceAfterTemplateKeyword: false
+SpacesInParentheses: false
+SpacesInConditionalStatement: false
+SpaceInEmptyParentheses: false
+SpacesInCStyleCastParentheses: false
+
+# Extras
+MaxEmptyLinesToKeep: 1

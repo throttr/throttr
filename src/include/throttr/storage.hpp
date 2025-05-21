@@ -18,110 +18,131 @@
 #ifndef THROTTR_STORAGE_HPP
 #define THROTTR_STORAGE_HPP
 
+#include <boost/multi_index/composite_key.hpp>
+#include <boost/multi_index/hashed_index.hpp>
+#include <boost/multi_index/mem_fun.hpp>
+#include <boost/multi_index/member.hpp>
+#include <boost/multi_index/ordered_index.hpp>
+#include <boost/multi_index/tag.hpp>
+#include <boost/multi_index_container.hpp>
 #include <throttr/entry.hpp>
 
-#include <boost/multi_index_container.hpp>
-#include <boost/multi_index/ordered_index.hpp>
-#include <boost/multi_index/hashed_index.hpp>
-#include <boost/multi_index/composite_key.hpp>
-#include <boost/multi_index/member.hpp>
-#include <boost/multi_index/mem_fun.hpp>
-#include <boost/multi_index/tag.hpp>
+namespace throttr
+{
+  /**
+   * Entry wrapper
+   */
+  struct entry_wrapper
+  {
+    /**
+     * Key
+     */
+    std::vector<std::byte> key_;
 
-namespace throttr {
+    /**
+     * Entry
+     */
+    entry entry_;
+
+    /**
+     * Expired
+     */
+    bool expired_ = false;
+
+    /**
+     * Key
+     *
+     * @return
+     */
+    [[nodiscard]] request_key key() const
+    {
+      return {
+        std::string_view(
+          reinterpret_cast<const char *>(key_.data()), // NOSONAR
+          key_.size()),                                // NOSONAR
+      };
+    }
+
     /**
      * Entry wrapper
+     *
+     * @param k
+     * @param e
      */
-    struct entry_wrapper {
-        /**
-         * Key
-         */
-        std::vector<std::byte> key_;
-
-        /**
-         * Entry
-         */
-        entry entry_;
-
-        /**
-         * Expired
-         */
-        bool expired_ = false;
-
-        /**
-         * Key
-         *
-         * @return
-         */
-        [[nodiscard]] request_key key() const {
-            return {
-                std::string_view(reinterpret_cast<const char *>(key_.data()), key_.size()), // NOSONAR
-            };
-        }
-
-        /**
-         * Entry wrapper
-         *
-         * @param k
-         * @param e
-         */
-        entry_wrapper(std::vector<std::byte> k, entry e) : key_(std::move(k)), entry_(std::move(e)) {
-        }
-    };
+    entry_wrapper(std::vector<std::byte> k, entry e) : key_(std::move(k)), entry_(std::move(e))
+    {
+    }
 
     /**
-     * Tag: access by expiration
+     * Expired flag
+     *
+     * @return
      */
-    struct tag_by_expiration {
-    };
+    bool expired_flag() const
+    {
+      return expired_;
+    }
 
-    /**
-     * Tag: access by valid key
-     */
-    struct tag_by_key_and_valid {
-    };
+    [[nodiscard]] std::shared_ptr<entry_wrapper> clone_and_mark_expired() const
+    {
+      entry copied_entry{
+        entry_.type_,
+        value_owned(entry_.value_.view().pointer_, entry_.value_.view().size_),
+        entry_.ttl_type_,
+        entry_.expires_at_,
+      };
 
-    /**
-     * Request entry by expiration
-     */
-    struct request_entry_by_expiration {
-        bool operator()(const entry &a, const entry &b) const {
-            return a.expires_at_ < b.expires_at_;
-        }
-    };
+      auto out = std::make_shared<entry_wrapper>(key_, std::move(copied_entry));
+      out->expired_ = true;
+      return out;
+    }
+  };
 
-    /**
-     * Multi-index container type for request storage
-     */
-    using storage_type = boost::multi_index::multi_index_container<
-        entry_wrapper,
-        boost::multi_index::indexed_by<
-            // Find by key and valid
-            boost::multi_index::hashed_unique<
-                boost::multi_index::tag<tag_by_key_and_valid>,
-                boost::multi_index::composite_key<
-                    entry_wrapper,
-                    boost::multi_index::const_mem_fun<entry_wrapper, request_key, &entry_wrapper::key>,
-                    boost::multi_index::member<entry_wrapper, bool, &entry_wrapper::expired_>
-                >,
-                boost::multi_index::composite_key_hash<
-                    request_key_hasher,
-                    std::hash<bool>
-                >,
-                boost::multi_index::composite_key_equal_to<
-                    std::equal_to<request_key>,
-                    std::equal_to<bool>
-                >
-            >,
-            // Find by key
-            boost::multi_index::ordered_non_unique<
-                boost::multi_index::tag<tag_by_expiration>,
-                boost::multi_index::member<entry_wrapper, entry, &entry_wrapper::entry_>,
-                request_entry_by_expiration
-            >
-        >
-    >;
-}
+  /**
+   * Tag: access by expiration
+   */
+  struct tag_by_expiration
+  {
+  };
 
+  /**
+   * Tag: access by valid key
+   */
+  struct tag_by_key_and_valid
+  {
+  };
+
+  /**
+   * Request entry by expiration
+   */
+  struct request_entry_by_expiration
+  {
+    bool operator()(const entry &a, const entry &b) const
+    {
+      return a.expires_at_ < b.expires_at_;
+    }
+  };
+
+  /**
+   * Multi-index container type for request storage
+   */
+  using storage_type = boost::multi_index::multi_index_container<
+    std::shared_ptr<entry_wrapper>,
+    boost::multi_index::indexed_by<
+      // Find by key and valid
+      boost::multi_index::hashed_unique<
+        boost::multi_index::tag<tag_by_key_and_valid>,
+        boost::multi_index::composite_key<
+          entry_wrapper,
+          boost::multi_index::const_mem_fun<entry_wrapper, request_key, &entry_wrapper::key>,
+          boost::multi_index::const_mem_fun<entry_wrapper, bool, &entry_wrapper::expired_flag>>,
+        boost::multi_index::composite_key_hash<request_key_hasher, std::hash<bool>>,
+        boost::multi_index::composite_key_equal_to<std::equal_to<request_key>, std::equal_to<bool>>>,
+      // Find by key
+      boost::multi_index::ordered_non_unique<
+        boost::multi_index::tag<tag_by_expiration>,
+        boost::multi_index::member<entry_wrapper, entry, &entry_wrapper::entry_>,
+        request_entry_by_expiration>>>;
+} // namespace throttr
 
 #endif // THROTTR_STORAGE_HPP

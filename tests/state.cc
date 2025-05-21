@@ -14,6 +14,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include <gtest/gtest.h>
+
 #include <boost/asio.hpp>
 #include <thread>
 #include <throttr/app.hpp>
@@ -22,230 +23,242 @@
 using boost::asio::ip::tcp;
 using namespace throttr;
 
-class StateTestFixture : public testing::Test {
-public:
-    boost::asio::io_context ioc_;
-    std::shared_ptr<state> state_;
-
-    void SetUp() override {
-        state_ = std::make_shared<state>(ioc_);
-    }
-};
-
-auto to_bytes = [](const char* str) {
-    return std::vector<std::byte>{
-        reinterpret_cast<const std::byte*>(str),
-        reinterpret_cast<const std::byte*>(str + std::strlen(str)) // NOSONAR
-    };
-};
-
-template <typename T>
-void test_ttl_change(
-    state& _state,
-    entry& _entry,
-    const std::string& _key,
-    const ttl_types _ttl_type,
-    const change_types _change_type,
-    const T _expected)
+class StateTestFixture : public testing::Test
 {
-    using namespace throttr;
-    using namespace std::chrono;
+public:
+  boost::asio::io_context ioc_;
+  std::shared_ptr<state> state_;
 
-    request_update_header _header{};
-    _header.request_type_ = request_types::update;
-    _header.attribute_ = attribute_types::ttl;
-    _header.change_ = _change_type;
-    _header.value_ = static_cast<value_type>(_expected.count());
+  void SetUp() override
+  {
+    state_ = std::make_shared<state>(ioc_);
+  }
+};
 
-    request_update _request{ &_header, _key };
+auto to_bytes = [](const char *str)
+{
+  return std::vector<std::byte>{
+    reinterpret_cast<const std::byte *>(str),
+    reinterpret_cast<const std::byte *>(str + std::strlen(str)) // NOSONAR
+  };
+};
 
-    _entry.ttl_type_ = _ttl_type;
-    const auto _now = steady_clock::now();
-    const auto _before = _entry.expires_at_;
+template<typename T>
+void
+test_ttl_change(
+  state &_state,
+  entry &_entry,
+  const std::string &_key,
+  const ttl_types _ttl_type,
+  const change_types _change_type,
+  const T _expected)
+{
+  using namespace throttr;
+  using namespace std::chrono;
 
-    const auto _key_bytes = std::vector<std::byte>{
-        reinterpret_cast<const std::byte*>(_key.data()),
-        reinterpret_cast<const std::byte*>(_key.data() + _key.size())
+  request_update_header _header{};
+  _header.request_type_ = request_types::update;
+  _header.attribute_ = attribute_types::ttl;
+  _header.change_ = _change_type;
+  _header.value_ = static_cast<value_type>(_expected.count());
+
+  request_update _request{&_header, _key};
+
+  _entry.ttl_type_ = _ttl_type;
+  const auto _now = steady_clock::now();
+  const auto _before = _entry.expires_at_;
+
+  const auto _key_bytes = std::vector<
+    std::byte>{reinterpret_cast<const std::byte *>(_key.data()), reinterpret_cast<const std::byte *>(_key.data() + _key.size())};
+  const std::span _span_key{_key_bytes};
+
+  ASSERT_TRUE(_state.apply_ttl_change(_entry, _request, _now, _span_key));
+
+  switch (_change_type)
+  {
+    case change_types::patch:
+      EXPECT_GE(_entry.expires_at_, _now + _expected);
+      break;
+    case change_types::increase:
+      EXPECT_GE(_entry.expires_at_, _before + _expected);
+      break;
+    case change_types::decrease:
+      EXPECT_LE(_entry.expires_at_, _before - _expected);
+      break;
+  }
+}
+
+TEST(State, TTLChange)
+{
+  using namespace throttr;
+  using namespace std::chrono;
+
+  boost::asio::io_context _ioc;
+  state _state(_ioc);
+  entry _entry;
+  _entry.expires_at_ = steady_clock::now();
+  const std::string _key = "user";
+
+  {
+    std::vector cases{
+      std::make_tuple(ttl_types::nanoseconds, change_types::patch, nanoseconds(32)),
+      std::make_tuple(ttl_types::nanoseconds, change_types::increase, nanoseconds(64)),
+      std::make_tuple(ttl_types::nanoseconds, change_types::decrease, nanoseconds(16)),
     };
-    const std::span _span_key{_key_bytes};
+    for (const auto &[t, c, e] : cases)
+      test_ttl_change<nanoseconds>(_state, _entry, _key, t, c, e);
+  }
 
-    ASSERT_TRUE(_state.apply_ttl_change(_entry, _request, _now, _span_key));
+  {
+    std::vector cases{
+      std::make_tuple(ttl_types::milliseconds, change_types::patch, milliseconds(128)),
+      std::make_tuple(ttl_types::milliseconds, change_types::increase, milliseconds(16)),
+      std::make_tuple(ttl_types::milliseconds, change_types::decrease, milliseconds(32)),
+    };
+    for (const auto &[t, c, e] : cases)
+      test_ttl_change<milliseconds>(_state, _entry, _key, t, c, e);
+  }
 
-    switch (_change_type) {
-        case change_types::patch:
-            EXPECT_GE(_entry.expires_at_, _now + _expected);
-            break;
-        case change_types::increase:
-            EXPECT_GE(_entry.expires_at_, _before + _expected);
-            break;
-        case change_types::decrease:
-            EXPECT_LE(_entry.expires_at_, _before - _expected);
-            break;
-    }
+  {
+    std::vector cases{
+      std::make_tuple(ttl_types::seconds, change_types::patch, seconds(4)),
+      std::make_tuple(ttl_types::seconds, change_types::increase, seconds(1)),
+      std::make_tuple(ttl_types::seconds, change_types::decrease, seconds(1)),
+    };
+    for (const auto &[t, c, e] : cases)
+      test_ttl_change<seconds>(_state, _entry, _key, t, c, e);
+  }
 }
 
-TEST(State, TTLChange) {
-    using namespace throttr;
-    using namespace std::chrono;
+TEST(StateHelpersTest, CalculateExpirationPointNanoseconds)
+{
+  const auto _now = std::chrono::steady_clock::now();
+  const auto _expires = get_expiration_point(_now, ttl_types::nanoseconds, 32);
 
-    boost::asio::io_context _ioc;
-    state _state(_ioc);
-    entry _entry;
-    _entry.expires_at_ = steady_clock::now();
-    const std::string _key = "user";
-
-    {
-        std::vector cases{
-            std::make_tuple(ttl_types::nanoseconds, change_types::patch, nanoseconds(32)),
-            std::make_tuple(ttl_types::nanoseconds, change_types::increase, nanoseconds(64)),
-            std::make_tuple(ttl_types::nanoseconds, change_types::decrease, nanoseconds(16)),
-        };
-        for (const auto& [t, c, e] : cases)
-            test_ttl_change<nanoseconds>(_state, _entry, _key, t, c, e);
-    }
-
-    {
-        std::vector cases{
-            std::make_tuple(ttl_types::milliseconds, change_types::patch, milliseconds(128)),
-            std::make_tuple(ttl_types::milliseconds, change_types::increase, milliseconds(16)),
-            std::make_tuple(ttl_types::milliseconds, change_types::decrease, milliseconds(32)),
-        };
-        for (const auto& [t, c, e] : cases)
-            test_ttl_change<milliseconds>(_state, _entry, _key, t, c, e);
-    }
-
-    {
-        std::vector cases{
-            std::make_tuple(ttl_types::seconds, change_types::patch, seconds(4)),
-            std::make_tuple(ttl_types::seconds, change_types::increase, seconds(1)),
-            std::make_tuple(ttl_types::seconds, change_types::decrease, seconds(1)),
-        };
-        for (const auto& [t, c, e] : cases)
-            test_ttl_change<seconds>(_state, _entry, _key, t, c, e);
-    }
+  const auto _diff = std::chrono::duration_cast<std::chrono::nanoseconds>(_expires - _now).count();
+  ASSERT_NEAR(_diff, 32, 16);
 }
 
-TEST(StateHelpersTest, CalculateExpirationPointNanoseconds) {
-    const auto _now = std::chrono::steady_clock::now();
-    const auto _expires = get_expiration_point(_now, ttl_types::nanoseconds, 32);
+TEST(StateHelpersTest, CalculateExpirationPointSeconds)
+{
+  const auto _now = std::chrono::steady_clock::now();
+  const auto _expires = get_expiration_point(_now, ttl_types::seconds, 3);
 
-    const auto _diff = std::chrono::duration_cast<std::chrono::nanoseconds>(_expires - _now).count();
-    ASSERT_NEAR(_diff, 32, 16);
+  const auto _diff = std::chrono::duration_cast<std::chrono::seconds>(_expires - _now).count();
+  ASSERT_NEAR(_diff, 3, 1);
 }
 
-TEST(StateHelpersTest, CalculateExpirationPointSeconds) {
-    const auto _now = std::chrono::steady_clock::now();
-    const auto _expires = get_expiration_point(_now, ttl_types::seconds, 3);
+TEST(StateHelpersTest, CalculateTTLRemainingNanosecondsNotExpired)
+{
+  const auto _now = std::chrono::steady_clock::now();
+  const auto _expires = _now + std::chrono::nanoseconds(256);
 
-    const auto _diff = std::chrono::duration_cast<std::chrono::seconds>(_expires - _now).count();
-    ASSERT_NEAR(_diff, 3, 1);
+  const auto _ttl = get_ttl(_expires, ttl_types::nanoseconds);
+  ASSERT_GE(_ttl, 0);
 }
 
-TEST(StateHelpersTest, CalculateTTLRemainingNanosecondsNotExpired) {
-    const auto _now = std::chrono::steady_clock::now();
-    const auto _expires = _now + std::chrono::nanoseconds(256);
+TEST(StateHelpersTest, CalculateTTLRemainingSecondsNotExpired)
+{
+  const auto _now = std::chrono::steady_clock::now();
+  const auto _expires = _now + std::chrono::seconds(10);
 
-    const auto _ttl = get_ttl(_expires, ttl_types::nanoseconds);
-    ASSERT_GE(_ttl, 0);
+  const auto _ttl = get_ttl(_expires, ttl_types::seconds);
+  ASSERT_GE(_ttl, 0);
 }
 
-TEST(StateHelpersTest, CalculateTTLRemainingSecondsNotExpired) {
-    const auto _now = std::chrono::steady_clock::now();
-    const auto _expires = _now + std::chrono::seconds(10);
+TEST(StateHelpersTest, CalculateTTLRemainingNanosecondsExpired)
+{
+  const auto _now = std::chrono::steady_clock::now();
+  const auto _expires = _now - std::chrono::nanoseconds(100);
 
-    const auto _ttl = get_ttl(_expires, ttl_types::seconds);
-    ASSERT_GE(_ttl, 0);
+  std::this_thread::sleep_for(std::chrono::nanoseconds(1000));
+
+  const auto _quota = get_ttl(_expires, ttl_types::nanoseconds);
+  ASSERT_EQ(_quota, 0);
 }
 
-TEST(StateHelpersTest, CalculateTTLRemainingNanosecondsExpired) {
-    const auto _now = std::chrono::steady_clock::now();
-    const auto _expires = _now - std::chrono::nanoseconds(100);
+TEST(StateHelpersTest, CalculateTTLRemainingSecondsExpired)
+{
+  const auto _now = std::chrono::steady_clock::now();
+  const auto _expires = _now - std::chrono::seconds(1);
 
-    std::this_thread::sleep_for(std::chrono::nanoseconds(1000));
+  std::this_thread::sleep_for(std::chrono::seconds(2));
 
-    const auto _quota = get_ttl(_expires, ttl_types::nanoseconds);
-    ASSERT_EQ(_quota, 0);
+  const auto _quota = get_ttl(_expires, ttl_types::seconds);
+  ASSERT_EQ(_quota, 0);
 }
 
-TEST(StateHelpersTest, CalculateTTLRemainingSecondsExpired) {
-    const auto _now = std::chrono::steady_clock::now();
-    const auto _expires = _now - std::chrono::seconds(1);
+TEST(State, QuotaChange)
+{
+  std::array<std::byte, sizeof(value_type)> buffer;
+  entry _entry;
+  _entry.value_ = {reinterpret_cast<char *>(buffer.data()), buffer.size()}; // NOSONAR
 
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+  auto *raw = reinterpret_cast<value_type *>(_entry.value_.data_.get());
 
-    const auto _quota = get_ttl(_expires, ttl_types::seconds);
-    ASSERT_EQ(_quota, 0);
+  // patch
+  *raw = 0;
+  request_update_header _patch_header{request_types::update, attribute_types::quota, change_types::patch, 42, 0};
+  request_update _patch_req{&_patch_header, ""};
+  EXPECT_TRUE(state::apply_quota_change(_entry, _patch_req));
+  EXPECT_EQ(*raw, 42);
+
+  // increase
+  *raw = 10;
+  request_update_header _inc_header{request_types::update, attribute_types::quota, change_types::increase, 5, 0};
+  request_update _inc_req{&_inc_header, ""};
+  EXPECT_TRUE(state::apply_quota_change(_entry, _inc_req));
+  EXPECT_EQ(*raw, 15);
+
+  // decrease (quota > value)
+  *raw = 20;
+  request_update_header _dec_gt_header{request_types::update, attribute_types::quota, change_types::decrease, 10, 0};
+  request_update _dec_gt_req{&_dec_gt_header, ""};
+  EXPECT_TRUE(state::apply_quota_change(_entry, _dec_gt_req));
+  EXPECT_EQ(*raw, 10);
+
+  // decrease (quota == value)
+  *raw = 10;
+  request_update_header _dec_eq_header{request_types::update, attribute_types::quota, change_types::decrease, 10, 0};
+  request_update _dec_eq_req{&_dec_eq_header, ""};
+  EXPECT_TRUE(state::apply_quota_change(_entry, _dec_eq_req));
+  EXPECT_EQ(*raw, 0);
+
+  // decrease (quota < value)
+  *raw = 5;
+  request_update_header _dec_lt_header{request_types::update, attribute_types::quota, change_types::decrease, 10, 0};
+  request_update _dec_lt_req{&_dec_lt_header, ""};
+  EXPECT_FALSE(state::apply_quota_change(_entry, _dec_lt_req));
 }
 
-TEST(State, QuotaChange) {
-    std::array<std::byte, sizeof(value_type)> buffer;
-    entry _entry;
-    _entry.value_ = { reinterpret_cast<char*>(buffer.data()), buffer.size() }; // NOSONAR
+TEST_F(StateTestFixture, ScheduleExpiration_ReprogramsIfNextEntryExists)
+{
+  using namespace std::chrono;
+  std::array buffer1{std::byte{1}};
+  std::array buffer2{std::byte{1}};
 
-    auto* raw = reinterpret_cast<value_type*>(_entry.value_.data_.get());
+  auto &_storage = state_->storage_;
+  auto &_index = _storage.get<tag_by_key_and_valid>();
 
-    // patch
-    *raw = 0;
-    request_update_header _patch_header{request_types::update, attribute_types::quota, change_types::patch, 42, 0};
-    request_update _patch_req{&_patch_header, ""};
-    EXPECT_TRUE(state::apply_quota_change(_entry, _patch_req));
-    EXPECT_EQ(*raw, 42);
+  const auto _now = steady_clock::now();
 
-    // increase
-    *raw = 10;
-    request_update_header _inc_header{request_types::update, attribute_types::quota, change_types::increase, 5, 0};
-    request_update _inc_req{&_inc_header, ""};
-    EXPECT_TRUE(state::apply_quota_change(_entry, _inc_req));
-    EXPECT_EQ(*raw, 15);
+  entry _entry1;
+  _entry1.type_ = entry_types::counter;
+  _entry1.value_ = {reinterpret_cast<char *>(buffer1.data()), buffer1.size()}; // NOSONAR
+  _entry1.expires_at_ = _now;
 
-    // decrease (quota > value)
-    *raw = 20;
-    request_update_header _dec_gt_header{request_types::update, attribute_types::quota, change_types::decrease, 10, 0};
-    request_update _dec_gt_req{&_dec_gt_header, ""};
-    EXPECT_TRUE(state::apply_quota_change(_entry, _dec_gt_req));
-    EXPECT_EQ(*raw, 10);
+  entry _entry2;
+  _entry2.type_ = entry_types::counter;
+  _entry2.value_ = {reinterpret_cast<char *>(buffer2.data()), buffer2.size()}; // NOSONAR
+  _entry2.expires_at_ = _now + seconds(5);
 
-    // decrease (quota == value)
-    *raw = 10;
-    request_update_header _dec_eq_header{request_types::update, attribute_types::quota, change_types::decrease, 10, 0};
-    request_update _dec_eq_req{&_dec_eq_header, ""};
-    EXPECT_TRUE(state::apply_quota_change(_entry, _dec_eq_req));
-    EXPECT_EQ(*raw, 0);
+  _index.insert(std::make_shared<entry_wrapper>(to_bytes("c1r1"), std::move(_entry1)));
+  _index.insert(std::make_shared<entry_wrapper>(to_bytes("c2r2"), std::move(_entry2)));
 
-    // decrease (quota < value)
-    *raw = 5;
-    request_update_header _dec_lt_header{request_types::update, attribute_types::quota, change_types::decrease, 10, 0};
-    request_update _dec_lt_req{&_dec_lt_header, ""};
-    EXPECT_FALSE(state::apply_quota_change(_entry, _dec_lt_req));
-}
+  state_->schedule_expiration(_now);
 
-TEST_F(StateTestFixture, ScheduleExpiration_ReprogramsIfNextEntryExists) {
-    using namespace std::chrono;
-    std::array buffer1{ std::byte{1} };
-    std::array buffer2{ std::byte{1} };
+  ioc_.restart();
+  ioc_.run_for(seconds(6));
 
-    auto &_storage = state_->storage_;
-    auto &_index = _storage.get<tag_by_key_and_valid>();
-
-    const auto _now = steady_clock::now();
-
-    entry _entry1;
-    _entry1.type_ = entry_types::counter;
-    _entry1.value_ = { reinterpret_cast<char*>(buffer1.data()), buffer1.size() }; // NOSONAR
-    _entry1.expires_at_ = _now;
-
-    entry _entry2;
-    _entry2.type_ = entry_types::counter;
-    _entry2.value_ = { reinterpret_cast<char*>(buffer2.data()), buffer2.size() }; // NOSONAR
-    _entry2.expires_at_ = _now + seconds(5);
-
-    _index.insert(entry_wrapper{to_bytes("c1r1"), (std::move(_entry1))});
-    _index.insert(entry_wrapper{to_bytes("c2r2"), (std::move(_entry2))});
-
-    state_->schedule_expiration(_now);
-
-    ioc_.restart();
-    ioc_.run_for(seconds(6));
-
-    EXPECT_TRUE(_index.empty());
+  EXPECT_TRUE(_index.empty());
 }
