@@ -36,7 +36,7 @@ namespace throttr {
     /**
      * Session
      */
-    class session : public std::enable_shared_from_this<session> {
+    class session {
     public:
         /**
          * Constructor
@@ -58,6 +58,26 @@ namespace throttr {
 #endif
             }
             // LCOV_EXCL_STOP
+        }
+
+        mutable std::atomic<int> ref_count_{0};
+
+        /**
+         * Intrusive ptr add reference
+         * @param p
+         */
+        friend void intrusive_ptr_add_ref(const session* p) {
+            p->ref_count_.fetch_add(1, std::memory_order_relaxed);
+        }
+
+        /**
+         * Intrusive ptr release
+         * @param p
+         */
+        friend void intrusive_ptr_release(const session* p) {
+            if (p->ref_count_.fetch_sub(1, std::memory_order_acq_rel) == 1) {
+                delete p;
+            }
         }
 
         /**
@@ -164,6 +184,9 @@ namespace throttr {
          * Try process next
          */
         void try_process_next() {
+            std::array<boost::asio::const_buffer, 64> _batch;
+            std::size_t _batch_size = 0;
+
             while (true) {
                 std::span<const std::byte> _span(buffer_.data() + buffer_start_, buffer_end_ - buffer_start_);
                 const std::size_t _msg_size = get_message_size(_span);
@@ -178,39 +201,42 @@ namespace throttr {
 #endif
             // LCOV_EXCL_STOP
 
-                auto _response = response_holder(0x00);
-
-                try {
-                    switch (const auto type = static_cast<request_types>(std::to_integer<uint8_t>(_view[0])); type) {
-                        case request_types::insert:
-                            _response = std::move(state_->handle_insert(_view));
-                            break;
-                        case request_types::set:
-                            _response = std::move(state_->handle_set(_view));
-                            break;
-                        case request_types::query:
-                        case request_types::get:
-                            _response = std::move(state_->handle_query(request_query::from_buffer(_view), type == request_types::query));
-                            break;
-                        case request_types::update:
-                            _response = std::move(state_->handle_update(request_update::from_buffer(_view)));
-                            break;
-                        case request_types::purge:
-                            _response = std::move(state_->handle_purge(request_purge::from_buffer(_view)));
-                            break;
-                        // LCOV_EXCL_START
-                    }
-                } catch (const request_error &e) {
-                    boost::ignore_unused(e);
-                }
-                // LCOV_EXCL_STOP
-
-                write_queue_.emplace_back(std::move(_response));
+                status_buffer_[_batch_size++] = 0x00;
+                _batch[_batch_size] = boost::asio::buffer(&status_buffer_[_batch_size], 1);
+                // auto _response = response_holder(0x00);
+                //
+                //
+                // try {
+                //     switch (const auto type = static_cast<request_types>(std::to_integer<uint8_t>(_view[0])); type) {
+                //         case request_types::insert:
+                //             _response = std::move(state_->handle_insert(_view));
+                //             break;
+                //         case request_types::set:
+                //             _response = std::move(state_->handle_set(_view));
+                //             break;
+                //         case request_types::query:
+                //         case request_types::get:
+                //             _response = std::move(state_->handle_query(request_query::from_buffer(_view), type == request_types::query));
+                //             break;
+                //         case request_types::update:
+                //             _response = std::move(state_->handle_update(request_update::from_buffer(_view)));
+                //             break;
+                //         case request_types::purge:
+                //             _response = std::move(state_->handle_purge(request_purge::from_buffer(_view)));
+                //             break;
+                //         // LCOV_EXCL_START
+                //     }
+                // } catch (const request_error &e) {
+                //     boost::ignore_unused(e);
+                // }
+                // // LCOV_EXCL_STOP
+                //
+                // write_queue_.emplace_back(std::move(_response));
             }
 
             // LCOV_EXCL_START Note: Partially tested.
             // The not tested case is when in-while break condition is triggered but no queue element exists.
-            do_write();
+            do_write(_batch, _batch_size);
             // LCOV_EXCL_STOP
 
             compact_buffer_if_needed();
@@ -219,28 +245,16 @@ namespace throttr {
         /**
          * Do write
          */
-        void do_write() {
+        void do_write(const std::array<boost::asio::const_buffer, 64>& batch,
+              const std::size_t batch_size) {
             // LCOV_EXCL_START
-            if (write_queue_.empty()) {
+            if (batch_size == 0) {
                 do_read();
                 return;
             }
             // LCOV_EXCL_STOP
 
-            std::vector<boost::asio::const_buffer> _batch;
-
-            _batch.reserve(write_queue_.size() * 5);
-
-            // LCOV_EXCL_START Note: Partially tested.
-            // The not tested case TBC is when execution reach this code but the queue or buffers are empty.
-            for (const auto& _response : write_queue_) {
-                for (const auto& _buffer : _response.buffers_) {
-                    if (boost::asio::buffer_size(_buffer) > 0) _batch.emplace_back(_buffer);
-                }
-            }
-            // LCOV_EXCL_STOP
-
-            auto self = shared_from_this();
+            auto _self = boost::intrusive_ptr{this};
 
             // LCOV_EXCL_START
 #ifndef NDEBUG
@@ -250,14 +264,20 @@ namespace throttr {
 
             boost::asio::async_write(
                 socket_,
-                    _batch,
+                    boost::asio::buffer(batch.data(), batch_size),
                     boost::asio::bind_allocator(
                         handler_allocator<int>(handler_memory_),
-                        [self] (const boost::system::error_code& ec, const std::size_t length) {
-                            self->on_write(ec, length);
+                        [_self] (const boost::system::error_code& ec, const std::size_t length) {
+                            _self->on_write(ec, length);
                         }
                     )
                 );
+        }
+
+        static std::size_t get_message_sized(const std::span<const std::byte> buffer, const std::size_t header_size, const std::size_t extra = 0) {
+            if (buffer.size() < header_size) return 0;
+            if (buffer.size() < header_size + extra) return 0;
+            return header_size + extra;
         }
 
         /**
@@ -266,42 +286,35 @@ namespace throttr {
          * @param buffer
          * @return
          */
-        static std::size_t get_message_size(std::span<const std::byte> buffer) {
+        static std::size_t get_message_size(const std::span<const std::byte> buffer) {
             if (buffer.empty()) return 0;
 
             const auto *_buffer = buffer.data();
-            const auto _type = static_cast<request_types>(std::to_integer<uint8_t>(_buffer[0])); // NOSONAR
 
-            auto _check_and_return = [&](const std::size_t header_size, const std::size_t extra = 0) -> std::size_t {
-                if (buffer.size() < header_size) return 0;
-                if (buffer.size() < header_size + extra) return 0;
-                return header_size + extra;
-            };
-
-            switch (_type) {
+            switch (const auto _type = static_cast<request_types>(std::to_integer<uint8_t>(_buffer[0])); _type) {
                 case request_types::insert: {
                     auto *_h = reinterpret_cast<const request_insert_header *>(_buffer); // NOSONAR
-                    return _check_and_return(request_insert_header_size, _h->key_size_);
+                    return get_message_sized(buffer, request_insert_header_size, _h->key_size_);
                 }
                 case request_types::query: {
                     auto *_h = reinterpret_cast<const request_query_header *>(_buffer); // NOSONAR
-                    return _check_and_return(request_query_header_size, _h->key_size_);
+                    return get_message_sized(buffer, request_query_header_size, _h->key_size_);
                 }
                 case request_types::update: {
                     auto *_h = reinterpret_cast<const request_update_header *>(_buffer); // NOSONAR
-                    return _check_and_return(request_update_header_size, _h->key_size_);
+                    return get_message_sized(buffer, request_update_header_size, _h->key_size_);
                 }
                 case request_types::purge: {
                     auto *_h = reinterpret_cast<const request_purge_header *>(_buffer); // NOSONAR
-                    return _check_and_return(request_purge_header_size, _h->key_size_);
+                    return get_message_sized(buffer, request_purge_header_size, _h->key_size_);
                 }
                 case request_types::set: {
                     auto *_h = reinterpret_cast<const request_set_header *>(_buffer); // NOSONAR
-                    return _check_and_return(request_set_header_size, _h->key_size_ + _h->value_size_);
+                    return get_message_sized(buffer, request_set_header_size, _h->key_size_ + _h->value_size_);
                 }
                 case request_types::get: {
                     auto *_h = reinterpret_cast<const request_get_header *>(_buffer); // NOSONAR
-                    return _check_and_return(request_get_header_size, _h->key_size_);
+                    return get_message_sized(buffer, request_get_header_size, _h->key_size_);
                 }
                     // LCOV_EXCL_START
                 default:
@@ -320,13 +333,13 @@ namespace throttr {
             }
             // LCOV_EXCL_STOP
 
-            auto self = shared_from_this();
+            auto _self = boost::intrusive_ptr{this};
             socket_.async_read_some(
                 boost::asio::buffer(buffer_.data() + buffer_end_, max_length_ - buffer_end_),
                 boost::asio::bind_allocator(
                         handler_allocator<int>(handler_memory_),
-                        [self] (const boost::system::error_code& ec, const std::size_t length) {
-                            self->on_read(ec, length);
+                        [_self] (const boost::system::error_code& ec, const std::size_t length) {
+                            _self->on_read(ec, length);
                         }
                     )
             );
@@ -340,10 +353,6 @@ namespace throttr {
          */
         void on_write(const boost::system::error_code &error, const std::size_t length) {
             boost::ignore_unused(length);
-
-            while (!write_queue_.empty()) write_queue_.pop_front(); // LCOV_EXCL_LINE Note: Partially tested
-            // The not tested case is when write queue is empty
-            // which isn't possible if the previous sequence was writing.
 
             // LCOV_EXCL_START
             if (error) {
@@ -372,9 +381,14 @@ namespace throttr {
         std::shared_ptr<state> state_;
 
         /**
-         * Write queue
+         * Max responses per batch
          */
-        std::deque<response_holder> write_queue_;
+        static constexpr std::size_t max_responses_per_batch_ = 64;
+
+        /**
+         * Status buffers
+         */
+        std::array<uint8_t, max_responses_per_batch_> status_buffer_;
     };
 }
 

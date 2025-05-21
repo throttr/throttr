@@ -34,6 +34,11 @@ namespace throttr {
         std::array<boost::asio::const_buffer, 5> buffers_;
 
         /**
+         * Buffers size
+         */
+        std::size_t buffers_size_ = 0;
+
+        /**
          * Status
          */
         std::uint8_t status_ = 0;
@@ -77,6 +82,15 @@ namespace throttr {
 
         /**
          * Constructor
+         */
+        response_holder() noexcept = default;
+
+        void* operator new(std::size_t) = delete;
+        void* operator new[](std::size_t) = delete;
+        void* operator new(std::size_t, void* ptr) noexcept { return ptr; }
+
+        /**
+         * Constructor
          *
          * @param entry
          * @param ttl
@@ -88,21 +102,19 @@ namespace throttr {
               ttl_(ttl),
               value_size_(static_cast<value_type>(entry.value_.view().size_)) {
             const auto _view = entry.value_.view();
-            if (as_query) { // LCOV_EXCL_LINE Note: Partially tested
-                buffers_ = {
-                    boost::asio::buffer(&status_, sizeof(status_)),
-                    boost::asio::buffer(_view.pointer_, _view.size_),
-                    boost::asio::buffer(&ttl_type_, sizeof(ttl_type_)),
-                    boost::asio::buffer(&ttl_, sizeof(ttl_))
-                };
+            if (as_query) {
+                buffers_[0] = boost::asio::buffer(&status_, sizeof(status_));
+                buffers_[1] = boost::asio::buffer(_view.pointer_, _view.size_);
+                buffers_[2] = boost::asio::buffer(&ttl_type_, sizeof(ttl_type_));
+                buffers_[3] = boost::asio::buffer(&ttl_, sizeof(ttl_));
+                buffers_size_ = 4;
             } else {
-                buffers_ = {
-                    boost::asio::buffer(&status_, sizeof(status_)),
-                    boost::asio::buffer(&ttl_type_, sizeof(ttl_type_)),
-                    boost::asio::buffer(&ttl_, sizeof(ttl_)),
-                    boost::asio::buffer(&value_size_, sizeof(value_size_)),
-                    boost::asio::buffer(_view.pointer_, _view.size_),
-                };
+                buffers_[0] = boost::asio::buffer(&status_, sizeof(status_));
+                buffers_[1] = boost::asio::buffer(&ttl_type_, sizeof(ttl_type_));
+                buffers_[2] = boost::asio::buffer(&ttl_, sizeof(ttl_));
+                buffers_[3] = boost::asio::buffer(&value_size_, sizeof(value_size_));
+                buffers_[4] = boost::asio::buffer(_view.pointer_, _view.size_);
+                buffers_size_ = 5;
             }
         }
 
@@ -113,9 +125,8 @@ namespace throttr {
          */
         explicit response_holder(const uint8_t status_code)
         : status_(status_code) {
-            buffers_ = {
-                boost::asio::buffer(&status_, sizeof(status_))
-            };
+            buffers_[0] = boost::asio::buffer(&status_, sizeof(status_));
+            buffers_size_ = 1;
         }
     };
 }

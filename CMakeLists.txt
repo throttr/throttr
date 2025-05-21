@@ -54,7 +54,7 @@ include(FetchContent)
 FetchContent_Declare(
         throttr-protocol
         GIT_REPOSITORY https://github.com/throttr/protocol.git
-        GIT_TAG 5.0.0
+        GIT_TAG 5.0.1
 )
 
 FetchContent_MakeAvailable(throttr-protocol)

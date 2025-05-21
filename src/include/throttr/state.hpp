@@ -87,7 +87,7 @@ namespace throttr {
          */
         response_holder handle_entry(
             const std::string_view& key,
-            const std::vector<std::byte>& value,
+            const std::span<const std::byte>& value,
             const ttl_types ttl_type,
             uint64_t ttl,
             const entry_types type,
