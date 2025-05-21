@@ -53,8 +53,8 @@ namespace throttr
      * @param size
      * @return void*
      */
-    void *allocate(const std::size_t size)
-    { // NOSONAR
+    void *allocate(const std::size_t size) // NOSONAR
+    {
       if (!in_use_ && size < sizeof(storage_))
       {
         in_use_ = true;
@@ -68,8 +68,8 @@ namespace throttr
      *
      * @param pointer
      */
-    void deallocate(void *pointer)
-    { // NOSONAR
+    void deallocate(void *pointer) // NOSONAR
+    {
       if (pointer == &storage_)
       {
         in_use_ = false;
@@ -118,7 +118,7 @@ namespace throttr
      * @tparam U
      * @param other
      */
-    template<typename U> handler_allocator(const handler_allocator<U> &other) noexcept : memory_(other.memory_)
+    template<typename U> explicit handler_allocator(const handler_allocator<U> &other) noexcept : memory_(other.memory_)
     {
     } // NOSONAR
 

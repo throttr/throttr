@@ -190,7 +190,7 @@ namespace throttr
       if (const bool _is_compliant = _it != _index.end(); !_is_compliant)
       {
         static constexpr std::uint8_t status = 0x00;
-        batch[batch_size++] = boost::asio::buffer(&status, sizeof(status));
+        batch[batch_size++] = boost::asio::buffer(&status, sizeof(status)); // NOSONAR
 #ifndef NDEBUG
         fmt::println(
           "{:%Y-%m-%d %H:%M:%S} REQUEST {} key={} RESPONSE ok=false",
@@ -207,27 +207,27 @@ namespace throttr
 
       // status_
       static constexpr std::uint8_t status = 0x01;
-      batch[batch_size++] = boost::asio::buffer(&status, sizeof(status));
+      batch[batch_size++] = boost::asio::buffer(&status, sizeof(status)); // NOSONAR
 
       if (as_query)
       {
-        batch[batch_size++] = boost::asio::buffer(_view.pointer_, _view.size_);
-        batch[batch_size++] = boost::asio::buffer(&_entry.ttl_type_, sizeof(_entry.ttl_type_));
+        batch[batch_size++] = boost::asio::buffer(_view.pointer_, _view.size_); // NOSONAR
+        batch[batch_size++] = boost::asio::buffer(&_entry.ttl_type_, sizeof(_entry.ttl_type_)); // NOSONAR
         std::memcpy(write_buffer + write_offset, &_ttl, sizeof(_ttl));
-        batch[batch_size++] = boost::asio::buffer(write_buffer + write_offset, sizeof(_ttl));
+        batch[batch_size++] = boost::asio::buffer(write_buffer + write_offset, sizeof(_ttl)); // NOSONAR
         write_offset += sizeof(_ttl);
       }
       else
       {
-        batch[batch_size++] = boost::asio::buffer(&_entry.ttl_type_, sizeof(_entry.ttl_type_));
+        batch[batch_size++] = boost::asio::buffer(&_entry.ttl_type_, sizeof(_entry.ttl_type_)); // NOSONAR
         std::memcpy(write_buffer + write_offset, &_ttl, sizeof(_ttl));
-        batch[batch_size++] = boost::asio::buffer(write_buffer + write_offset, sizeof(_ttl));
+        batch[batch_size++] = boost::asio::buffer(write_buffer + write_offset, sizeof(_ttl)); // NOSONAR
         write_offset += sizeof(_ttl);
         const auto _size = static_cast<value_type>(_view.size_);
         std::memcpy(write_buffer + write_offset, &_size, sizeof(_size));
-        batch[batch_size++] = boost::asio::buffer(write_buffer + write_offset, sizeof(_size));
+        batch[batch_size++] = boost::asio::buffer(write_buffer + write_offset, sizeof(_size)); // NOSONAR
         write_offset += sizeof(_size);
-        batch[batch_size++] = boost::asio::buffer(_view.pointer_, _view.size_);
+        batch[batch_size++] = boost::asio::buffer(_view.pointer_, _view.size_); // NOSONAR
       }
 
 #ifndef NDEBUG
