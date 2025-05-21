@@ -199,7 +199,7 @@ namespace throttr
      */
     void try_process_next()
     {
-      std::array<boost::asio::const_buffer, 512> _batch;
+      auto _batch = std::make_unique<std::array<boost::asio::const_buffer, 512>>();
       std::size_t _batch_size = 0;
 
       while (true)
@@ -229,12 +229,12 @@ namespace throttr
           {
             case request_types::insert:
               write_buffer_[write_offset_] = state_->handle_insert(_view);
-              _batch[_batch_size++] = boost::asio::buffer(write_buffer_.data() + write_offset_, 1); // NOSONAR
+              (*_batch)[_batch_size++] = boost::asio::buffer(write_buffer_.data() + write_offset_, 1); // NOSONAR
               write_offset_ += 1;
               break;
             case request_types::set:
               write_buffer_[write_offset_] = state_->handle_set(_view);
-              _batch[_batch_size++] = boost::asio::buffer(write_buffer_.data() + write_offset_, 1); // NOSONAR
+              (*_batch)[_batch_size++] = boost::asio::buffer(write_buffer_.data() + write_offset_, 1); // NOSONAR
               write_offset_ += 1;
               break;
             case request_types::query:
@@ -242,19 +242,19 @@ namespace throttr
               state_->handle_query(
                 request_query::from_buffer(_view),
                 _type == request_types::query,
-                _batch,
+                *_batch,
                 _batch_size,
                 write_buffer_.data(),
                 write_offset_);
               break;
             case request_types::update:
               write_buffer_[write_offset_] = state_->handle_update(request_update::from_buffer(_view));
-              _batch[_batch_size++] = boost::asio::buffer(write_buffer_.data() + write_offset_, 1); // NOSONAR
+              (*_batch)[_batch_size++] = boost::asio::buffer(write_buffer_.data() + write_offset_, 1); // NOSONAR
               write_offset_ += 1;
               break;
             case request_types::purge:
               write_buffer_[write_offset_] = state_->handle_purge(request_purge::from_buffer(_view));
-              _batch[_batch_size++] = boost::asio::buffer(write_buffer_.data() + write_offset_, 1); // NOSONAR
+              (*_batch)[_batch_size++] = boost::asio::buffer(write_buffer_.data() + write_offset_, 1); // NOSONAR
               write_offset_ += 1;
               break;
               // LCOV_EXCL_START
@@ -263,7 +263,7 @@ namespace throttr
         catch (const request_error &e)
         {
           write_buffer_[write_offset_] = 0x00;
-          _batch[_batch_size++] = boost::asio::buffer(write_buffer_.data() + write_offset_, 1); // NOSONAR
+          (*_batch)[_batch_size++] = boost::asio::buffer(write_buffer_.data() + write_offset_, 1); // NOSONAR
           write_offset_ += 1;
           boost::ignore_unused(e);
         }
@@ -273,7 +273,7 @@ namespace throttr
       // LCOV_EXCL_START Note: Partially tested.
       // The not tested case is when in-while break condition is triggered but no
       // queue element exists.
-      do_write(_batch, _batch_size);
+      do_write(*_batch, _batch_size);
       // LCOV_EXCL_STOP
 
       compact_buffer_if_needed();
