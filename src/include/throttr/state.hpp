@@ -486,8 +486,8 @@ namespace throttr
                 "{:%Y-%m-%d %H:%M:%S} SCHEDULER KEY EXPIRED key={}",
                 std::chrono::system_clock::now(),
                 std::string_view(
-                  reinterpret_cast<const char *>(entry.key_.data()),
-                  entry.key_.size())); // NOSONAR
+                  reinterpret_cast<const char *>(entry->key_.data()),
+                  entry->key_.size())); // NOSONAR
 #endif
               entry = entry->clone_and_mark_expired();
             });
@@ -502,8 +502,8 @@ namespace throttr
               "{:%Y-%m-%d %H:%M:%S} SCHEDULER KEY ERASED key={}",
               std::chrono::system_clock::now(),
               std::string_view(
-                reinterpret_cast<const char *>(_it->key_.data()),
-                _it->key_.size())); // NOSONAR
+                reinterpret_cast<const char *>((*_it)->key_.data()),
+                (*_it)->key_.size())); // NOSONAR
 #endif
             _timer_index.erase(_projected);
           }
