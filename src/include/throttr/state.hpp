@@ -179,7 +179,7 @@ namespace throttr
     void handle_query(
       const request_query &request,
       bool as_query,
-      std::array<boost::asio::const_buffer, 64> &batch,
+      std::array<boost::asio::const_buffer, 256> &batch,
       std::size_t &batch_size,
       std::uint8_t *write_buffer,
       std::size_t &write_offset)

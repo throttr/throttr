@@ -199,7 +199,7 @@ namespace throttr
      */
     void try_process_next()
     {
-      std::array<boost::asio::const_buffer, 64> _batch;
+      std::array<boost::asio::const_buffer, 256> _batch;
       std::size_t _batch_size = 0;
 
       while (true)
@@ -282,7 +282,7 @@ namespace throttr
     /**
      * Do write
      */
-    void do_write(const std::array<boost::asio::const_buffer, 64> &batch, const std::size_t batch_size)
+    void do_write(const std::array<boost::asio::const_buffer, 256> &batch, const std::size_t batch_size)
     {
       // LCOV_EXCL_START
       if (batch_size == 0)
