@@ -19,6 +19,7 @@
 #define THROTTR_SERVER_HPP
 
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/intrusive_ptr.hpp>
 #include <throttr/state.hpp>
 #include <throttr/session.hpp>
 
@@ -56,7 +57,8 @@ namespace throttr {
                 socket_,
                 [this](const boost::system::error_code &error) {
                     if (!error) {
-                        std::make_shared<session>(std::move(socket_), state_)->start();
+                        const auto _ptr = boost::intrusive_ptr{new session(std::move(socket_), state_)};
+                        _ptr->start();
                     }
 
                     do_accept();
