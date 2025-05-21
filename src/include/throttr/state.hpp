@@ -179,7 +179,7 @@ class state : public std::enable_shared_from_this<state> {
     const auto& _index = storage_.get<tag_by_key_and_valid>();
     const auto _it = _index.find(std::make_tuple(_key, false));
 
-    if (const bool _is_compliant = _it->entry_.type_ == entry_types::counter;
+    if (const bool _is_compliant = _it != _index.end();
         !_is_compliant) {
       static constexpr std::uint8_t status = 0x00;
       batch[batch_size++] = boost::asio::buffer(&status, sizeof(status));
