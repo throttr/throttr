@@ -14,6 +14,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include <gtest/gtest.h>
+
 #include <boost/asio.hpp>
 #include <thread>
 #include <throttr/app.hpp>
@@ -22,16 +23,19 @@
 using boost::asio::ip::tcp;
 using namespace throttr;
 
-class CompactBufferTest : public ::testing::Test {
- public:
-  static session create_dummy_session(std::shared_ptr<state> state) {
+class CompactBufferTest : public ::testing::Test
+{
+public:
+  static session create_dummy_session(std::shared_ptr<state> state)
+  {
     boost::asio::io_context ioc;
     tcp::socket socket(ioc);
     return session(std::move(socket), state);
   }
 };
 
-TEST_F(CompactBufferTest, CompactBufferClearsWhenFullyConsumed) {
+TEST_F(CompactBufferTest, CompactBufferClearsWhenFullyConsumed)
+{
   boost::asio::io_context ioc;
   const auto _state = std::make_shared<state>(ioc);
   auto s = create_dummy_session(_state);
@@ -45,7 +49,8 @@ TEST_F(CompactBufferTest, CompactBufferClearsWhenFullyConsumed) {
   ASSERT_EQ(s.buffer_end_, 0);
 }
 
-TEST_F(CompactBufferTest, CompactBufferCompactsWhenHalfFull) {
+TEST_F(CompactBufferTest, CompactBufferCompactsWhenHalfFull)
+{
   boost::asio::io_context ioc;
   const auto _state = std::make_shared<state>(ioc);
   auto s = create_dummy_session(_state);
@@ -62,7 +67,8 @@ TEST_F(CompactBufferTest, CompactBufferCompactsWhenHalfFull) {
 
   std::string recovered;
   recovered.reserve(data.size());
-  for (std::size_t i = 0; i < data.size(); ++i) {
+  for (std::size_t i = 0; i < data.size(); ++i)
+  {
     recovered += static_cast<char>(std::to_integer<uint8_t>(s.buffer_[i]));
   }
   ASSERT_EQ(recovered, data);

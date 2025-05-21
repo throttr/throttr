@@ -3,91 +3,101 @@
 
 #include <throttr/protocol_wrapper.hpp>
 
-namespace throttr {
-/**
- * Value view
- */
-struct value_view {
+namespace throttr
+{
   /**
-   * Pointer
+   * Value view
    */
-  char* pointer_;
+  struct value_view
+  {
+    /**
+     * Pointer
+     */
+    char *pointer_;
+
+    /**
+     * Size
+     */
+    std::size_t size_;
+  };
 
   /**
-   * Size
+   * Value owned
    */
-  std::size_t size_;
-};
+  struct value_owned
+  {
+    /**
+     * Data
+     */
+    std::unique_ptr<char[]> data_; // NOSONAR
 
-/**
- * Value owned
- */
-struct value_owned {
-  /**
-   * Data
-   */
-  std::unique_ptr<char[]> data_;  // NOSONAR
+    /**
+     * Size
+     */
+    std::size_t size_;
 
-  /**
-   * Size
-   */
-  std::size_t size_;
+    /**
+     * Constructor
+     */
+    value_owned() : data_(nullptr), size_(0)
+    {
+    }
 
-  /**
-   * Constructor
-   */
-  value_owned() : data_(nullptr), size_(0) {}
+    /**
+     * Constructor
+     *
+     * @param sz
+     */
+    explicit value_owned(const std::size_t sz) : data_(std::make_unique<char[]>(sz)), size_(sz)
+    {
+    }
 
-  /**
-   * Constructor
-   *
-   * @param sz
-   */
-  explicit value_owned(const std::size_t sz)
-      : data_(std::make_unique<char[]>(sz)), size_(sz) {}
+    /**
+     * Constructor
+     *
+     * @param src
+     * @param sz
+     */
+    value_owned(const char *src, const std::size_t sz) : data_(std::make_unique<char[]>(sz)), size_(sz)
+    {
+      std::memcpy(data_.get(), src, sz);
+    }
 
-  /**
-   * Constructor
-   *
-   * @param src
-   * @param sz
-   */
-  value_owned(const char* src, const std::size_t sz)
-      : data_(std::make_unique<char[]>(sz)), size_(sz) {
-    std::memcpy(data_.get(), src, sz);
-  }
-
-  /**
-   * View accessor
-   * @return
-   */
-  [[nodiscard]] value_view view() const { return {data_.get(), size_}; }
-};
-
-/**
- * Entry
- */
-struct entry {
-  /**
-   * Type
-   */
-  entry_types type_;
+    /**
+     * View accessor
+     * @return
+     */
+    [[nodiscard]] value_view view() const
+    {
+      return {data_.get(), size_};
+    }
+  };
 
   /**
-   * Value
+   * Entry
    */
-  value_owned value_;
+  struct entry
+  {
+    /**
+     * Type
+     */
+    entry_types type_;
 
-  /**
-   * TTL type
-   */
-  ttl_types ttl_type_;
+    /**
+     * Value
+     */
+    value_owned value_;
 
-  /**
-   * Expires at
-   */
-  std::chrono::steady_clock::time_point expires_at_;
-};
-}  // namespace throttr
+    /**
+     * TTL type
+     */
+    ttl_types ttl_type_;
 
-#endif  // THROTTR_ENTRY_HPP
+    /**
+     * Expires at
+     */
+    std::chrono::steady_clock::time_point expires_at_;
+  };
+} // namespace throttr
+
+#endif // THROTTR_ENTRY_HPP

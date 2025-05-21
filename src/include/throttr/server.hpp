@@ -23,63 +23,65 @@
 #include <throttr/session.hpp>
 #include <throttr/state.hpp>
 
-namespace throttr {
-/**
- * Server
- */
-class server {
- public:
+namespace throttr
+{
   /**
-   * Constructor
-   *
-   * @param io_context
-   * @param port
-   * @param state
+   * Server
    */
-  server(boost::asio::io_context& io_context,
-         const short port,
-         const std::shared_ptr<state>& state)
-      : acceptor_(
-            io_context,
-            boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
+  class server
+  {
+  public:
+    /**
+     * Constructor
+     *
+     * @param io_context
+     * @param port
+     * @param state
+     */
+    server(boost::asio::io_context &io_context, const short port, const std::shared_ptr<state> &state) :
+        acceptor_(io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
         socket_(io_context),
-        state_(state) {
-    state->acceptor_ready_ = true;
-    do_accept();
-  };
+        state_(state)
+    {
+      state->acceptor_ready_ = true;
+      do_accept();
+    };
 
- private:
-  /**
-   * Do accept
-   */
-  void do_accept() {
-    acceptor_.async_accept(
-        socket_, [this](const boost::system::error_code& error) {
-          if (!error) {
-            const auto _ptr =
-                boost::intrusive_ptr{new session(std::move(socket_), state_)};
+  private:
+    /**
+     * Do accept
+     */
+    void do_accept()
+    {
+      acceptor_.async_accept(
+        socket_,
+        [this](const boost::system::error_code &error)
+        {
+          if (!error)
+          {
+            const auto _ptr = boost::intrusive_ptr{new session(std::move(socket_), state_)};
             _ptr->start();
           }
 
           do_accept();
         });
-  }
+    }
 
-  /**
-   * Acceptor
-   */
-  boost::asio::ip::tcp::acceptor acceptor_;
+    /**
+     * Acceptor
+     */
+    boost::asio::ip::tcp::acceptor acceptor_;
 
-  /**
-   * Socket
-   */
-  boost::asio::ip::tcp::socket socket_;
+    /**
+     * Socket
+     */
+    boost::asio::ip::tcp::socket socket_;
 
-  /**
-   * State
-   */
-  std::shared_ptr<state> state_;
-};
-}  // namespace throttr
+    /**
+     * State
+     */
+    std::shared_ptr<state> state_;
+  };
+} // namespace throttr
 
-#endif  // THROTTR_SERVER_HPP
+#endif // THROTTR_SERVER_HPP

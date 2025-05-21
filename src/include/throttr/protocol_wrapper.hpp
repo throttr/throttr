@@ -31,4 +31,4 @@
 
 #include <throttr/protocol.hpp>
 
-#endif  // THROTTR_PROTOCOL_WRAPPER_HPP
+#endif // THROTTR_PROTOCOL_WRAPPER_HPP
