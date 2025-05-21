@@ -56,9 +56,9 @@ TEST_F(CompactBufferTest, CompactBufferCompactsWhenHalfFull)
   auto s = create_dummy_session(_state);
 
   constexpr std::string_view data = "abcdef";
-  std::memcpy(s.buffer_.data() + 17384, data.data(), data.size());
-  s.buffer_start_ = 17384;
-  s.buffer_end_ = 17384 + data.size();
+  std::memcpy(s.buffer_.data() + 3000, data.data(), data.size());
+  s.buffer_start_ = 3000;
+  s.buffer_end_ = 3000 + data.size();
 
   s.compact_buffer_if_needed();
 

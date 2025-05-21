@@ -139,7 +139,7 @@ namespace throttr
     /**
      * Max length
      */
-    static constexpr std::size_t max_length_ = 32768;
+    static constexpr std::size_t max_length_ = 8192;
 
     /**
      * Buffer
