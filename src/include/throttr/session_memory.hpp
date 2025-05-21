@@ -21,150 +21,150 @@
 #include <cstddef>
 
 namespace throttr {
-    // LCOV_EXCL_START Note: This isn't something that i could cover
+// LCOV_EXCL_START Note: This isn't something that i could cover
 
-    /**
-     * Handler memory
-     */
-    class handler_memory {
-    public:
-        /**
-         * Constructor
-         */
-        handler_memory() = default;
+/**
+ * Handler memory
+ */
+class handler_memory {
+ public:
+  /**
+   * Constructor
+   */
+  handler_memory() = default;
 
-        /**
-         * Swap operator
-         */
-        handler_memory(const handler_memory&) = delete;
+  /**
+   * Swap operator
+   */
+  handler_memory(const handler_memory&) = delete;
 
-        /**
-         * Assignment operator
-         *
-         * @return handler_memory
-         */
-        handler_memory& operator=(const handler_memory&) = delete;
+  /**
+   * Assignment operator
+   *
+   * @return handler_memory
+   */
+  handler_memory& operator=(const handler_memory&) = delete;
 
-        /**
-         * Allocate
-         *
-         * @param size
-         * @return void*
-         */
-        void* allocate(const std::size_t size) { // NOSONAR
-            if (!in_use_ && size < sizeof(storage_)) {
-                in_use_ = true;
-                return &storage_;
-            }
-            return ::operator new(size);
-        }
+  /**
+   * Allocate
+   *
+   * @param size
+   * @return void*
+   */
+  void* allocate(const std::size_t size) {  // NOSONAR
+    if (!in_use_ && size < sizeof(storage_)) {
+      in_use_ = true;
+      return &storage_;
+    }
+    return ::operator new(size);
+  }
 
-        /**
-         * Deallocate
-         *
-         * @param pointer
-         */
-        void deallocate(void* pointer) { // NOSONAR
-            if (pointer == &storage_) {
-                in_use_ = false;
-            } else {
-                ::operator delete(pointer);
-            }
-        }
+  /**
+   * Deallocate
+   *
+   * @param pointer
+   */
+  void deallocate(void* pointer) {  // NOSONAR
+    if (pointer == &storage_) {
+      in_use_ = false;
+    } else {
+      ::operator delete(pointer);
+    }
+  }
 
-    private:
-        // Note: That 16 should be adjusted if we pass more
-        // captured objects into the read and write lambdas
+ private:
+  // Note: That 16 should be adjusted if we pass more
+  // captured objects into the read and write lambdas
 
-        /**
-         * Storage
-         */
-        std::byte storage_[16] alignas(16); // NOSONAR
+  /**
+   * Storage
+   */
+  std::byte storage_[16] alignas(16);  // NOSONAR
 
-        /**
-         * In use
-         */
-        bool in_use_ = false;
-    };
+  /**
+   * In use
+   */
+  bool in_use_ = false;
+};
 
-    /**
-     * Handler allocator
-     */
-    template <typename T>
-    class handler_allocator {
-    public:
-        using value_type = T;
+/**
+ * Handler allocator
+ */
+template <typename T>
+class handler_allocator {
+ public:
+  using value_type = T;
 
-        /**
-         * Constructor
-         *
-         * @param mem
-         */
-        explicit handler_allocator(handler_memory& mem) noexcept : memory_(mem) {}
+  /**
+   * Constructor
+   *
+   * @param mem
+   */
+  explicit handler_allocator(handler_memory& mem) noexcept : memory_(mem) {}
 
-        /**
-         * Swap operator
-         *
-         * @tparam U
-         * @param other
-         */
-        template <typename U>
-        handler_allocator(const handler_allocator<U>& other) noexcept : memory_(other.memory_) {}  // NOSONAR
+  /**
+   * Swap operator
+   *
+   * @tparam U
+   * @param other
+   */
+  template <typename U>
+  handler_allocator(const handler_allocator<U>& other) noexcept
+      : memory_(other.memory_) {}  // NOSONAR
 
-        /**
-         * Allocate
-         *
-         * @param n
-         * @return
-         */
-        T* allocate(const std::size_t n) const {
-            return static_cast<T*>(memory_.allocate(sizeof(T) * n));
-        }
+  /**
+   * Allocate
+   *
+   * @param n
+   * @return
+   */
+  T* allocate(const std::size_t n) const {
+    return static_cast<T*>(memory_.allocate(sizeof(T) * n));
+  }
 
-        /**
-         * Deallocate
-         *
-         * @param p
-         */
-        void deallocate(T* p, std::size_t) const {
-            memory_.deallocate(p);
-        }
+  /**
+   * Deallocate
+   *
+   * @param p
+   */
+  void deallocate(T* p, std::size_t) const { memory_.deallocate(p); }
 
-        /**
-         * Equals operator
-         *
-         * @tparam U
-         * @param other
-         * @return bool
-         */
-        template <typename U>
-        bool operator==(const handler_allocator<U>& other) const noexcept {
-            return &memory_ == &other.memory_;
-        }
+  /**
+   * Equals operator
+   *
+   * @tparam U
+   * @param other
+   * @return bool
+   */
+  template <typename U>
+  bool operator==(const handler_allocator<U>& other) const noexcept {
+    return &memory_ == &other.memory_;
+  }
 
-        /**
-         * Not equals operator
-         *
-         * @tparam U
-         * @param other
-         * @return bool
-         */
-        template <typename U>
-        bool operator!=(const handler_allocator<U>& other) const noexcept {
-            return !(*this == other);
-        }
+  /**
+   * Not equals operator
+   *
+   * @tparam U
+   * @param other
+   * @return bool
+   */
+  template <typename U>
+  bool operator!=(const handler_allocator<U>& other) const noexcept {
+    return !(*this == other);
+  }
 
-    private:
-        /**
-         * Memory
-         *
-         * @tparam
-         */
-        template <typename> friend class handler_allocator;
-        handler_memory& memory_;
-    };
+ private:
+  /**
+   * Memory
+   *
+   * @tparam
+   */
+  template <typename>
+  friend class handler_allocator;
+  handler_memory& memory_;
+};
 
-    // LCOV_EXCL_STOP
-}
+// LCOV_EXCL_STOP
+}  // namespace throttr
 
-#endif // THROTTR_SESSION_MEMORY_HPP
+#endif  // THROTTR_SESSION_MEMORY_HPP

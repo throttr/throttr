@@ -23,47 +23,47 @@ using boost::asio::ip::tcp;
 using namespace throttr;
 
 class CompactBufferTest : public ::testing::Test {
-public:
-    static session create_dummy_session(std::shared_ptr<state> state) {
-        boost::asio::io_context ioc;
-        tcp::socket socket(ioc);
-        return session(std::move(socket), state);
-    }
+ public:
+  static session create_dummy_session(std::shared_ptr<state> state) {
+    boost::asio::io_context ioc;
+    tcp::socket socket(ioc);
+    return session(std::move(socket), state);
+  }
 };
 
 TEST_F(CompactBufferTest, CompactBufferClearsWhenFullyConsumed) {
-    boost::asio::io_context ioc;
-    const auto _state = std::make_shared<state>(ioc);
-    auto s = create_dummy_session(_state);
+  boost::asio::io_context ioc;
+  const auto _state = std::make_shared<state>(ioc);
+  auto s = create_dummy_session(_state);
 
-    s.buffer_start_ = 100;
-    s.buffer_end_ = 100;
+  s.buffer_start_ = 100;
+  s.buffer_end_ = 100;
 
-    s.compact_buffer_if_needed();
+  s.compact_buffer_if_needed();
 
-    ASSERT_EQ(s.buffer_start_, 0);
-    ASSERT_EQ(s.buffer_end_, 0);
+  ASSERT_EQ(s.buffer_start_, 0);
+  ASSERT_EQ(s.buffer_end_, 0);
 }
 
 TEST_F(CompactBufferTest, CompactBufferCompactsWhenHalfFull) {
-    boost::asio::io_context ioc;
-    const auto _state = std::make_shared<state>(ioc);
-    auto s = create_dummy_session(_state);
+  boost::asio::io_context ioc;
+  const auto _state = std::make_shared<state>(ioc);
+  auto s = create_dummy_session(_state);
 
-    constexpr std::string_view data = "abcdef";
-    std::memcpy(s.buffer_.data() + 3000, data.data(), data.size());
-    s.buffer_start_ = 3000;
-    s.buffer_end_ = 3000 + data.size();
+  constexpr std::string_view data = "abcdef";
+  std::memcpy(s.buffer_.data() + 3000, data.data(), data.size());
+  s.buffer_start_ = 3000;
+  s.buffer_end_ = 3000 + data.size();
 
-    s.compact_buffer_if_needed();
+  s.compact_buffer_if_needed();
 
-    ASSERT_EQ(s.buffer_start_, 0);
-    ASSERT_EQ(s.buffer_end_, data.size());
+  ASSERT_EQ(s.buffer_start_, 0);
+  ASSERT_EQ(s.buffer_end_, data.size());
 
-    std::string recovered;
-    recovered.reserve(data.size());
-    for (std::size_t i = 0; i < data.size(); ++i) {
-        recovered += static_cast<char>(std::to_integer<uint8_t>(s.buffer_[i]));
-    }
-    ASSERT_EQ(recovered, data);
+  std::string recovered;
+  recovered.reserve(data.size());
+  for (std::size_t i = 0; i < data.size(); ++i) {
+    recovered += static_cast<char>(std::to_integer<uint8_t>(s.buffer_[i]));
+  }
+  ASSERT_EQ(recovered, data);
 }

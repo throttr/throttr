@@ -23,77 +23,76 @@
 #include <chrono>
 
 namespace throttr {
-    /**
-     * Get expiration point
-     *
-     * @param now
-     * @param ttl_type
-     * @param ttl
-     * @return std::chrono::steady_clock::time_point
-     */
-    inline std::chrono::steady_clock::time_point get_expiration_point(
-        const std::chrono::steady_clock::time_point& now,
-        const ttl_types ttl_type,
-        const value_type ttl
-    ) {
-        using namespace std::chrono;
+/**
+ * Get expiration point
+ *
+ * @param now
+ * @param ttl_type
+ * @param ttl
+ * @return std::chrono::steady_clock::time_point
+ */
+inline std::chrono::steady_clock::time_point get_expiration_point(
+    const std::chrono::steady_clock::time_point& now,
+    const ttl_types ttl_type,
+    const value_type ttl) {
+  using namespace std::chrono;
 
-        // LCOV_EXCL_START
-        switch (ttl_type) {
-            case ttl_types::nanoseconds:
-                return now + nanoseconds(ttl);
-            case ttl_types::milliseconds:
-                return now + milliseconds(ttl);
-            case ttl_types::microseconds:
-                return now + microseconds(ttl);
-            case ttl_types::minutes:
-                return now + minutes(ttl);
-            case ttl_types::hours:
-                return now + hours(ttl);
-            default:
-                return now + seconds(ttl);
-        }
-        // LCOV_EXCL_STOP
-    }
-
-    /**
-     * Get TTL
-     *
-     * @param expires_at
-     * @param ttl_type
-     * @return value_type
-     */
-    inline value_type get_ttl(
-        const std::chrono::steady_clock::time_point& expires_at,
-        const ttl_types ttl_type
-    ) {
-        using enum ttl_types;
-
-        const auto now = std::chrono::steady_clock::now();
-        if (expires_at <= now) {
-            return 0;
-        }
-
-        const auto diff = expires_at - now;
-
-        // LCOV_EXCL_START
-        switch (ttl_type) {
-            case nanoseconds:
-                return std::chrono::duration_cast<std::chrono::nanoseconds>(diff).count();
-            case milliseconds:
-                return std::chrono::duration_cast<std::chrono::milliseconds>(diff).count();
-            case microseconds:
-                return std::chrono::duration_cast<std::chrono::microseconds>(diff).count();
-            case minutes:
-                return std::chrono::duration_cast<std::chrono::minutes>(diff).count();
-            case hours:
-                return std::chrono::duration_cast<std::chrono::hours>(diff).count();
-            default:
-                return std::chrono::duration_cast<std::chrono::seconds>(diff).count();
-        }
-        // LCOV_EXCL_STOP
-    }
+  // LCOV_EXCL_START
+  switch (ttl_type) {
+    case ttl_types::nanoseconds:
+      return now + nanoseconds(ttl);
+    case ttl_types::milliseconds:
+      return now + milliseconds(ttl);
+    case ttl_types::microseconds:
+      return now + microseconds(ttl);
+    case ttl_types::minutes:
+      return now + minutes(ttl);
+    case ttl_types::hours:
+      return now + hours(ttl);
+    default:
+      return now + seconds(ttl);
+  }
+  // LCOV_EXCL_STOP
 }
 
+/**
+ * Get TTL
+ *
+ * @param expires_at
+ * @param ttl_type
+ * @return value_type
+ */
+inline value_type get_ttl(
+    const std::chrono::steady_clock::time_point& expires_at,
+    const ttl_types ttl_type) {
+  using enum ttl_types;
 
-#endif // THROTTR_TIME_HPP
+  const auto now = std::chrono::steady_clock::now();
+  if (expires_at <= now) {
+    return 0;
+  }
+
+  const auto diff = expires_at - now;
+
+  // LCOV_EXCL_START
+  switch (ttl_type) {
+    case nanoseconds:
+      return std::chrono::duration_cast<std::chrono::nanoseconds>(diff).count();
+    case milliseconds:
+      return std::chrono::duration_cast<std::chrono::milliseconds>(diff)
+          .count();
+    case microseconds:
+      return std::chrono::duration_cast<std::chrono::microseconds>(diff)
+          .count();
+    case minutes:
+      return std::chrono::duration_cast<std::chrono::minutes>(diff).count();
+    case hours:
+      return std::chrono::duration_cast<std::chrono::hours>(diff).count();
+    default:
+      return std::chrono::duration_cast<std::chrono::seconds>(diff).count();
+  }
+  // LCOV_EXCL_STOP
+}
+}  // namespace throttr
+
+#endif  // THROTTR_TIME_HPP

@@ -21,14 +21,14 @@
 #include <string_view>
 
 namespace throttr {
-    /**
-     * Get version
-     *
-     * @return string_view
-     */
-    inline std::string_view get_version() {
-        return "4.0.14";
-    }
+/**
+ * Get version
+ *
+ * @return string_view
+ */
+inline std::string_view get_version() {
+  return "4.0.14";
 }
+}  // namespace throttr
 
-#endif // THROTTR_VERSION_HPP
+#endif  // THROTTR_VERSION_HPP
