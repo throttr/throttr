@@ -37,8 +37,7 @@ namespace throttr
   /**
    * State
    */
-  class state : public std::enable_shared_from_this<state>
-  {
+  class state : public std::enable_shared_from_this<state> {
   public:
     /**
      * Acceptor ready
@@ -64,6 +63,11 @@ namespace throttr
      * Scheduled key
      */
     std::span<const std::byte> scheduled_key_;
+
+    /**
+     * Remove lock
+     */
+    std::mutex mutex_;
 
     /**
      * Constructor
@@ -97,9 +101,9 @@ namespace throttr
       const auto _expires_at = get_expiration_point(_now, ttl_type, ttl);
 
       auto &_index = storage_.get<tag_by_key_and_valid>();
-      auto _key = std::vector<
+      const auto _key = std::vector<
         std::byte>(reinterpret_cast<const std::byte *>(key.data()), reinterpret_cast<const std::byte *>(key.data() + key.size()));
-      const auto _entry_ptr = std::make_shared<entry_wrapper>(_key, request_entry{type, value, ttl_type, _expires_at});
+      const auto _entry_ptr = entry_wrapper{ _key, request_entry{type, value, ttl_type, _expires_at} };
 
       auto [_it, _inserted] = storage_.insert(_entry_ptr);
 
@@ -108,9 +112,18 @@ namespace throttr
       // LCOV_EXCL_START Note: Actually tested
       if (_inserted)
       {
-        if (const auto &_entry = (*_index.begin())->entry_; _expires_at <= _entry.expires_at_)
+        for (const auto &_item : _index)
         {
-          boost::asio::post(strand_, [self = shared_from_this(), _expires_at] { self->schedule_expiration(_expires_at); });
+          if (!_item.expired_)
+          {
+            if (_expires_at <= _item.entry_.expires_at_)
+            {
+              boost::asio::post(strand_, [self = shared_from_this(), _expires_at] {
+                self->schedule_expiration(_expires_at);
+              });
+            }
+            break;
+          }
         }
       }
       // LCOV_EXCL_STOP
@@ -123,7 +136,7 @@ namespace throttr
         std::chrono::system_clock::now(),
         as_insert ? "INSERT" : "SET",
         key,
-        span_to_hex(std::span(_entry_ptr->entry_.value_.data(), _entry_ptr->entry_.value_.size())),
+        span_to_hex(std::span(_entry_ptr.entry_.value_.data(), _entry_ptr.entry_.value_.size())),
         to_string(ttl_type),
         ttl,
         _inserted);
@@ -144,7 +157,7 @@ namespace throttr
       const auto _request = request_insert::from_buffer(view);
       std::vector<std::byte> value(sizeof(value_type));
       std::memcpy(value.data(), &_request.header_->quota_, sizeof(value_type));
-      return handle_entry(_request.key_, value, _request.header_->ttl_type_, _request.header_->ttl_, entry_types::counter, true);
+      return handle_entry(_request.key_, value, _request.header_->ttl_type_, _request.header_->ttl_, entry_types::counter);
     }
 
     /**
@@ -156,8 +169,8 @@ namespace throttr
     std::uint8_t handle_set(const std::span<const std::byte> view)
     {
       const auto _request = request_set::from_buffer(view);
-      std::vector value(_request.value_.begin(), _request.value_.end());
-      return handle_entry(_request.key_, value, _request.header_->ttl_type_, _request.header_->ttl_, entry_types::raw, false);
+      const std::vector value(_request.value_.begin(), _request.value_.end());
+      return handle_entry(_request.key_, value, _request.header_->ttl_type_, _request.header_->ttl_, entry_types::raw);
     }
 
     /**
@@ -179,9 +192,9 @@ namespace throttr
     {
       const request_key _key{request.key_};
       const auto &_index = storage_.get<tag_by_key_and_valid>();
-      const auto _it = _index.find(std::make_tuple(_key, false));
+      const auto _it = _index.find(_key);
 
-      if (const bool _is_compliant = _it != _index.end(); !_is_compliant) // LCOV_EXCL_LINE
+      if (_it == _index.end() || _it->expired_) // LCOV_EXCL_LINE
       {
         static constexpr std::uint8_t status = 0x00;
         std::memcpy(write_buffer + write_offset, &status, sizeof(status));
@@ -200,9 +213,7 @@ namespace throttr
         return;
       }
 
-      const std::shared_ptr<entry_wrapper> _safe_entry = *_it;
-      const auto &_entry = _safe_entry->entry_;
-      const value_type _ttl = get_ttl(_entry.expires_at_, _entry.ttl_type_);
+      const value_type _ttl = get_ttl(_it->entry_.expires_at_, _it->entry_.ttl_type_);
 
       // status_
       static constexpr std::uint8_t status = 0x01;
@@ -212,37 +223,37 @@ namespace throttr
 
       if (as_query) // LCOV_EXCL_LINE
       {
-        batch.push_back(boost::asio::buffer(_entry.value_.data(), _entry.value_.size()));
-        batch.push_back(boost::asio::buffer(&_entry.ttl_type_, sizeof(_entry.ttl_type_)));
+        batch.push_back(boost::asio::buffer(_it->entry_.value_.data(), _it->entry_.value_.size()));
+        batch.push_back(boost::asio::buffer(&_it->entry_.ttl_type_, sizeof(_it->entry_.ttl_type_)));
         std::memcpy(write_buffer + write_offset, &_ttl, sizeof(_ttl));
         batch.push_back(boost::asio::buffer(write_buffer + write_offset, sizeof(_ttl)));
         write_offset += sizeof(_ttl);
       }
       else
       {
-        batch.push_back(boost::asio::buffer(&_entry.ttl_type_, sizeof(_entry.ttl_type_)));
+        batch.push_back(boost::asio::buffer(&_it->entry_.ttl_type_, sizeof(_it->entry_.ttl_type_)));
         std::memcpy(write_buffer + write_offset, &_ttl, sizeof(_ttl));
         batch.push_back(boost::asio::buffer(write_buffer + write_offset, sizeof(_ttl)));
         write_offset += sizeof(_ttl);
-        const auto _size = static_cast<value_type>(_entry.value_.size());
+        const auto _size = static_cast<value_type>(_it->entry_.value_.size());
         std::memcpy(write_buffer + write_offset, &_size, sizeof(_size));
         batch.push_back(boost::asio::buffer(write_buffer + write_offset, sizeof(_size)));
         write_offset += sizeof(_size);
-        batch.push_back(boost::asio::buffer(_entry.value_.data(), _entry.value_.size()));
+        batch.push_back(boost::asio::buffer(_it->entry_.value_.data(), _it->entry_.value_.size()));
       }
 
       // LCOV_EXCL_START
 #ifndef NDEBUG
       if (as_query)
       {
-        auto *_quota = reinterpret_cast<const value_type *>(_entry.value_.data());
+        auto *_quota = reinterpret_cast<const value_type *>(_it->entry_.value_.data());
         fmt::println(
           "{:%Y-%m-%d %H:%M:%S} REQUEST QUERY key={} RESPONSE ok=true quota={} "
           "ttl_type={} ttl={}",
           std::chrono::system_clock::now(),
           _key.key_,
           *_quota,
-          to_string(_entry.ttl_type_),
+          to_string(_it->entry_.ttl_type_),
           _ttl);
       }
       else
@@ -252,8 +263,8 @@ namespace throttr
           "ttl_type={} ttl={}",
           std::chrono::system_clock::now(),
           _key.key_,
-          span_to_hex(std::span(_entry.value_.data(), _entry.value_.size())),
-          to_string(_entry.ttl_type_),
+          span_to_hex(std::span(_it->entry_.value_.data(), _it->entry_.value_.size())),
+          to_string(_it->entry_.ttl_type_),
           _ttl);
       }
 #endif
@@ -272,9 +283,9 @@ namespace throttr
       const auto _now = std::chrono::steady_clock::now();
 
       auto &_index = storage_.get<tag_by_key_and_valid>();
-      const auto _it = _index.find(std::make_tuple(_key, false));
+      const auto _it = _index.find(_key);
 
-      if (_it == _index.end()) // LCOV_EXCL_LINE note: Partially covered.
+      if (_it == _index.end() || _it->expired_) // LCOV_EXCL_LINE note: Partially covered.
       {
         return 0x00;
       }
@@ -285,18 +296,18 @@ namespace throttr
 
       storage_.modify(
         _it,
-        [&](const std::shared_ptr<entry_wrapper> &object)
+        [&](entry_wrapper &object)
         {
           switch (request.header_->attribute_)
           {
             case quota:
-              if (object->entry_.type_ == entry_types::counter)
+              if (object.entry_.type_ == entry_types::counter)
               { // LCOV_EXCL_LINE Note: Partially tested
-                _modified = apply_quota_change(object->entry_, request);
+                _modified = apply_quota_change(object.entry_, request);
               }
               break;
             case ttl:
-              _modified = apply_ttl_change(object->entry_, request, _now, object->key_);
+              _modified = apply_ttl_change(object.entry_, request, _now, object.key_);
               break;
           }
         });
@@ -401,9 +412,9 @@ namespace throttr
       if (
         scheduled_key_.size() == key.size() &&
         std::equal(scheduled_key_.begin(), scheduled_key_.end(), key.begin())) // LCOV_EXCL_LINE
-                                                                               // Note:
-                                                                               // Partially
-                                                                               // tested
+          // Note:
+            // Partially
+              // tested
       {
         boost::asio::post(
           strand_, [_self = shared_from_this(), _expires_at = entry.expires_at_] { _self->schedule_expiration(_expires_at); });
@@ -423,11 +434,11 @@ namespace throttr
       const request_key _key{request.key_};
 
       auto &_index = storage_.get<tag_by_key_and_valid>();
-      const auto _it = _index.find(std::make_tuple(_key, false));
+      const auto _it = _index.find(_key);
 
       bool _erased = true;
 
-      if (_it == _index.end()) // LCOV_EXCL_LINE note: Partially covered.
+      if (_it == _index.end() || _it->expired_) // LCOV_EXCL_LINE note: Partially covered.
       {
         _erased = false;
       }
@@ -456,62 +467,82 @@ namespace throttr
      */
     void expiration_timer()
     {
+      std::scoped_lock guard(mutex_);
       const auto _now = std::chrono::steady_clock::now();
-      auto &_timer_index = storage_.get<tag_by_expiration>();
+      auto &_index = storage_.get<tag_by_key_and_valid>();
 
       std::vector<request_key> _to_expire;
-      for (const auto &_item : _timer_index)
+      std::vector<request_key> _to_erase;
+      std::chrono::steady_clock::time_point _next_expiration = std::chrono::steady_clock::time_point::max();
+      for (const auto &_item : _index)
       {
-        const std::shared_ptr<entry_wrapper> _safe_entry = _item;
-        if (_safe_entry->entry_.expires_at_ > _now)
-          break;
-        _to_expire.emplace_back(_item->key());
+        if (_item.expired_) {
+          if (_now - _item.entry_.expires_at_ > std::chrono::seconds(10))
+          {
+            _to_erase.emplace_back(_item.key());
+          }
+          continue;
+        }
+        if (_item.entry_.expires_at_ <= _now) {
+          _to_expire.emplace_back(_item.key());
+        } else {
+          _next_expiration = std::min(_next_expiration, _item.entry_.expires_at_);
+        }
       }
-
-      auto &_valid_index = storage_.get<tag_by_key_and_valid>();
 
       for (const auto &_key : _to_expire)
       {
-        if (auto _it = _valid_index.find(std::make_tuple(_key, false)); _it != _valid_index.end())
+        if (auto _it = _index.find(_key); _it != _index.end() && !_it->expired_)
         {
-          _valid_index.modify(
+          _index.modify(
             _it,
-            [](std::shared_ptr<entry_wrapper> &entry)
+            [](entry_wrapper &entry)
             {
 #ifndef NDEBUG
               fmt::println(
                 "{:%Y-%m-%d %H:%M:%S} SCHEDULER KEY EXPIRED key={}",
                 std::chrono::system_clock::now(),
                 std::string_view(
-                  reinterpret_cast<const char *>(entry->key_.data()),
-                  entry->key_.size())); // NOSONAR
+                  reinterpret_cast<const char *>(entry.key_.data()),
+                  entry.key_.size())); // NOSONAR
 #endif
-              entry = entry->clone_and_mark_expired();
+              entry.expired_ = true;
             });
         }
+      }
 
-        if (auto _it = _valid_index.find(std::make_tuple(_key, true)); _it != _valid_index.end())
+      auto &_erase_index = storage_.get<tag_by_key_and_valid>();
+      for (const auto &_key : _to_erase)
+      {
+        if (auto _it = _erase_index.find(_key); _it != _erase_index.end()  && _it->expired_)
         {
-          if (auto _projected = storage_.project<tag_by_expiration>(_it); _projected != _timer_index.end())
-          {
 #ifndef NDEBUG
-            fmt::println(
-              "{:%Y-%m-%d %H:%M:%S} SCHEDULER KEY ERASED key={}",
-              std::chrono::system_clock::now(),
-              std::string_view(
-                reinterpret_cast<const char *>((*_it)->key_.data()),
-                (*_it)->key_.size())); // NOSONAR
+          fmt::println(
+            "{:%Y-%m-%d %H:%M:%S} SCHEDULER KEY ERASED key={}",
+            std::chrono::system_clock::now(),
+            std::string_view(
+              reinterpret_cast<const char *>(_it->key_.data()),
+              _it->key_.size()));
 #endif
-            _timer_index.erase(_projected);
-          }
+          _erase_index.erase(_it);
         }
       }
 
-      if (!_timer_index.empty())
+      for (auto &_candidate_index = storage_.get<tag_by_key_and_valid>(); const auto &_item : _candidate_index)
       {
-        const auto _next = (*_timer_index.begin())->entry_.expires_at_;
-        schedule_expiration(_next);
+        const auto &_expires_at = _item.entry_.expires_at_;
+        std::chrono::steady_clock::time_point _candidate;
+
+        if (_item.expired_)
+          _candidate = _expires_at + std::chrono::seconds(10);
+        else
+          _candidate = _expires_at;
+
+        _next_expiration = std::min(_next_expiration, _candidate);
       }
+
+      if (_next_expiration != std::chrono::steady_clock::time_point::max())
+        schedule_expiration(_next_expiration);
     }
 
     /**
@@ -523,28 +554,17 @@ namespace throttr
       fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULER GARBAGE COLLECTION STARTED", std::chrono::system_clock::now());
 #endif
 
-      auto &_schedule_index = storage_.get<tag_by_expiration>();
-      if (_schedule_index.empty())
+      const auto _now = std::chrono::steady_clock::now();
+      if (proposed <= _now)
+      {
+        expiration_timer(); // Ejecutar inmediatamente si ya está vencido
         return;
+      }
 
-      const auto &_item = _schedule_index.begin();
-      const std::shared_ptr<entry_wrapper> _safe_entry = *_item;
-      const auto &_entry = _safe_entry->entry_;
-
-      if (proposed > _entry.expires_at_)
-        return;
-
-      const auto _delay = _entry.expires_at_ - std::chrono::steady_clock::now();
-      scheduled_key_ = std::span(_safe_entry->key_);
-
-#ifndef NDEBUG
-      fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULER GARBAGE COLLECTION FINISHED", std::chrono::system_clock::now());
-#endif
-
+      const auto _delay = proposed - _now;
       expiration_timer_.expires_after(_delay);
       expiration_timer_.async_wait(
-        [_self = shared_from_this()](const boost::system::error_code &ec)
-        {
+        [_self = shared_from_this()](const boost::system::error_code& ec) {
           if (!ec)
             _self->expiration_timer();
         });

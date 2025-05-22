@@ -1,3 +1,11 @@
+### v4.0.17
+
+- Shared pointer has been removed from container.
+- Container now doesn't use expired ordered index.
+- Operation are designed to be more stable.
+- Now we avoid to copy elements on query and get.
+- Process has been tested against multiple 20m insert and queries tests.
+
 ### v4.0.16
 
 - Now server can resist huge amount of concurrent operations without SIGSEGV.
