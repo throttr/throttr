@@ -99,13 +99,6 @@ namespace throttr
   };
 
   /**
-   * Tag: access by expiration
-   */
-  struct tag_by_expiration
-  {
-  };
-
-  /**
    * Tag: access by valid key
    */
   struct tag_by_key_and_valid
@@ -113,44 +106,16 @@ namespace throttr
   };
 
   /**
-   * Request entry by expiration
-   */
-  struct request_entry_by_expiration
-  {
-    bool operator()(const request_entry &a, const request_entry &b) const
-    {
-      return a.expires_at_ < b.expires_at_;
-    }
-  };
-
-  struct request_entry_expiration_key
-  {
-    const std::chrono::steady_clock::time_point &operator()(const entry_wrapper &e) const
-    {
-      return e.entry_.expires_at_;
-    }
-  };
-
-  /**
    * Multi-index container type for request storage
    */
   using storage_type = boost::multi_index::multi_index_container<
-    std::shared_ptr<entry_wrapper>,
+    entry_wrapper,
     boost::multi_index::indexed_by<
-      // Find by key and valid
-      boost::multi_index::hashed_unique<
-        boost::multi_index::tag<tag_by_key_and_valid>,
-        boost::multi_index::composite_key<
-          entry_wrapper,
-          boost::multi_index::const_mem_fun<entry_wrapper, request_key, &entry_wrapper::key>,
-          boost::multi_index::const_mem_fun<entry_wrapper, bool, &entry_wrapper::expired_flag>>,
-        boost::multi_index::composite_key_hash<request_key_hasher, std::hash<bool>>,
-        boost::multi_index::composite_key_equal_to<std::equal_to<request_key>, std::equal_to<bool>>>,
-      // Find by key
-      boost::multi_index::ordered_non_unique<
-        boost::multi_index::tag<tag_by_expiration>,
-        boost::multi_index::member<entry_wrapper, request_entry, &entry_wrapper::entry_>,
-        request_entry_by_expiration>>>;
+    boost::multi_index::hashed_unique<
+      boost::multi_index::tag<tag_by_key_and_valid>,
+      boost::multi_index::const_mem_fun<entry_wrapper, request_key, &entry_wrapper::key>,
+      request_key_hasher,
+      std::equal_to<request_key>>>>;
 } // namespace throttr
 
 #endif // THROTTR_STORAGE_HPP

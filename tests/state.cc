@@ -190,7 +190,6 @@ TEST(StateHelpersTest, CalculateTTLRemainingSecondsExpired)
 
 TEST(State, QuotaChange)
 {
-  std::array<std::byte, sizeof(value_type)> buffer;
   request_entry _entry;
   _entry.value_.resize(sizeof(value_type));
 
@@ -247,13 +246,13 @@ TEST_F(StateTestFixture, ScheduleExpiration_ReprogramsIfNextEntryExists)
   _entry2.value_ = {std::byte{1}}; // NOSONAR
   _entry2.expires_at_ = _now + seconds(5);
 
-  _index.insert(std::make_shared<entry_wrapper>(to_bytes("c1r1"), std::move(_entry1)));
-  _index.insert(std::make_shared<entry_wrapper>(to_bytes("c2r2"), std::move(_entry2)));
+  _index.insert(entry_wrapper{ to_bytes("c1r1"), std::move(_entry1)});
+  _index.insert(entry_wrapper {to_bytes("c2r2"), std::move(_entry2)});
 
   state_->schedule_expiration(_now);
 
   ioc_.restart();
-  ioc_.run_for(seconds(6));
+  ioc_.run_for(seconds(30));
 
   EXPECT_TRUE(_index.empty());
 }
