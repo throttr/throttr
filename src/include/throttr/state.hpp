@@ -87,7 +87,7 @@ namespace throttr
      */
     std::uint8_t handle_entry(
       const std::string_view &key,
-      const std::span<const std::byte> &value,
+      const std::vector<std::byte> &value,
       const ttl_types ttl_type,
       uint64_t ttl,
       const entry_types type,
@@ -96,17 +96,11 @@ namespace throttr
       const auto _now = std::chrono::steady_clock::now();
       const auto _expires_at = get_expiration_point(_now, ttl_type, ttl);
 
-      entry _scoped_entry{
-        type,
-        value_owned{reinterpret_cast<const char *>(value.data()), value.size()}, // NOSONAR
-        ttl_type,
-        _expires_at};
-
       auto &_index = storage_.get<tag_by_key_and_valid>();
-      const auto _entry_ptr = std::make_shared<entry_wrapper>(
-        std::
-          vector(reinterpret_cast<const std::byte *>(key.data()), reinterpret_cast<const std::byte *>(key.data() + key.size())),
-        std::move(_scoped_entry));
+      auto _key = std::vector<
+        std::byte>(reinterpret_cast<const std::byte *>(key.data()), reinterpret_cast<const std::byte *>(key.data() + key.size()));
+      const auto _entry_ptr = std::make_shared<entry_wrapper>(_key, request_entry{type, value, ttl_type, _expires_at});
+
       auto [_it, _inserted] = storage_.insert(_entry_ptr);
 
       boost::ignore_unused(_it);
@@ -129,7 +123,7 @@ namespace throttr
         std::chrono::system_clock::now(),
         as_insert ? "INSERT" : "SET",
         key,
-        span_to_hex(value),
+        span_to_hex(std::span(_entry_ptr->entry_.value_.data(), _entry_ptr->entry_.value_.size())),
         to_string(ttl_type),
         ttl,
         _inserted);
@@ -148,7 +142,8 @@ namespace throttr
     std::uint8_t handle_insert(const std::span<const std::byte> view)
     {
       const auto _request = request_insert::from_buffer(view);
-      const std::span value(view.begin() + 1, view.begin() + 1 + sizeof(value_type));
+      std::vector<std::byte> value(sizeof(value_type));
+      std::memcpy(value.data(), &_request.header_->quota_, sizeof(value_type));
       return handle_entry(_request.key_, value, _request.header_->ttl_type_, _request.header_->ttl_, entry_types::counter, true);
     }
 
@@ -161,8 +156,8 @@ namespace throttr
     std::uint8_t handle_set(const std::span<const std::byte> view)
     {
       const auto _request = request_set::from_buffer(view);
-      return handle_entry(
-        _request.key_, _request.value_, _request.header_->ttl_type_, _request.header_->ttl_, entry_types::raw, false);
+      std::vector value(_request.value_.begin(), _request.value_.end());
+      return handle_entry(_request.key_, value, _request.header_->ttl_type_, _request.header_->ttl_, entry_types::raw, false);
     }
 
     /**
@@ -173,14 +168,12 @@ namespace throttr
      * @param write_buffer
      * @param write_offset
      * @param batch
-     * @param batch_size
      * @return uint8_t
      */
     void handle_query(
       const request_query &request,
-      bool as_query,
-      std::array<boost::asio::const_buffer, 512> &batch,
-      std::size_t &batch_size,
+      const bool as_query,
+      std::vector<boost::asio::const_buffer> &batch,
       std::uint8_t *write_buffer,
       std::size_t &write_offset)
     {
@@ -191,7 +184,9 @@ namespace throttr
       if (const bool _is_compliant = _it != _index.end(); !_is_compliant) // LCOV_EXCL_LINE
       {
         static constexpr std::uint8_t status = 0x00;
-        batch[batch_size++] = boost::asio::buffer(&status, sizeof(status)); // NOSONAR
+        std::memcpy(write_buffer + write_offset, &status, sizeof(status));
+        batch.push_back(boost::asio::buffer(&status, sizeof(status)));
+        write_offset += sizeof(status);
 
         // LCOV_EXCL_START
 #ifndef NDEBUG
@@ -207,39 +202,40 @@ namespace throttr
 
       const std::shared_ptr<entry_wrapper> _safe_entry = *_it;
       const auto &_entry = _safe_entry->entry_;
-      const auto _view = _entry.value_.view();
       const value_type _ttl = get_ttl(_entry.expires_at_, _entry.ttl_type_);
 
       // status_
       static constexpr std::uint8_t status = 0x01;
-      batch[batch_size++] = boost::asio::buffer(&status, sizeof(status)); // NOSONAR
+      std::memcpy(write_buffer + write_offset, &status, sizeof(status));
+      batch.push_back(boost::asio::buffer(&status, sizeof(status)));
+      write_offset += sizeof(status);
 
       if (as_query) // LCOV_EXCL_LINE
       {
-        batch[batch_size++] = boost::asio::buffer(_view.pointer_, _view.size_);                 // NOSONAR
-        batch[batch_size++] = boost::asio::buffer(&_entry.ttl_type_, sizeof(_entry.ttl_type_)); // NOSONAR
+        batch.push_back(boost::asio::buffer(_entry.value_.data(), _entry.value_.size()));
+        batch.push_back(boost::asio::buffer(&_entry.ttl_type_, sizeof(_entry.ttl_type_)));
         std::memcpy(write_buffer + write_offset, &_ttl, sizeof(_ttl));
-        batch[batch_size++] = boost::asio::buffer(write_buffer + write_offset, sizeof(_ttl)); // NOSONAR
+        batch.push_back(boost::asio::buffer(write_buffer + write_offset, sizeof(_ttl)));
         write_offset += sizeof(_ttl);
       }
       else
       {
-        batch[batch_size++] = boost::asio::buffer(&_entry.ttl_type_, sizeof(_entry.ttl_type_)); // NOSONAR
+        batch.push_back(boost::asio::buffer(&_entry.ttl_type_, sizeof(_entry.ttl_type_)));
         std::memcpy(write_buffer + write_offset, &_ttl, sizeof(_ttl));
-        batch[batch_size++] = boost::asio::buffer(write_buffer + write_offset, sizeof(_ttl)); // NOSONAR
+        batch.push_back(boost::asio::buffer(write_buffer + write_offset, sizeof(_ttl)));
         write_offset += sizeof(_ttl);
-        const auto _size = static_cast<value_type>(_view.size_);
+        const auto _size = static_cast<value_type>(_entry.value_.size());
         std::memcpy(write_buffer + write_offset, &_size, sizeof(_size));
-        batch[batch_size++] = boost::asio::buffer(write_buffer + write_offset, sizeof(_size)); // NOSONAR
+        batch.push_back(boost::asio::buffer(write_buffer + write_offset, sizeof(_size)));
         write_offset += sizeof(_size);
-        batch[batch_size++] = boost::asio::buffer(_view.pointer_, _view.size_); // NOSONAR
+        batch.push_back(boost::asio::buffer(_entry.value_.data(), _entry.value_.size()));
       }
 
       // LCOV_EXCL_START
 #ifndef NDEBUG
       if (as_query)
       {
-        auto *_quota = reinterpret_cast<const value_type *>(_view.pointer_);
+        auto *_quota = reinterpret_cast<const value_type *>(_entry.value_.data());
         fmt::println(
           "{:%Y-%m-%d %H:%M:%S} REQUEST QUERY key={} RESPONSE ok=true quota={} "
           "ttl_type={} ttl={}",
@@ -256,7 +252,7 @@ namespace throttr
           "ttl_type={} ttl={}",
           std::chrono::system_clock::now(),
           _key.key_,
-          span_to_hex(std::span(reinterpret_cast<const std::byte *>(_view.pointer_), _view.size_)),
+          span_to_hex(std::span(_entry.value_.data(), _entry.value_.size())),
           to_string(_entry.ttl_type_),
           _ttl);
       }
@@ -329,12 +325,11 @@ namespace throttr
      * @param request
      * @return bool
      */
-    static bool apply_quota_change(const entry &entry, const request_update &request)
+    static bool apply_quota_change(request_entry &entry, const request_update &request)
     {
       using enum change_types;
 
-      auto _view = entry.value_.view();
-      auto *_quota = reinterpret_cast<value_type *>(_view.pointer_);
+      auto *_quota = reinterpret_cast<value_type *>(entry.value_.data());
 
       switch (request.header_->change_)
       {
@@ -368,7 +363,7 @@ namespace throttr
      * @return bool
      */
     bool apply_ttl_change(
-      entry &entry,
+      request_entry &entry,
       const request_update &request,
       const std::chrono::steady_clock::time_point &now,
       std::span<const std::byte> key)
@@ -403,10 +398,12 @@ namespace throttr
           break;
       }
 
-      if (scheduled_key_.size() == key.size() && std::equal(scheduled_key_.begin(), scheduled_key_.end(), key.begin())) // LCOV_EXCL_LINE
-                                                                                                                        // Note:
-                                                                                                                        // Partially
-                                                                                                                        // tested
+      if (
+        scheduled_key_.size() == key.size() &&
+        std::equal(scheduled_key_.begin(), scheduled_key_.end(), key.begin())) // LCOV_EXCL_LINE
+                                                                               // Note:
+                                                                               // Partially
+                                                                               // tested
       {
         boost::asio::post(
           strand_, [_self = shared_from_this(), _expires_at = entry.expires_at_] { _self->schedule_expiration(_expires_at); });

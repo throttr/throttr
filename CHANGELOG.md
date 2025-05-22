@@ -1,7 +1,15 @@
+### v4.0.16
+
+- Now server can resist huge amount of concurrent operations without SIGSEGV.
+- Entry was deprecated, and we now uses Request entry from protocol.hpp.
+- Now we have more stable write operation.
+- Intrusive pointers has been rolled back.
+- Local tests proves 20m requests on 8544ms. 2.34 millions RPS (with existing key).
+
 ### v4.0.15
 
 - Now we uses shared_ptr on stored elements.
-- Now server can resist 2.5 millions request per seconds using pipelined requests.
+- Now server can resist 2.5 millions request per seconds using pipelined requests (non-existing key).
 - Now we have a more optimized algorithm.
 
 ### v4.0.14

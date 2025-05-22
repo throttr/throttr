@@ -59,8 +59,7 @@ namespace throttr
         {
           if (!error)
           {
-            const auto _ptr = boost::intrusive_ptr{new session(std::move(socket_), state_)};
-            _ptr->start();
+            std::make_shared<session>(std::move(socket_), state_)->start();
           }
 
           do_accept();
