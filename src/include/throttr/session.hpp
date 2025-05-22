@@ -35,7 +35,7 @@ namespace throttr
   /**
    * Session
    */
-  class session
+  class session : public std::enable_shared_from_this<session>
   {
   public:
     /**
@@ -58,29 +58,6 @@ namespace throttr
 #endif
       }
       // LCOV_EXCL_STOP
-    }
-
-    mutable std::atomic<int> ref_count_{0};
-
-    /**
-     * Intrusive ptr add reference
-     * @param p
-     */
-    friend void intrusive_ptr_add_ref(const session *p)
-    {
-      p->ref_count_.fetch_add(1, std::memory_order_relaxed);
-    }
-
-    /**
-     * Intrusive ptr release
-     * @param p
-     */
-    friend void intrusive_ptr_release(const session *p)
-    {
-      if (p->ref_count_.fetch_sub(1, std::memory_order_acq_rel) == 1) // LCOV_EXCL_LINE
-      {
-        delete p; // NOSONAR
-      }
     }
 
     /**
@@ -131,6 +108,7 @@ namespace throttr
     {
       if (buffer_start_ == buffer_end_) // LCOV_EXCL_LINE note: Partially tested.
         return;                         // LCOV_EXCL_LINE note: Partially tested.
+      std::puts("COMPACTED WTF");
       std::memmove(buffer_.data(), buffer_.data() + buffer_start_, buffer_end_ - buffer_start_);
       buffer_end_ -= buffer_start_;
       buffer_start_ = 0;
@@ -139,7 +117,7 @@ namespace throttr
     /**
      * Max length
      */
-    static constexpr std::size_t max_length_ = 8192;
+    static constexpr std::size_t max_length_ = 7680;
 
     /**
      * Buffer
@@ -292,7 +270,7 @@ namespace throttr
       }
       // LCOV_EXCL_STOP
 
-      auto _self = boost::intrusive_ptr{this};
+      auto _self = shared_from_this();
 
       // LCOV_EXCL_START
 #ifndef NDEBUG
@@ -389,7 +367,7 @@ namespace throttr
       }
       // LCOV_EXCL_STOP
 
-      auto _self = boost::intrusive_ptr{this};
+      auto _self = shared_from_this();
       socket_.async_read_some(
         boost::asio::buffer(buffer_.data() + buffer_end_, max_length_ - buffer_end_),
         boost::asio::bind_allocator(

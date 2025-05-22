@@ -25,7 +25,7 @@
 #include <boost/multi_index/ordered_index.hpp>
 #include <boost/multi_index/tag.hpp>
 #include <boost/multi_index_container.hpp>
-#include <throttr/entry.hpp>
+#include <throttr/protocol_wrapper.hpp>
 
 namespace throttr
 {
@@ -42,7 +42,7 @@ namespace throttr
     /**
      * Entry
      */
-    entry entry_;
+    request_entry entry_;
 
     /**
      * Expired
@@ -69,7 +69,7 @@ namespace throttr
      * @param k
      * @param e
      */
-    entry_wrapper(std::vector<std::byte> k, entry e) : key_(std::move(k)), entry_(std::move(e))
+    entry_wrapper(std::vector<std::byte> k, request_entry e) : key_(std::move(k)), entry_(std::move(e))
     {
     }
 
@@ -85,9 +85,9 @@ namespace throttr
 
     [[nodiscard]] std::shared_ptr<entry_wrapper> clone_and_mark_expired() const
     {
-      entry copied_entry{
+      request_entry copied_entry{
         entry_.type_,
-        value_owned(entry_.value_.view().pointer_, entry_.value_.view().size_),
+        std::vector(entry_.value_),
         entry_.ttl_type_,
         entry_.expires_at_,
       };
@@ -117,9 +117,17 @@ namespace throttr
    */
   struct request_entry_by_expiration
   {
-    bool operator()(const entry &a, const entry &b) const
+    bool operator()(const request_entry &a, const request_entry &b) const
     {
       return a.expires_at_ < b.expires_at_;
+    }
+  };
+
+  struct request_entry_expiration_key
+  {
+    const std::chrono::steady_clock::time_point &operator()(const entry_wrapper &e) const
+    {
+      return e.entry_.expires_at_;
     }
   };
 
@@ -141,8 +149,10 @@ namespace throttr
       // Find by key
       boost::multi_index::ordered_non_unique<
         boost::multi_index::tag<tag_by_expiration>,
-        boost::multi_index::member<entry_wrapper, entry, &entry_wrapper::entry_>,
-        request_entry_by_expiration>>>;
+        boost::multi_index::member<entry_wrapper, request_entry, &entry_wrapper::entry_>,
+        request_entry_by_expiration>
+  >
+  >;
 } // namespace throttr
 
 #endif // THROTTR_STORAGE_HPP
