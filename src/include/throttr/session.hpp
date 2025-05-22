@@ -257,7 +257,7 @@ namespace throttr
     void do_write(const std::vector<boost::asio::const_buffer> &batch)
     {
       // LCOV_EXCL_START
-      if (batch.size() == 0)
+      if (batch.empty())
       {
         do_read();
         return;
