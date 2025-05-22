@@ -150,9 +150,7 @@ namespace throttr
       boost::multi_index::ordered_non_unique<
         boost::multi_index::tag<tag_by_expiration>,
         boost::multi_index::member<entry_wrapper, request_entry, &entry_wrapper::entry_>,
-        request_entry_by_expiration>
-  >
-  >;
+        request_entry_by_expiration>>>;
 } // namespace throttr
 
 #endif // THROTTR_STORAGE_HPP
