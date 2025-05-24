@@ -520,106 +520,85 @@ TEST_F(ServerTestFixture, HandlesListReturnsCorrectStructure)
 
 TEST_F(ServerTestFixture, HandlesListWithMultipleFragments)
 {
-  std::vector<std::string> keys;
-  std::vector<std::vector<std::byte>> values;
+  std::vector<std::string> _keys;
+  std::vector<std::vector<std::byte>> _values;
 
-  for (int i = 0; i < 100; ++i)
+  for (int _i = 0; _i < 100; ++_i)
   {
-    std::string key = "key_" + std::to_string(i);
-    key += std::string(10 - key.size(), 'X');
-    keys.push_back(key);
+    std::string _key = "key_" + std::to_string(_i);
+    _key += std::string(10 - _key.size(), 'X');
+    _keys.push_back(_key);
 
-    std::vector<std::byte> value = {std::byte{0xAB}, std::byte{0xCD}};
-    values.push_back(value);
+    std::vector _value = {std::byte{0xAB}, std::byte{0xCD}};
+    _values.push_back(_value);
 
-    const auto buffer = request_set_builder(value, ttl_types::seconds, 60, key);
-    const auto response = send_and_receive(buffer);
-    ASSERT_EQ(static_cast<uint8_t>(response[0]), 1);
+    const auto _buffer = request_set_builder(_value, ttl_types::seconds, 60, _key);
+    const auto _response = send_and_receive(_buffer);
+    ASSERT_EQ(static_cast<uint8_t>(_response[0]), 1);
   }
 
-  const auto list_buffer = request_list_builder();
+  const auto _list_buffer = request_list_builder();
 
-  boost::asio::io_context io_context;
-  tcp::resolver resolver(io_context);
-  const auto endpoints = resolver.resolve("127.0.0.1", std::to_string(1337));
-  tcp::socket socket(io_context);
-  std::cout << "Connecting..." << std::endl;
-  boost::asio::connect(socket, endpoints);
-  std::cout << "Connected..." << std::endl;
+  boost::asio::io_context _io_context;
+  tcp::resolver _resolver(_io_context);
+  const auto _endpoints = _resolver.resolve("127.0.0.1", std::to_string(1337));
+  tcp::socket _socket(_io_context);
+  boost::asio::connect(_socket, _endpoints);
+  boost::asio::write(_socket, boost::asio::buffer(_list_buffer.data(), _list_buffer.size()));
+  uint64_t _fragment_count = 0;
+  boost::asio::read(_socket, boost::asio::buffer(&_fragment_count, 8));
+  ASSERT_GE(_fragment_count, 2);
 
-  std::cout << "Writing request..." << std::endl;
-  boost::asio::write(socket, boost::asio::buffer(list_buffer.data(), list_buffer.size()));
-  std::cout << "Request wrote..." << std::endl;
+  std::vector<std::byte> _full_response;
+  _full_response.insert(_full_response.end(), reinterpret_cast<std::byte*>(&_fragment_count), reinterpret_cast<std::byte*>(&_fragment_count) + sizeof(_fragment_count));
 
-  // Leer cantidad de fragmentos
-  uint64_t fragment_count = 0;
-  std::cout << "Reading fragments..." << std::endl;
-  boost::asio::read(socket, boost::asio::buffer(&fragment_count, 8));
-  std::cout << "Fragments read..." << fragment_count << std::endl;
-  ASSERT_GE(fragment_count, 2);
+  uint64_t _total_keys = 0;
+  std::vector<size_t> _all_key_sizes;
+  std::vector<std::string> _read_keys;
 
-  std::vector<std::byte> full_response;
-  full_response.insert(full_response.end(), reinterpret_cast<std::byte*>(&fragment_count), reinterpret_cast<std::byte*>(&fragment_count) + sizeof(fragment_count));
-
-  uint64_t total_keys = 0;
-  std::vector<size_t> all_key_sizes;
-  std::vector<std::string> read_keys;
-
-  for (uint64_t i = 0; i < fragment_count; ++i)
+  for (uint64_t _i = 0; _i < _fragment_count; ++_i)
   {
-    uint64_t fragment_id = 0;
-    uint64_t key_count = 0;
+    uint64_t _fragment_id = 0;
+    uint64_t _key_count = 0;
 
-    std::cout << "Reading fragment ID" << std::endl;
-    boost::asio::read(socket, boost::asio::buffer(&fragment_id, sizeof(fragment_id)));
-    std::cout << "Read fragment ID:" << fragment_id << std::endl;
-    std::cout << "Reading Key Count" << std::endl;
-    boost::asio::read(socket, boost::asio::buffer(&key_count, sizeof(key_count)));
-    std::cout << "Reading Keys:" << key_count << std::endl;
+    boost::asio::read(_socket, boost::asio::buffer(&_fragment_id, sizeof(_fragment_id)));
+    boost::asio::read(_socket, boost::asio::buffer(&_key_count, sizeof(_key_count)));
 
-    full_response.insert(full_response.end(), reinterpret_cast<std::byte*>(&fragment_id), reinterpret_cast<std::byte*>(&fragment_id) + sizeof(fragment_id));
-    full_response.insert(full_response.end(), reinterpret_cast<std::byte*>(&key_count), reinterpret_cast<std::byte*>(&key_count) + sizeof(key_count));
+    _full_response.insert(_full_response.end(), reinterpret_cast<std::byte*>(&_fragment_id), reinterpret_cast<std::byte*>(&_fragment_id) + sizeof(_fragment_id));
+    _full_response.insert(_full_response.end(), reinterpret_cast<std::byte*>(&_key_count), reinterpret_cast<std::byte*>(&_key_count) + sizeof(_key_count));
 
-    total_keys += key_count;
-    std::vector<size_t> fragment_key_sizes;
+    _total_keys += _key_count;
+    std::vector<size_t> _fragment_key_sizes;
 
-    for (uint64_t k = 0; k < key_count; ++k)
+    for (uint64_t _k = 0; _k < _key_count; ++_k)
     {
-      std::array<std::byte, 11 + sizeof(value_type)> meta{};
-      std::cout << "Reading Keys Values" << std::endl;
-      boost::asio::read(socket, boost::asio::buffer(meta));
-      full_response.insert(full_response.end(), meta.begin(), meta.end());
+      std::array<std::byte, 11 + sizeof(value_type)> _meta{};
+      boost::asio::read(_socket, boost::asio::buffer(_meta));
+      _full_response.insert(_full_response.end(), _meta.begin(), _meta.end());
 
-      const size_t key_size = static_cast<size_t>(meta[0]);
-      fragment_key_sizes.push_back(key_size);
-      all_key_sizes.push_back(static_cast<size_t>(meta[0]));
+      const size_t _key_size = static_cast<size_t>(_meta[0]);
+      _fragment_key_sizes.push_back(_key_size);
+      _all_key_sizes.push_back(_key_size);
     }
 
-    for (size_t k = 0; k < fragment_key_sizes.size(); ++k)
+    for (size_t _k = 0; _k < _fragment_key_sizes.size(); ++_k)
     {
-      std::vector<std::byte> key(fragment_key_sizes[k]);
-      boost::asio::read(socket, boost::asio::buffer(key));
-      full_response.insert(full_response.end(), key.begin(), key.end());
-
-      std::cout << "Raw key bytes: ";
-      for (auto b : key)
-        std::printf("%02X ", std::to_integer<uint8_t>(b));
-      std::cout << std::endl;
-
-      std::string string_key(reinterpret_cast<const char *>(key.data()), key.size());
-      std::cout << "KEY is " << string_key << std::endl;
-      read_keys.push_back(string_key);
+      std::vector<std::byte> _key(_fragment_key_sizes[_k]);
+      boost::asio::read(_socket, boost::asio::buffer(_key));
+      _full_response.insert(_full_response.end(), _key.begin(), _key.end());
+      std::string _string_key(reinterpret_cast<const char *>(_key.data()), _key.size());
+      _read_keys.push_back(_string_key);
     }
   }
 
-  std::sort(keys.begin(), keys.end());
-  std::sort(read_keys.begin(), read_keys.end());
+  std::sort(_keys.begin(), _keys.end());
+  std::sort(_read_keys.begin(), _read_keys.end());
 
-  ASSERT_EQ(read_keys.size(), keys.size());
+  ASSERT_EQ(_read_keys.size(), _keys.size());
 
-  for (size_t i = 0; i < keys.size(); ++i)
+  for (size_t _i = 0; _i < _keys.size(); ++_i)
   {
-    ASSERT_EQ(read_keys[i], keys[i]);
+    ASSERT_EQ(_read_keys[_i], _keys[_i]);
   }
 }
 

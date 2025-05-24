@@ -510,7 +510,6 @@ namespace throttr
 
       std::size_t i = 0;
       for (auto fragment : _fragments) {
-        std::cout << "Fragment size: " << fragment.size() << std::endl;
         const uint64_t fragment_id = i + 1;
         const uint64_t key_count = fragment.size();
 
