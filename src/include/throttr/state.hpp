@@ -73,6 +73,16 @@ namespace throttr
     std::mutex mutex_;
 
     /**
+     * Success response
+     */
+    constexpr static uint8_t success_response_ = 0x01;
+
+    /**
+     * Failed response
+     */
+    constexpr static uint8_t failed_response_ = 0x01;
+
+    /**
      * Constructor
      *
      * @param ioc
@@ -144,7 +154,7 @@ namespace throttr
 #endif
       // LCOV_EXCL_STOP
 
-      return _inserted ? 0x01 : 0x00;
+      return _inserted ? success_response_ : failed_response_;
     }
 
     /**
@@ -288,7 +298,7 @@ namespace throttr
 
       if (_it == _index.end() || _it->expired_) // LCOV_EXCL_LINE note: Partially covered.
       {
-        return 0x00;
+        return failed_response_;
       }
 
       using enum attribute_types;
@@ -327,7 +337,7 @@ namespace throttr
 #endif
       // LCOV_EXCL_STOP
 
-      return _modified ? 0x01 : 0x00;
+      return _modified ? success_response_ : failed_response_;
     }
 
     /**
@@ -454,7 +464,7 @@ namespace throttr
       if (_erased) // LCOV_EXCL_LINE Note: Partially tested.
         _index.erase(_it);
 
-      return _erased ? 0x01 : 0x00;
+      return _erased ? success_response_ : failed_response_;
     }
 
     /**
