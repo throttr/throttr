@@ -80,7 +80,7 @@ namespace throttr
     /**
      * Failed response
      */
-    constexpr static uint8_t failed_response_ = 0x01;
+    constexpr static uint8_t failed_response_ = 0x00;
 
     /**
      * Constructor
