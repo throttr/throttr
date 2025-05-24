@@ -343,6 +343,10 @@ namespace throttr
           auto *_h = reinterpret_cast<const request_get_header *>(_buffer); // NOSONAR
           return get_message_sized(buffer, request_get_header_size, _h->key_size_);
         }
+        case request_types::list:
+        {
+          return get_message_sized(buffer, request_list_header_size, 0);
+        }
           // LCOV_EXCL_START
         default:
           return 0;

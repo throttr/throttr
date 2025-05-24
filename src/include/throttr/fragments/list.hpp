@@ -25,11 +25,32 @@ namespace throttr
 #pragma pack(push, 1)
   struct fragment_list_item
   {
-    std::uint8_t key_size_;
-    entry_types key_type_;
-    ttl_types ttl_type_;
-    std::chrono::steady_clock::time_point expires_at_;
-    value_type bytes_used_;
+    const entry_wrapper &ref;
+
+    std::uint8_t key_size() const
+    {
+      return static_cast<std::uint8_t>(ref.key_.size());
+    }
+    const auto &key() const
+    {
+      return ref.key_;
+    }
+    const auto &type() const
+    {
+      return ref.entry_.type_;
+    }
+    const auto &ttl_type() const
+    {
+      return ref.entry_.ttl_type_;
+    }
+    const auto &expires_at() const
+    {
+      return ref.entry_.expires_at_;
+    }
+    value_type bytes_used() const
+    {
+      return static_cast<value_type>(ref.entry_.value_.size());
+    }
   };
 #pragma pack(pop)
 } // namespace throttr

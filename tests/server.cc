@@ -437,6 +437,86 @@ TEST_F(ServerTestFixture, PurgeExistingEntry)
   ASSERT_EQ(static_cast<uint8_t>(_query_response[0]), 0);
 }
 
+TEST_F(ServerTestFixture, HandlesListReturnsCorrectStructure)
+{
+  const std::string _key1 = "abc";
+  const std::string _key2 = "EHLO";
+  const std::vector _value1 = {std::byte{0x01}, std::byte{0x02}, std::byte{0x03}, std::byte{0x04}};
+  const std::vector _value2 = {std::byte{0x05}, std::byte{0x06}, std::byte{0x07}, std::byte{0x08}, std::byte{0x09}, std::byte{0x0A}, std::byte{0x0B}, std::byte{0x0C}};
+
+  // SET key1 (counter, type 0x00)
+  const auto _buffer1 = request_set_builder(_value1, ttl_types::seconds, 10, _key1);
+  const auto _response1 = send_and_receive(_buffer1);
+  ASSERT_EQ(static_cast<uint8_t>(_response1[0]), 1);
+
+  // SET key2 (buffer, type 0x01)
+  const auto _buffer2 = request_set_builder(_value2, ttl_types::seconds, 10, _key2);
+  const auto _response2 = send_and_receive(_buffer2);
+  ASSERT_EQ(static_cast<uint8_t>(_response2[0]), 1);
+
+  // LIST request
+  const auto _list_buffer = request_list_builder();
+  const auto _response = send_and_receive(_list_buffer, 8 + 16 + ((11 + sizeof(value_type)) * 2) + _key1.size() + _key2.size());
+
+  size_t _offset = 0;
+
+  // Fragment count
+  uint64_t _fragment_count;
+  std::memcpy(&_fragment_count, _response.data() + _offset, sizeof(_fragment_count));
+  _offset += sizeof(_fragment_count);
+  ASSERT_EQ(_fragment_count, 1);
+
+  // Fragment ID
+  uint64_t _fragment_id;
+  std::memcpy(&_fragment_id, _response.data() + _offset, sizeof(_fragment_id));
+  _offset += sizeof(_fragment_id);
+  ASSERT_EQ(_fragment_id, 1);
+
+  // Key count
+  uint64_t _key_count;
+  std::memcpy(&_key_count, _response.data() + _offset, sizeof(_key_count));
+  _offset += sizeof(_key_count);
+  ASSERT_EQ(_key_count, 2);
+
+  std::cout << span_to_hex(_response) << std::endl;
+
+  // Key 1 metadata
+  ASSERT_EQ(static_cast<uint8_t>(_response[_offset]), _key1.size()); _offset += 1;
+  ASSERT_EQ(static_cast<uint8_t>(_response[_offset]), 0x01); _offset += 1; // type
+  ASSERT_EQ(static_cast<uint8_t>(_response[_offset]), static_cast<uint8_t>(ttl_types::seconds)); _offset += 1;
+
+  uint64_t _expires1;
+  std::memcpy(&_expires1, _response.data() + _offset, sizeof(_expires1)); _offset += sizeof(_expires1);
+  ASSERT_GT(_expires1, 0);
+
+  value_type _bytes_used_1;
+  std::memcpy(&_bytes_used_1, _response.data() + _offset, sizeof(_bytes_used_1)); _offset += sizeof(_bytes_used_1);
+  ASSERT_EQ(_bytes_used_1, _value1.size());
+
+  // Key 2 metadata
+  ASSERT_EQ(static_cast<uint8_t>(_response[_offset]), _key2.size()); _offset += 1;
+  ASSERT_EQ(static_cast<uint8_t>(_response[_offset]), 0x01); _offset += 1; // type
+  ASSERT_EQ(static_cast<uint8_t>(_response[_offset]), static_cast<uint8_t>(ttl_types::seconds)); _offset += 1;
+
+  uint64_t _expires2;
+  std::memcpy(&_expires2, _response.data() + _offset, sizeof(_expires2)); _offset += sizeof(_expires2);
+  ASSERT_GT(_expires2, 0);
+
+  value_type _bytes_used_2;
+  std::memcpy(&_bytes_used_2, _response.data() + _offset, sizeof(_bytes_used_2)); _offset += sizeof(_bytes_used_2);
+  ASSERT_EQ(_bytes_used_2, _value2.size());
+
+  // Key 1 raw
+  ASSERT_EQ(std::memcmp(_response.data() + _offset, _key1.data(), _key1.size()), 0);
+  _offset += _key1.size();
+
+  // Key 2 raw
+  ASSERT_EQ(std::memcmp(_response.data() + _offset, _key2.data(), _key2.size()), 0);
+  _offset += _key2.size();
+
+  ASSERT_EQ(_offset, _response.size());
+}
+
 TEST_F(ServerTestFixture, PurgeNonExistentEntryReturnsError)
 {
   const auto _purge = request_purge_builder("nonexistent_consumer/nonexistent_resource");

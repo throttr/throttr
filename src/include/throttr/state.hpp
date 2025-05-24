@@ -478,31 +478,76 @@ namespace throttr
     void handle_list(std::vector<boost::asio::const_buffer> &batch, std::uint8_t *write_buffer, std::size_t &write_offset)
     {
       std::size_t _fragment_size = 0;
+      constexpr std::size_t _max_fragment_size = 2048;
+
       std::vector<fragment_list_item> _fragment_items;
       std::vector<std::vector<fragment_list_item>> _fragments;
-      for (auto &_index = storage_.get<tag_by_key>(); const auto &_item : _index)
+
+      const auto &_index = storage_.get<tag_by_key>();
+
+      for (const auto &_item : _index)
       {
         const std::size_t _item_size = _item.key_.size() + _item.entry_.value_.size() + 11;
-        if (constexpr std::size_t _max_fragment_size = 2048; _fragment_size + _item_size > _max_fragment_size)
+
+        if (_fragment_size + _item_size > _max_fragment_size)
         {
           _fragments.push_back(std::move(_fragment_items));
           _fragment_items.clear();
           _fragment_size = 0;
         }
-        _fragment_items.push_back(fragment_list_item{
-          .key_size_ = static_cast<std::uint8_t>(_item.key_.size()),
-          .key_type_ = _item.entry_.type_,
-          .ttl_type_ = _item.entry_.ttl_type_,
-          .expires_at_ = _item.entry_.expires_at_,
-          .bytes_used_ = static_cast<value_type>(_item.entry_.value_.size()),
-        });
+
+        _fragment_items.emplace_back(fragment_list_item{_item});
         _fragment_size += _item_size;
       }
 
       if (!_fragment_items.empty())
       {
         _fragments.push_back(std::move(_fragment_items));
-        _fragment_items.clear();
+      }
+
+      const uint64_t fragment_count = _fragments.size();
+      std::memcpy(write_buffer + write_offset, &fragment_count, sizeof(fragment_count));
+      batch.emplace_back(write_buffer + write_offset, sizeof(fragment_count));
+      write_offset += sizeof(fragment_count);
+
+      for (std::size_t i = 0; i < _fragments.size(); ++i)
+      {
+        const auto &items = _fragments[i];
+        const uint64_t fragment_id = i + 1;
+        const uint64_t key_count = items.size();
+
+        std::memcpy(write_buffer + write_offset, &fragment_id, sizeof(fragment_id));
+        batch.emplace_back(write_buffer + write_offset, sizeof(fragment_id));
+        write_offset += sizeof(fragment_id);
+
+        std::memcpy(write_buffer + write_offset, &key_count, sizeof(key_count));
+        batch.emplace_back(write_buffer + write_offset, sizeof(key_count));
+        write_offset += sizeof(key_count);
+
+        for (const auto &item : items)
+        {
+          write_buffer[write_offset] = item.key_size();
+          batch.emplace_back(write_buffer + write_offset, 1);
+          write_offset += 1;
+          batch.emplace_back(&item.type(), sizeof(item.type()));
+          batch.emplace_back(&item.ttl_type(), sizeof(item.ttl_type()));
+
+          const auto exp = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(
+                   item.expires_at().time_since_epoch()).count());
+          std::memcpy(write_buffer + write_offset, &exp, sizeof(exp));
+          batch.emplace_back(write_buffer + write_offset, sizeof(exp));
+          write_offset += sizeof(exp);
+
+          const auto used = item.bytes_used();
+          std::memcpy(write_buffer + write_offset, &used, sizeof(value_type));
+          batch.emplace_back(write_buffer + write_offset, sizeof(value_type));
+          write_offset += sizeof(value_type);
+        }
+
+        for (const auto &item : items)
+        {
+          batch.emplace_back(item.key().data(), item.key().size());
+        }
       }
     }
 
