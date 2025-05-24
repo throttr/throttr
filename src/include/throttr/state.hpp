@@ -32,6 +32,8 @@
 #include <throttr/utils.hpp>
 #include <vector>
 
+#include <throttr/fragments/list.hpp>
+
 namespace throttr
 {
   /**
@@ -465,8 +467,32 @@ namespace throttr
      */
     void handle_list(std::vector<boost::asio::const_buffer> &batch, std::uint8_t *write_buffer, std::size_t &write_offset)
     {
-      for (auto &index = storage_.get<tag_by_key>(); const auto &item : index)
+      std::size_t _fragment_size = 0;
+      std::vector<fragment_list_item> _fragment_items;
+      std::vector<std::vector<fragment_list_item>> _fragments;
+      for (auto &_index = storage_.get<tag_by_key>(); const auto &_item : _index)
       {
+        const std::size_t _item_size = _item.key_.size() + _item.entry_.value_.size() + 11;
+        if (constexpr std::size_t _max_fragment_size = 2048; _fragment_size + _item_size > _max_fragment_size)
+        {
+          _fragments.push_back(std::move(_fragment_items));
+          _fragment_items.clear();
+          _fragment_size = 0;
+        }
+        _fragment_items.push_back(fragment_list_item{
+          .key_size_ = static_cast<std::uint8_t>(_item.key_.size()),
+          .key_type_ = _item.entry_.type_,
+          .ttl_type_ = _item.entry_.ttl_type_,
+          .expires_at_ = _item.entry_.expires_at_,
+          .bytes_used_ = static_cast<value_type>(_item.entry_.value_.size()),
+        });
+        _fragment_size += _item_size;
+      }
+
+      if (!_fragment_items.empty())
+      {
+        _fragments.push_back(std::move(_fragment_items));
+        _fragment_items.clear();
       }
     }
 
