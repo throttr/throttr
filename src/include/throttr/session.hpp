@@ -226,6 +226,9 @@ namespace throttr
             _batch.push_back(boost::asio::buffer(write_buffer_.data() + write_offset_, 1));
             write_offset_ += 1;
             break;
+          case request_types::list:
+            state_->handle_list(_batch, write_buffer_.data(), write_offset_);
+            break;
             // LCOV_EXCL_START
           default:
             write_buffer_[write_offset_] = 0x00;

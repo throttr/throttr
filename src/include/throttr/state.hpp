@@ -37,7 +37,8 @@ namespace throttr
   /**
    * State
    */
-  class state : public std::enable_shared_from_this<state> {
+  class state : public std::enable_shared_from_this<state>
+  {
   public:
     /**
      * Acceptor ready
@@ -100,10 +101,10 @@ namespace throttr
       const auto _now = std::chrono::steady_clock::now();
       const auto _expires_at = get_expiration_point(_now, ttl_type, ttl);
 
-      auto &_index = storage_.get<tag_by_key_and_valid>();
+      auto &_index = storage_.get<tag_by_key>();
       const auto _key = std::vector<
         std::byte>(reinterpret_cast<const std::byte *>(key.data()), reinterpret_cast<const std::byte *>(key.data() + key.size()));
-      const auto _entry_ptr = entry_wrapper{ _key, request_entry{type, value, ttl_type, _expires_at} };
+      const auto _entry_ptr = entry_wrapper{_key, request_entry{type, value, ttl_type, _expires_at}};
 
       auto [_it, _inserted] = storage_.insert(_entry_ptr);
 
@@ -118,9 +119,7 @@ namespace throttr
           {
             if (_expires_at <= _item.entry_.expires_at_)
             {
-              boost::asio::post(strand_, [self = shared_from_this(), _expires_at] {
-                self->schedule_expiration(_expires_at);
-              });
+              boost::asio::post(strand_, [self = shared_from_this(), _expires_at] { self->schedule_expiration(_expires_at); });
             }
             break;
           }
@@ -191,7 +190,7 @@ namespace throttr
       std::size_t &write_offset)
     {
       const request_key _key{request.key_};
-      const auto &_index = storage_.get<tag_by_key_and_valid>();
+      const auto &_index = storage_.get<tag_by_key>();
       const auto _it = _index.find(_key);
 
       if (_it == _index.end() || _it->expired_) // LCOV_EXCL_LINE
@@ -282,7 +281,7 @@ namespace throttr
       const request_key _key{request.key_};
       const auto _now = std::chrono::steady_clock::now();
 
-      auto &_index = storage_.get<tag_by_key_and_valid>();
+      auto &_index = storage_.get<tag_by_key>();
       const auto _it = _index.find(_key);
 
       if (_it == _index.end() || _it->expired_) // LCOV_EXCL_LINE note: Partially covered.
@@ -412,9 +411,9 @@ namespace throttr
       if (
         scheduled_key_.size() == key.size() &&
         std::equal(scheduled_key_.begin(), scheduled_key_.end(), key.begin())) // LCOV_EXCL_LINE
-          // Note:
-            // Partially
-              // tested
+                                                                               // Note:
+                                                                               // Partially
+                                                                               // tested
       {
         boost::asio::post(
           strand_, [_self = shared_from_this(), _expires_at = entry.expires_at_] { _self->schedule_expiration(_expires_at); });
@@ -433,7 +432,7 @@ namespace throttr
     {
       const request_key _key{request.key_};
 
-      auto &_index = storage_.get<tag_by_key_and_valid>();
+      auto &_index = storage_.get<tag_by_key>();
       const auto _it = _index.find(_key);
 
       bool _erased = true;
@@ -457,6 +456,21 @@ namespace throttr
     }
 
     /**
+     * Handle list
+     *
+     * @param write_buffer
+     * @param write_offset
+     * @param batch
+     * @return uint8_t
+     */
+    void handle_list(std::vector<boost::asio::const_buffer> &batch, std::uint8_t *write_buffer, std::size_t &write_offset)
+    {
+      for (auto &index = storage_.get<tag_by_key>(); const auto &item : index)
+      {
+      }
+    }
+
+    /**
      * Expired entries
      */
     std::deque<std::pair<entry_wrapper, std::chrono::steady_clock::time_point>> expired_entries_;
@@ -469,23 +483,27 @@ namespace throttr
     {
       std::scoped_lock guard(mutex_);
       const auto _now = std::chrono::steady_clock::now();
-      auto &_index = storage_.get<tag_by_key_and_valid>();
+      auto &_index = storage_.get<tag_by_key>();
 
       std::vector<request_key> _to_expire;
       std::vector<request_key> _to_erase;
       std::chrono::steady_clock::time_point _next_expiration = std::chrono::steady_clock::time_point::max();
       for (const auto &_item : _index)
       {
-        if (_item.expired_) {
+        if (_item.expired_)
+        {
           if (_now - _item.entry_.expires_at_ > std::chrono::seconds(10))
           {
             _to_erase.emplace_back(_item.key());
           }
           continue;
         }
-        if (_item.entry_.expires_at_ <= _now) {
+        if (_item.entry_.expires_at_ <= _now)
+        {
           _to_expire.emplace_back(_item.key());
-        } else {
+        }
+        else
+        {
           _next_expiration = std::min(_next_expiration, _item.entry_.expires_at_);
         }
       }
@@ -511,24 +529,22 @@ namespace throttr
         }
       }
 
-      auto &_erase_index = storage_.get<tag_by_key_and_valid>();
+      auto &_erase_index = storage_.get<tag_by_key>();
       for (const auto &_key : _to_erase)
       {
-        if (auto _it = _erase_index.find(_key); _it != _erase_index.end()  && _it->expired_)
+        if (auto _it = _erase_index.find(_key); _it != _erase_index.end() && _it->expired_)
         {
 #ifndef NDEBUG
           fmt::println(
             "{:%Y-%m-%d %H:%M:%S} SCHEDULER KEY ERASED key={}",
             std::chrono::system_clock::now(),
-            std::string_view(
-              reinterpret_cast<const char *>(_it->key_.data()),
-              _it->key_.size()));
+            std::string_view(reinterpret_cast<const char *>(_it->key_.data()), _it->key_.size()));
 #endif
           _erase_index.erase(_it);
         }
       }
 
-      for (auto &_candidate_index = storage_.get<tag_by_key_and_valid>(); const auto &_item : _candidate_index)
+      for (auto &_candidate_index = storage_.get<tag_by_key>(); const auto &_item : _candidate_index)
       {
         const auto &_expires_at = _item.entry_.expires_at_;
         std::chrono::steady_clock::time_point _candidate;
@@ -564,7 +580,8 @@ namespace throttr
       const auto _delay = proposed - _now;
       expiration_timer_.expires_after(_delay);
       expiration_timer_.async_wait(
-        [_self = shared_from_this()](const boost::system::error_code& ec) {
+        [_self = shared_from_this()](const boost::system::error_code &ec)
+        {
           if (!ec)
             _self->expiration_timer();
         });

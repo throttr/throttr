@@ -232,7 +232,7 @@ TEST_F(StateTestFixture, ScheduleExpiration_ReprogramsIfNextEntryExists)
 {
   using namespace std::chrono;
   auto &_storage = state_->storage_;
-  auto &_index = _storage.get<tag_by_key_and_valid>();
+  auto &_index = _storage.get<tag_by_key>();
 
   const auto _now = steady_clock::now();
 
@@ -246,8 +246,8 @@ TEST_F(StateTestFixture, ScheduleExpiration_ReprogramsIfNextEntryExists)
   _entry2.value_ = {std::byte{1}}; // NOSONAR
   _entry2.expires_at_ = _now + seconds(5);
 
-  _index.insert(entry_wrapper{ to_bytes("c1r1"), std::move(_entry1)});
-  _index.insert(entry_wrapper {to_bytes("c2r2"), std::move(_entry2)});
+  _index.insert(entry_wrapper{to_bytes("c1r1"), std::move(_entry1)});
+  _index.insert(entry_wrapper{to_bytes("c2r2"), std::move(_entry2)});
 
   state_->schedule_expiration(_now);
 
