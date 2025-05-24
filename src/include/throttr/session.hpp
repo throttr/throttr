@@ -199,45 +199,39 @@ namespace throttr
           span_to_hex(_view));
 #endif
         // LCOV_EXCL_STOP
-
-        try
+        switch (const auto _type = static_cast<request_types>(std::to_integer<uint8_t>(_view[0])); _type)
         {
-          switch (const auto _type = static_cast<request_types>(std::to_integer<uint8_t>(_view[0])); _type)
-          {
-            case request_types::insert:
-              write_buffer_[write_offset_] = state_->handle_insert(_view);
-              _batch.push_back(boost::asio::buffer(write_buffer_.data() + write_offset_, 1));
-              write_offset_ += 1;
-              break;
-            case request_types::set:
-              write_buffer_[write_offset_] = state_->handle_set(_view);
-              _batch.push_back(boost::asio::buffer(write_buffer_.data() + write_offset_, 1));
-              write_offset_ += 1;
-              break;
-            case request_types::query:
-            case request_types::get:
-              state_->handle_query(
-                request_query::from_buffer(_view), _type == request_types::query, _batch, write_buffer_.data(), write_offset_);
-              break;
-            case request_types::update:
-              write_buffer_[write_offset_] = state_->handle_update(request_update::from_buffer(_view));
-              _batch.push_back(boost::asio::buffer(write_buffer_.data() + write_offset_, 1));
-              write_offset_ += 1;
-              break;
-            case request_types::purge:
-              write_buffer_[write_offset_] = state_->handle_purge(request_purge::from_buffer(_view));
-              _batch.push_back(boost::asio::buffer(write_buffer_.data() + write_offset_, 1));
-              write_offset_ += 1;
-              break;
-              // LCOV_EXCL_START
-          }
-        }
-        catch (const request_error &e)
-        {
-          write_buffer_[write_offset_] = 0x00;
-          _batch.push_back(boost::asio::buffer(write_buffer_.data() + write_offset_, 1));
-          write_offset_ += 1;
-          boost::ignore_unused(e);
+          case request_types::insert:
+            write_buffer_[write_offset_] = state_->handle_insert(_view);
+            _batch.push_back(boost::asio::buffer(write_buffer_.data() + write_offset_, 1));
+            write_offset_ += 1;
+            break;
+          case request_types::set:
+            write_buffer_[write_offset_] = state_->handle_set(_view);
+            _batch.push_back(boost::asio::buffer(write_buffer_.data() + write_offset_, 1));
+            write_offset_ += 1;
+            break;
+          case request_types::query:
+          case request_types::get:
+            state_->handle_query(
+              request_query::from_buffer(_view), _type == request_types::query, _batch, write_buffer_.data(), write_offset_);
+            break;
+          case request_types::update:
+            write_buffer_[write_offset_] = state_->handle_update(request_update::from_buffer(_view));
+            _batch.push_back(boost::asio::buffer(write_buffer_.data() + write_offset_, 1));
+            write_offset_ += 1;
+            break;
+          case request_types::purge:
+            write_buffer_[write_offset_] = state_->handle_purge(request_purge::from_buffer(_view));
+            _batch.push_back(boost::asio::buffer(write_buffer_.data() + write_offset_, 1));
+            write_offset_ += 1;
+            break;
+            // LCOV_EXCL_START
+          default:
+            write_buffer_[write_offset_] = 0x00;
+            _batch.push_back(boost::asio::buffer(write_buffer_.data() + write_offset_, 1));
+            write_offset_ += 1;
+            break;
         }
         // LCOV_EXCL_STOP
       }
