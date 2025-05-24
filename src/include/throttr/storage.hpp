@@ -72,36 +72,11 @@ namespace throttr
     entry_wrapper(std::vector<std::byte> k, request_entry e) : key_(std::move(k)), entry_(std::move(e))
     {
     }
-
-    /**
-     * Expired flag
-     *
-     * @return
-     */
-    bool expired_flag() const
-    {
-      return expired_;
-    }
-
-    [[nodiscard]] std::shared_ptr<entry_wrapper> clone_and_mark_expired() const
-    {
-      request_entry copied_entry{
-        entry_.type_,
-        std::vector(entry_.value_),
-        entry_.ttl_type_,
-        entry_.expires_at_,
-      };
-
-      auto out = std::make_shared<entry_wrapper>(key_, std::move(copied_entry));
-      out->expired_ = true;
-      return out;
-    }
   };
-
   /**
-   * Tag: access by valid key
+   * Tag: access by key
    */
-  struct tag_by_key_and_valid
+  struct tag_by_key
   {
   };
 
@@ -110,9 +85,8 @@ namespace throttr
    */
   using storage_type = boost::multi_index::multi_index_container<
     entry_wrapper,
-    boost::multi_index::indexed_by<
-    boost::multi_index::hashed_unique<
-      boost::multi_index::tag<tag_by_key_and_valid>,
+    boost::multi_index::indexed_by<boost::multi_index::hashed_unique<
+      boost::multi_index::tag<tag_by_key>,
       boost::multi_index::const_mem_fun<entry_wrapper, request_key, &entry_wrapper::key>,
       request_key_hasher,
       std::equal_to<request_key>>>>;

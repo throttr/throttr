@@ -37,7 +37,8 @@ namespace throttr
   /**
    * State
    */
-  class state : public std::enable_shared_from_this<state> {
+  class state : public std::enable_shared_from_this<state>
+  {
   public:
     /**
      * Acceptor ready
@@ -70,6 +71,16 @@ namespace throttr
     std::mutex mutex_;
 
     /**
+     * Success response
+     */
+    constexpr static uint8_t success_response_ = 0x01;
+
+    /**
+     * Failed response
+     */
+    constexpr static uint8_t failed_response_ = 0x00;
+
+    /**
      * Constructor
      *
      * @param ioc
@@ -100,10 +111,10 @@ namespace throttr
       const auto _now = std::chrono::steady_clock::now();
       const auto _expires_at = get_expiration_point(_now, ttl_type, ttl);
 
-      auto &_index = storage_.get<tag_by_key_and_valid>();
-      const auto _key = std::vector<
-        std::byte>(reinterpret_cast<const std::byte *>(key.data()), reinterpret_cast<const std::byte *>(key.data() + key.size()));
-      const auto _entry_ptr = entry_wrapper{ _key, request_entry{type, value, ttl_type, _expires_at} };
+      auto &_index = storage_.get<tag_by_key>();
+      const auto _key = std::vector<std::byte>(
+        reinterpret_cast<const std::byte *>(key.data()), reinterpret_cast<const std::byte *>(key.data() + key.size())); // NOSONAR
+      const auto _entry_ptr = entry_wrapper{_key, request_entry{type, value, ttl_type, _expires_at}};
 
       auto [_it, _inserted] = storage_.insert(_entry_ptr);
 
@@ -118,9 +129,7 @@ namespace throttr
           {
             if (_expires_at <= _item.entry_.expires_at_)
             {
-              boost::asio::post(strand_, [self = shared_from_this(), _expires_at] {
-                self->schedule_expiration(_expires_at);
-              });
+              boost::asio::post(strand_, [self = shared_from_this(), _expires_at] { self->schedule_expiration(_expires_at); });
             }
             break;
           }
@@ -143,7 +152,7 @@ namespace throttr
 #endif
       // LCOV_EXCL_STOP
 
-      return _inserted ? 0x01 : 0x00;
+      return _inserted ? success_response_ : failed_response_;
     }
 
     /**
@@ -179,7 +188,6 @@ namespace throttr
      * @param request
      * @param as_query
      * @param write_buffer
-     * @param write_offset
      * @param batch
      * @return uint8_t
      */
@@ -187,19 +195,19 @@ namespace throttr
       const request_query &request,
       const bool as_query,
       std::vector<boost::asio::const_buffer> &batch,
-      std::uint8_t *write_buffer,
-      std::size_t &write_offset)
+      std::vector<std::uint8_t> &write_buffer)
     {
       const request_key _key{request.key_};
-      const auto &_index = storage_.get<tag_by_key_and_valid>();
+      const auto &_index = storage_.get<tag_by_key>();
       const auto _it = _index.find(_key);
+
+      const auto _write_buffer_size = write_buffer.size();
 
       if (_it == _index.end() || _it->expired_) // LCOV_EXCL_LINE
       {
         static constexpr std::uint8_t status = 0x00;
-        std::memcpy(write_buffer + write_offset, &status, sizeof(status));
-        batch.push_back(boost::asio::buffer(&status, sizeof(status)));
-        write_offset += sizeof(status);
+        write_buffer.push_back(status);
+        batch.emplace_back(boost::asio::buffer(&write_buffer[_write_buffer_size], 1));
 
         // LCOV_EXCL_START
 #ifndef NDEBUG
@@ -216,37 +224,50 @@ namespace throttr
       const value_type _ttl = get_ttl(_it->entry_.expires_at_, _it->entry_.ttl_type_);
 
       // status_
-      static constexpr std::uint8_t status = 0x01;
-      std::memcpy(write_buffer + write_offset, &status, sizeof(status));
-      batch.push_back(boost::asio::buffer(&status, sizeof(status)));
-      write_offset += sizeof(status);
+      write_buffer.push_back(0x01);
+      batch.emplace_back(boost::asio::buffer(&write_buffer[_write_buffer_size], 1));
 
       if (as_query) // LCOV_EXCL_LINE
       {
-        batch.push_back(boost::asio::buffer(_it->entry_.value_.data(), _it->entry_.value_.size()));
+        // Value
+        batch.push_back(boost::asio::buffer(_it->entry_.value_.data(), sizeof(value_type)));
+        // TTL Type
         batch.push_back(boost::asio::buffer(&_it->entry_.ttl_type_, sizeof(_it->entry_.ttl_type_)));
-        std::memcpy(write_buffer + write_offset, &_ttl, sizeof(_ttl));
-        batch.push_back(boost::asio::buffer(write_buffer + write_offset, sizeof(_ttl)));
-        write_offset += sizeof(_ttl);
-      }
-      else
+        // TTL
+        {
+          const auto _offset = write_buffer.size();
+          const auto *_ttl_ptr = reinterpret_cast<const std::uint8_t *>(&_ttl); // NOSONAR
+          write_buffer.insert(write_buffer.end(), _ttl_ptr, _ttl_ptr + sizeof(_ttl));
+          batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_ttl)));
+        }
+      } else
       {
-        batch.push_back(boost::asio::buffer(&_it->entry_.ttl_type_, sizeof(_it->entry_.ttl_type_)));
-        std::memcpy(write_buffer + write_offset, &_ttl, sizeof(_ttl));
-        batch.push_back(boost::asio::buffer(write_buffer + write_offset, sizeof(_ttl)));
-        write_offset += sizeof(_ttl);
-        const auto _size = static_cast<value_type>(_it->entry_.value_.size());
-        std::memcpy(write_buffer + write_offset, &_size, sizeof(_size));
-        batch.push_back(boost::asio::buffer(write_buffer + write_offset, sizeof(_size)));
-        write_offset += sizeof(_size);
-        batch.push_back(boost::asio::buffer(_it->entry_.value_.data(), _it->entry_.value_.size()));
+        // TTL Type
+        batch.emplace_back(boost::asio::buffer(&_it->entry_.ttl_type_, sizeof(_it->entry_.ttl_type_)));
+        // TTL
+        {
+          const auto _offset = write_buffer.size();
+          const auto *_ttl_ptr = reinterpret_cast<const std::uint8_t *>(&_ttl); // NOSONAR
+          write_buffer.insert(write_buffer.end(), _ttl_ptr, _ttl_ptr + sizeof(_ttl));
+          batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_ttl)));
+        }
+        // Size
+        {
+          const auto _offset = write_buffer.size();
+          const auto _size = static_cast<value_type>(_it->entry_.value_.size());
+          const auto *_size_ptr = reinterpret_cast<const std::uint8_t *>(&_size); // NOSONAR
+          write_buffer.insert(write_buffer.end(), _size_ptr, _size_ptr + sizeof(_size));
+          batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_size)));
+        }
+        // Value
+        batch.emplace_back(boost::asio::buffer(_it->entry_.value_.data(), _it->entry_.value_.size()));
       }
 
       // LCOV_EXCL_START
 #ifndef NDEBUG
       if (as_query)
       {
-        auto *_quota = reinterpret_cast<const value_type *>(_it->entry_.value_.data());
+        auto *_quota = reinterpret_cast<const value_type *>(_it->entry_.value_.data()); // NOSONAR
         fmt::println(
           "{:%Y-%m-%d %H:%M:%S} REQUEST QUERY key={} RESPONSE ok=true quota={} "
           "ttl_type={} ttl={}",
@@ -282,12 +303,12 @@ namespace throttr
       const request_key _key{request.key_};
       const auto _now = std::chrono::steady_clock::now();
 
-      auto &_index = storage_.get<tag_by_key_and_valid>();
+      auto &_index = storage_.get<tag_by_key>();
       const auto _it = _index.find(_key);
 
       if (_it == _index.end() || _it->expired_) // LCOV_EXCL_LINE note: Partially covered.
       {
-        return 0x00;
+        return failed_response_;
       }
 
       using enum attribute_types;
@@ -326,7 +347,7 @@ namespace throttr
 #endif
       // LCOV_EXCL_STOP
 
-      return _modified ? 0x01 : 0x00;
+      return _modified ? success_response_ : failed_response_;
     }
 
     /**
@@ -340,7 +361,7 @@ namespace throttr
     {
       using enum change_types;
 
-      auto *_quota = reinterpret_cast<value_type *>(entry.value_.data());
+      auto *_quota = reinterpret_cast<value_type *>(entry.value_.data()); // NOSONAR
 
       switch (request.header_->change_)
       {
@@ -409,16 +430,13 @@ namespace throttr
           break;
       }
 
-      if (
-        scheduled_key_.size() == key.size() &&
-        std::equal(scheduled_key_.begin(), scheduled_key_.end(), key.begin())) // LCOV_EXCL_LINE
-          // Note:
-            // Partially
-              // tested
+      // LCOV_EXCL_START
+      if (scheduled_key_.size() == key.size() && std::equal(scheduled_key_.begin(), scheduled_key_.end(), key.begin()))
       {
         boost::asio::post(
           strand_, [_self = shared_from_this(), _expires_at = entry.expires_at_] { _self->schedule_expiration(_expires_at); });
       }
+      // LCOV_EXCL_STOP
 
       return true;
     }
@@ -433,7 +451,7 @@ namespace throttr
     {
       const request_key _key{request.key_};
 
-      auto &_index = storage_.get<tag_by_key_and_valid>();
+      auto &_index = storage_.get<tag_by_key>();
       const auto _it = _index.find(_key);
 
       bool _erased = true;
@@ -453,7 +471,113 @@ namespace throttr
       if (_erased) // LCOV_EXCL_LINE Note: Partially tested.
         _index.erase(_it);
 
-      return _erased ? 0x01 : 0x00;
+      return _erased ? success_response_ : failed_response_;
+    }
+
+    /**
+     * Handle list
+     *
+     * @param write_buffer
+     * @param batch
+     * @return uint8_t
+     */
+    void handle_list(std::vector<boost::asio::const_buffer> &batch, std::vector<std::uint8_t> &write_buffer)
+    {
+      std::size_t _fragments_count = 1;
+      std::size_t _fragment_size = 0;
+      constexpr std::size_t _max_fragment_size = 2048;
+
+      std::vector<const entry_wrapper *> _fragment_items;
+      std::vector<std::vector<const entry_wrapper *>> _fragments;
+
+      const auto &_index = storage_.get<tag_by_key>();
+
+      for (auto &_item : _index) // LCOV_EXCL_LINE Partially tested
+      {
+        const std::size_t _item_size = _item.key_.size() + _item.entry_.value_.size() + 11;
+
+        if (_fragment_size + _item_size > _max_fragment_size) // LCOV_EXCL_LINE Partially tested
+        {
+          _fragments.push_back(_fragment_items);
+          _fragment_size = 0;
+          _fragments_count++;
+          _fragment_items.clear();
+        }
+
+        _fragment_items.emplace_back(&_item);
+        _fragment_size += _item_size;
+      }
+
+      if (!_fragment_items.empty()) // LCOV_EXCL_LINE Partially tested
+      {
+        _fragments.push_back(std::move(_fragment_items));
+      }
+
+      {
+        const auto _offset = write_buffer.size();
+        const uint64_t _fragment_count = _fragments.size();
+        const auto *_count_ptr = reinterpret_cast<const std::uint8_t *>(&_fragment_count); // NOSONAR
+        write_buffer.insert(write_buffer.end(), _count_ptr, _count_ptr + sizeof(_fragment_count));
+        batch.emplace_back(
+          boost::asio::buffer(&write_buffer[_offset], sizeof(_fragment_count)));
+      }
+
+      std::size_t _i = 0;
+      for (const auto & _fragment : _fragments) // LCOV_EXCL_LINE Partially tested
+      {
+        const uint64_t _fragment_index = _i + 1;
+        const uint64_t _key_count = _fragment.size();
+
+        {
+          const auto _offset = write_buffer.size();
+          const auto *_fid_ptr = reinterpret_cast<const std::uint8_t *>(&_fragment_index); // NOSONAR
+          write_buffer.insert(write_buffer.end(), _fid_ptr, _fid_ptr + sizeof(_fragment_index));
+          batch.emplace_back(
+            boost::asio::buffer(&write_buffer[_offset], sizeof(_fragment_index)));
+        }
+
+        {
+          const auto _offset = write_buffer.size();
+          const auto *_kcount_ptr = reinterpret_cast<const std::uint8_t *>(&_key_count); // NOSONAR
+          write_buffer.insert(write_buffer.end(), _kcount_ptr, _kcount_ptr + sizeof(_key_count));
+          batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_key_count)));
+        }
+
+        for (const auto *_entry : _fragment) // LCOV_EXCL_LINE Partially tested
+        {
+          {
+            const auto _offset = write_buffer.size();
+            write_buffer.push_back(static_cast<std::uint8_t>(_entry->key_.size()));
+            batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], 1));
+          }
+
+          batch.emplace_back(boost::asio::buffer(&_entry->entry_.type_, sizeof(_entry->entry_.type_)));
+          batch.emplace_back(boost::asio::buffer(&_entry->entry_.ttl_type_, sizeof(_entry->entry_.ttl_type_)));
+
+          {
+            const auto _offset = write_buffer.size();
+            const uint64_t _expired_at =
+              std::chrono::duration_cast<std::chrono::nanoseconds>(_entry->entry_.expires_at_.time_since_epoch()).count();
+            const auto *_exp_ptr = reinterpret_cast<const std::uint8_t *>(&_expired_at); // NOSONAR
+            write_buffer.insert(write_buffer.end(), _exp_ptr, _exp_ptr + sizeof(uint64_t));
+            batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(uint64_t)));
+          }
+
+          {
+            const auto _offset = write_buffer.size();
+            value_type _bytes_used = static_cast<value_type>(_entry->entry_.value_.size());
+            const auto *_used_ptr = reinterpret_cast<const std::uint8_t *>(&_bytes_used); // NOSONAR
+            write_buffer.insert(write_buffer.end(), _used_ptr, _used_ptr + sizeof(value_type));
+            batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(value_type)));
+          }
+        }
+
+        for (const auto &_item : _fragment) // LCOV_EXCL_LINE Partially tested
+        {
+          batch.emplace_back(boost::asio::const_buffer(_item->key_.data(), _item->key_.size()));
+        }
+        _i++;
+      }
     }
 
     /**
@@ -469,23 +593,27 @@ namespace throttr
     {
       std::scoped_lock guard(mutex_);
       const auto _now = std::chrono::steady_clock::now();
-      auto &_index = storage_.get<tag_by_key_and_valid>();
+      auto &_index = storage_.get<tag_by_key>();
 
       std::vector<request_key> _to_expire;
       std::vector<request_key> _to_erase;
       std::chrono::steady_clock::time_point _next_expiration = std::chrono::steady_clock::time_point::max();
       for (const auto &_item : _index)
       {
-        if (_item.expired_) {
+        if (_item.expired_)
+        {
           if (_now - _item.entry_.expires_at_ > std::chrono::seconds(10))
           {
             _to_erase.emplace_back(_item.key());
           }
           continue;
         }
-        if (_item.entry_.expires_at_ <= _now) {
+        if (_item.entry_.expires_at_ <= _now)
+        {
           _to_expire.emplace_back(_item.key());
-        } else {
+        }
+        else
+        {
           _next_expiration = std::min(_next_expiration, _item.entry_.expires_at_);
         }
       }
@@ -503,32 +631,30 @@ namespace throttr
                 "{:%Y-%m-%d %H:%M:%S} SCHEDULER KEY EXPIRED key={}",
                 std::chrono::system_clock::now(),
                 std::string_view(
-                  reinterpret_cast<const char *>(entry.key_.data()),
-                  entry.key_.size())); // NOSONAR
+                  reinterpret_cast<const char *>(entry.key_.data()), // NOSONAR
+                  entry.key_.size()));                               // NOSONAR
 #endif
               entry.expired_ = true;
             });
         }
       }
 
-      auto &_erase_index = storage_.get<tag_by_key_and_valid>();
+      auto &_erase_index = storage_.get<tag_by_key>();
       for (const auto &_key : _to_erase)
       {
-        if (auto _it = _erase_index.find(_key); _it != _erase_index.end()  && _it->expired_)
+        if (auto _it = _erase_index.find(_key); _it != _erase_index.end() && _it->expired_)
         {
 #ifndef NDEBUG
           fmt::println(
             "{:%Y-%m-%d %H:%M:%S} SCHEDULER KEY ERASED key={}",
             std::chrono::system_clock::now(),
-            std::string_view(
-              reinterpret_cast<const char *>(_it->key_.data()),
-              _it->key_.size()));
+            std::string_view(reinterpret_cast<const char *>(_it->key_.data()), _it->key_.size())); // NOSONAR
 #endif
           _erase_index.erase(_it);
         }
       }
 
-      for (auto &_candidate_index = storage_.get<tag_by_key_and_valid>(); const auto &_item : _candidate_index)
+      for (auto &_candidate_index = storage_.get<tag_by_key>(); const auto &_item : _candidate_index)
       {
         const auto &_expires_at = _item.entry_.expires_at_;
         std::chrono::steady_clock::time_point _candidate;
@@ -564,7 +690,8 @@ namespace throttr
       const auto _delay = proposed - _now;
       expiration_timer_.expires_after(_delay);
       expiration_timer_.async_wait(
-        [_self = shared_from_this()](const boost::system::error_code& ec) {
+        [_self = shared_from_this()](const boost::system::error_code &ec)
+        {
           if (!ec)
             _self->expiration_timer();
         });
