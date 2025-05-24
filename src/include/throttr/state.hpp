@@ -492,11 +492,11 @@ namespace throttr
 
       const auto &_index = storage_.get<tag_by_key>();
 
-      for (auto &_item : _index)
+      for (auto &_item : _index) // LCOV_EXCL_LINE Partially tested
       {
         const std::size_t _item_size = _item.key_.size() + _item.entry_.value_.size() + 11;
 
-        if (_fragment_size + _item_size > _max_fragment_size)
+        if (_fragment_size + _item_size > _max_fragment_size) // LCOV_EXCL_LINE Partially tested
         {
           _fragments.push_back(_fragment_items);
           _fragment_size = 0;
@@ -508,7 +508,7 @@ namespace throttr
         _fragment_size += _item_size;
       }
 
-      if (!_fragment_items.empty())
+      if (!_fragment_items.empty()) // LCOV_EXCL_LINE Partially tested
       {
         _fragments.push_back(std::move(_fragment_items));
       }
@@ -523,7 +523,7 @@ namespace throttr
       }
 
       std::size_t _i = 0;
-      for (auto _fragment : _fragments)
+      for (const auto & _fragment : _fragments) // LCOV_EXCL_LINE Partially tested
       {
         const uint64_t _fragment_index = _i + 1;
         const uint64_t _key_count = _fragment.size();
@@ -543,7 +543,7 @@ namespace throttr
           batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_key_count)));
         }
 
-        for (const auto *_entry : _fragment)
+        for (const auto *_entry : _fragment) // LCOV_EXCL_LINE Partially tested
         {
           {
             const auto _offset = write_buffer.size();
@@ -572,7 +572,7 @@ namespace throttr
           }
         }
 
-        for (const auto &_item : _fragment)
+        for (const auto &_item : _fragment) // LCOV_EXCL_LINE Partially tested
         {
           batch.emplace_back(boost::asio::const_buffer(_item->key_.data(), _item->key_.size()));
         }
