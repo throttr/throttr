@@ -32,8 +32,6 @@
 #include <throttr/utils.hpp>
 #include <vector>
 
-#include <throttr/fragments/list.hpp>
-
 namespace throttr
 {
   /**
@@ -420,16 +418,14 @@ namespace throttr
           break;
       }
 
+      // LCOV_EXCL_START
       if (
         scheduled_key_.size() == key.size() &&
-        std::equal(scheduled_key_.begin(), scheduled_key_.end(), key.begin())) // LCOV_EXCL_LINE
-                                                                               // Note:
-                                                                               // Partially
-                                                                               // tested
+        std::equal(scheduled_key_.begin(), scheduled_key_.end(), key.begin()))
       {
-        boost::asio::post(
-          strand_, [_self = shared_from_this(), _expires_at = entry.expires_at_] { _self->schedule_expiration(_expires_at); });
+        boost::asio::post(strand_, [_self = shared_from_this(), _expires_at = entry.expires_at_] { _self->schedule_expiration(_expires_at); });
       }
+      // LCOV_EXCL_STOP
 
       return true;
     }
@@ -477,26 +473,28 @@ namespace throttr
      */
     void handle_list(std::vector<boost::asio::const_buffer> &batch, std::uint8_t *write_buffer, std::size_t &write_offset)
     {
+      std::size_t _fragments_count = 1;
       std::size_t _fragment_size = 0;
       constexpr std::size_t _max_fragment_size = 2048;
 
-      std::vector<fragment_list_item> _fragment_items;
-      std::vector<std::vector<fragment_list_item>> _fragments;
+      std::vector<const entry_wrapper*> _fragment_items;
+      std::vector<std::vector<const entry_wrapper*>> _fragments;
 
       const auto &_index = storage_.get<tag_by_key>();
 
-      for (const auto &_item : _index)
+      for (auto &_item : _index)
       {
         const std::size_t _item_size = _item.key_.size() + _item.entry_.value_.size() + 11;
 
         if (_fragment_size + _item_size > _max_fragment_size)
         {
-          _fragments.push_back(std::move(_fragment_items));
-          _fragment_items.clear();
+          _fragments.push_back(_fragment_items);
           _fragment_size = 0;
+          _fragments_count++;
+          _fragment_items.clear();
         }
 
-        _fragment_items.emplace_back(fragment_list_item{_item});
+        _fragment_items.emplace_back(&_item);
         _fragment_size += _item_size;
       }
 
@@ -510,46 +508,49 @@ namespace throttr
       batch.emplace_back(write_buffer + write_offset, sizeof(fragment_count));
       write_offset += sizeof(fragment_count);
 
-      for (std::size_t i = 0; i < _fragments.size(); ++i)
-      {
-        const auto &items = _fragments[i];
+      std::size_t i = 0;
+      for (auto fragment : _fragments) {
+        std::cout << "Fragment size: " << fragment.size() << std::endl;
         const uint64_t fragment_id = i + 1;
-        const uint64_t key_count = items.size();
+        const uint64_t key_count = fragment.size();
 
         std::memcpy(write_buffer + write_offset, &fragment_id, sizeof(fragment_id));
         batch.emplace_back(write_buffer + write_offset, sizeof(fragment_id));
-        write_offset += sizeof(fragment_id);
+        write_offset += sizeof(uint64_t);
 
         std::memcpy(write_buffer + write_offset, &key_count, sizeof(key_count));
         batch.emplace_back(write_buffer + write_offset, sizeof(key_count));
-        write_offset += sizeof(key_count);
+        write_offset += sizeof(uint64_t);
 
-        for (const auto &item : items)
+        for (const auto *entry : fragment)
         {
-          write_buffer[write_offset] = item.key_size();
+          write_buffer[write_offset] = static_cast<std::uint8_t>(entry->key_.size());
           batch.emplace_back(write_buffer + write_offset, 1);
           write_offset += 1;
-          batch.emplace_back(&item.type(), sizeof(item.type()));
-          batch.emplace_back(&item.ttl_type(), sizeof(item.ttl_type()));
 
-          const auto exp = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::nanoseconds>(
-                   item.expires_at().time_since_epoch()).count());
-          std::memcpy(write_buffer + write_offset, &exp, sizeof(exp));
-          batch.emplace_back(write_buffer + write_offset, sizeof(exp));
-          write_offset += sizeof(exp);
+          batch.emplace_back(&entry->entry_.type_, sizeof(entry->entry_.type_));
+          batch.emplace_back(&entry->entry_.ttl_type_, sizeof(entry->entry_.ttl_type_));
 
-          const auto used = item.bytes_used();
+          const uint64_t exp = std::chrono::duration_cast<std::chrono::nanoseconds>(
+              entry->entry_.expires_at_.time_since_epoch()).count();
+          std::memcpy(write_buffer + write_offset, &exp, sizeof(uint64_t));
+          batch.emplace_back(write_buffer + write_offset, sizeof(uint64_t));
+          write_offset += sizeof(uint64_t);
+
+          value_type used = static_cast<value_type>(entry->entry_.value_.size());
           std::memcpy(write_buffer + write_offset, &used, sizeof(value_type));
           batch.emplace_back(write_buffer + write_offset, sizeof(value_type));
           write_offset += sizeof(value_type);
         }
 
-        for (const auto &item : items)
+        for (const auto &_item : fragment)
         {
-          batch.emplace_back(item.key().data(), item.key().size());
+          batch.emplace_back(boost::asio::const_buffer(_item->key_.data(), _item->key_.size()));
         }
+        i++;
       }
     }
+
 
     /**
      * Expired entries

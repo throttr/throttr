@@ -116,7 +116,7 @@ namespace throttr
     /**
      * Max length
      */
-    static constexpr std::size_t max_length_ = 7680;
+    static constexpr std::size_t max_length_ = 8096;
 
     /**
      * Buffer
@@ -265,12 +265,21 @@ namespace throttr
 
       // LCOV_EXCL_START
 #ifndef NDEBUG
-      fmt::println(
-        "{:%Y-%m-%d %H:%M:%S} SESSION WRITE ip={} port={} buffer={}",
-        std::chrono::system_clock::now(),
-        ip_,
-        port_,
-        buffers_to_hex(batch));
+      auto _printable_buffer = buffers_to_hex(batch);
+      if (_printable_buffer.size() <= 64) {
+        fmt::println(
+          "{:%Y-%m-%d %H:%M:%S} SESSION WRITE ip={} port={} buffer={}",
+          std::chrono::system_clock::now(),
+          ip_,
+          port_,
+          _printable_buffer);
+      } else {
+        fmt::println(
+           "{:%Y-%m-%d %H:%M:%S} SESSION WRITE ip={} port={} buffer=too many bytes",
+           std::chrono::system_clock::now(),
+           ip_,
+           port_);
+      }
 #endif
       // LCOV_EXCL_STOP
 
@@ -279,9 +288,8 @@ namespace throttr
         batch,
         boost::asio::bind_allocator(
           handler_allocator<int>(handler_memory_),
-          [_self, scoped_batch = batch](const boost::system::error_code &ec, const std::size_t length)
+          [_self](const boost::system::error_code &ec, const std::size_t length)
           {
-            boost::ignore_unused(scoped_batch);
             _self->on_write(ec, length);
           }));
     }

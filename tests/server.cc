@@ -13,6 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+#include <numeric>
 #include <gtest/gtest.h>
 
 #include <boost/asio.hpp>
@@ -515,6 +516,111 @@ TEST_F(ServerTestFixture, HandlesListReturnsCorrectStructure)
   _offset += _key2.size();
 
   ASSERT_EQ(_offset, _response.size());
+}
+
+TEST_F(ServerTestFixture, HandlesListWithMultipleFragments)
+{
+  std::vector<std::string> keys;
+  std::vector<std::vector<std::byte>> values;
+
+  for (int i = 0; i < 100; ++i)
+  {
+    std::string key = "key_" + std::to_string(i);
+    key += std::string(10 - key.size(), 'X');
+    keys.push_back(key);
+
+    std::vector<std::byte> value = {std::byte{0xAB}, std::byte{0xCD}};
+    values.push_back(value);
+
+    const auto buffer = request_set_builder(value, ttl_types::seconds, 60, key);
+    const auto response = send_and_receive(buffer);
+    ASSERT_EQ(static_cast<uint8_t>(response[0]), 1);
+  }
+
+  const auto list_buffer = request_list_builder();
+
+  boost::asio::io_context io_context;
+  tcp::resolver resolver(io_context);
+  const auto endpoints = resolver.resolve("127.0.0.1", std::to_string(1337));
+  tcp::socket socket(io_context);
+  std::cout << "Connecting..." << std::endl;
+  boost::asio::connect(socket, endpoints);
+  std::cout << "Connected..." << std::endl;
+
+  std::cout << "Writing request..." << std::endl;
+  boost::asio::write(socket, boost::asio::buffer(list_buffer.data(), list_buffer.size()));
+  std::cout << "Request wrote..." << std::endl;
+
+  // Leer cantidad de fragmentos
+  uint64_t fragment_count = 0;
+  std::cout << "Reading fragments..." << std::endl;
+  boost::asio::read(socket, boost::asio::buffer(&fragment_count, 8));
+  std::cout << "Fragments read..." << fragment_count << std::endl;
+  ASSERT_GE(fragment_count, 2);
+
+  std::vector<std::byte> full_response;
+  full_response.insert(full_response.end(), reinterpret_cast<std::byte*>(&fragment_count), reinterpret_cast<std::byte*>(&fragment_count) + sizeof(fragment_count));
+
+  uint64_t total_keys = 0;
+  std::vector<size_t> all_key_sizes;
+  std::vector<std::string> read_keys;
+
+  for (uint64_t i = 0; i < fragment_count; ++i)
+  {
+    uint64_t fragment_id = 0;
+    uint64_t key_count = 0;
+
+    std::cout << "Reading fragment ID" << std::endl;
+    boost::asio::read(socket, boost::asio::buffer(&fragment_id, sizeof(fragment_id)));
+    std::cout << "Read fragment ID:" << fragment_id << std::endl;
+    std::cout << "Reading Key Count" << std::endl;
+    boost::asio::read(socket, boost::asio::buffer(&key_count, sizeof(key_count)));
+    std::cout << "Reading Keys:" << key_count << std::endl;
+
+    full_response.insert(full_response.end(), reinterpret_cast<std::byte*>(&fragment_id), reinterpret_cast<std::byte*>(&fragment_id) + sizeof(fragment_id));
+    full_response.insert(full_response.end(), reinterpret_cast<std::byte*>(&key_count), reinterpret_cast<std::byte*>(&key_count) + sizeof(key_count));
+
+    total_keys += key_count;
+    std::vector<size_t> fragment_key_sizes;
+
+    for (uint64_t k = 0; k < key_count; ++k)
+    {
+      std::array<std::byte, 11 + sizeof(value_type)> meta{};
+      std::cout << "Reading Keys Values" << std::endl;
+      boost::asio::read(socket, boost::asio::buffer(meta));
+      full_response.insert(full_response.end(), meta.begin(), meta.end());
+
+      const size_t key_size = static_cast<size_t>(meta[0]);
+      fragment_key_sizes.push_back(key_size);
+      all_key_sizes.push_back(static_cast<size_t>(meta[0]));
+    }
+
+    for (size_t k = 0; k < fragment_key_sizes.size(); ++k)
+    {
+      std::vector<std::byte> key(fragment_key_sizes[k]);
+      boost::asio::read(socket, boost::asio::buffer(key));
+      full_response.insert(full_response.end(), key.begin(), key.end());
+
+      std::cout << "Raw key bytes: ";
+      for (auto b : key)
+        std::printf("%02X ", std::to_integer<uint8_t>(b));
+      std::cout << std::endl;
+
+      std::string string_key(reinterpret_cast<const char *>(key.data()), key.size());
+      std::cout << "KEY is " << string_key << std::endl;
+      read_keys.push_back(string_key);
+    }
+  }
+
+  std::sort(keys.begin(), keys.end());
+  std::sort(read_keys.begin(), read_keys.end());
+
+  ASSERT_EQ(read_keys.size(), keys.size());
+
+  for (size_t i = 0; i < keys.size(); ++i)
+  {
+    ASSERT_EQ(read_keys[i], keys[i]);
+  }
 }
 
 TEST_F(ServerTestFixture, PurgeNonExistentEntryReturnsError)
