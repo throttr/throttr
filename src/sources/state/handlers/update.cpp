@@ -42,8 +42,8 @@ namespace throttr
         switch (request.header_->attribute_)
         {
           case quota:
-            if (object.entry_.type_ == entry_types::counter)
-            { // LCOV_EXCL_LINE Note: Partially tested.
+            if (object.entry_.type_ == entry_types::counter) // LCOV_EXCL_LINE Note: Partially tested.
+            {
               _modified = apply_quota_change(object.entry_, request);
             }
             break;

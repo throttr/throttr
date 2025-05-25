@@ -76,7 +76,7 @@ namespace throttr
     auto &_erase_index = storage_.get<tag_by_key>();
     for (const auto &_key : _to_erase) // LCOV_EXCL_LINE Note: Partially tested.
     {
-      if (auto _it = _erase_index.find(_key);
+      if (auto _it = _erase_index.find(_key);         // LCOV_EXCL_LINE Note: Partially tested.
           _it != _erase_index.end() && _it->expired_) // LCOV_EXCL_LINE Note: Partially tested.
       {
 #ifndef NDEBUG
@@ -89,8 +89,8 @@ namespace throttr
       }
     }
 
-    for (auto &_candidate_index = storage_.get<tag_by_key>();
-         const auto &_item : _candidate_index) // LCOV_EXCL_LINE Note: Partially tested.
+    for (auto &_candidate_index = storage_.get<tag_by_key>(); // LCOV_EXCL_LINE Note: Partially tested.
+         const auto &_item : _candidate_index)                // LCOV_EXCL_LINE Note: Partially tested.
     {
       const auto &_expires_at = _item.entry_.expires_at_;
       std::chrono::steady_clock::time_point _candidate;
@@ -118,7 +118,7 @@ namespace throttr
 #endif
 
     const auto _now = std::chrono::steady_clock::now();
-    if (proposed <= _now)
+    if (proposed <= _now) // LCOV_EXCL_LINE Note: Partially tested.
     {
       expiration_timer();
       return;

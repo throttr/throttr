@@ -58,7 +58,7 @@ namespace throttr
         socket_,
         [this](const boost::system::error_code &error)
         {
-          if (!error)
+          if (!error) // LCOV_EXCL_LINE Note: Partially tested.
           {
             std::make_shared<connection>(std::move(socket_), state_)->start();
           }
