@@ -244,6 +244,11 @@ namespace throttr
             state_->handle_list(_batch, write_buffer_);
             break;
           }
+          case request_types::stat:
+          {
+            state_->handle_list(_batch, write_buffer_);
+            break;
+          }
             // LCOV_EXCL_START
           default:
           {
@@ -311,8 +316,6 @@ namespace throttr
     get_message_sized(const std::span<const std::byte> buffer, const std::size_t header_size, const std::size_t extra = 0)
     {
       // LCOV_EXCL_START
-      if (buffer.size() < header_size)
-        return 0;
       if (buffer.size() < header_size + extra)
         return 0;
       // LCOV_EXCL_STOP
@@ -367,6 +370,11 @@ namespace throttr
         case request_types::list:
         {
           return get_message_sized(buffer, request_list_header_size, 0);
+        }
+        case request_types::stat:
+        {
+          auto *_h = reinterpret_cast<const request_stat_header *>(_buffer); // NOSONAR
+          return get_message_sized(buffer, request_stat_header_size, _h->key_size_);
         }
           // LCOV_EXCL_START
         default:

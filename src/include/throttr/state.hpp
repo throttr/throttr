@@ -614,6 +614,10 @@ namespace throttr
     void expiration_timer()
     {
       std::scoped_lock guard(mutex_);
+#ifndef NDEBUG
+      fmt::println("{:%Y-%m-%d %H:%M:%S} GARBAGE COLLECTION STARTED", std::chrono::system_clock::now());
+#endif
+
       const auto _now = std::chrono::steady_clock::now();
       auto &_index = storage_.get<tag_by_key>();
 
@@ -650,7 +654,7 @@ namespace throttr
             {
 #ifndef NDEBUG
               fmt::println(
-                "{:%Y-%m-%d %H:%M:%S} SCHEDULER KEY EXPIRED key={}",
+                "{:%Y-%m-%d %H:%M:%S} GARBAGE COLLECTOR MARKED KEY AS EXPIRED key={}",
                 std::chrono::system_clock::now(),
                 std::string_view(
                   reinterpret_cast<const char *>(entry.key_.data()), // NOSONAR
@@ -668,7 +672,7 @@ namespace throttr
         {
 #ifndef NDEBUG
           fmt::println(
-            "{:%Y-%m-%d %H:%M:%S} SCHEDULER KEY ERASED key={}",
+            "{:%Y-%m-%d %H:%M:%S} GARBAGE COLLECTOR ERASED EXPIRED KEY key={}",
             std::chrono::system_clock::now(),
             std::string_view(reinterpret_cast<const char *>(_it->key_.data()), _it->key_.size())); // NOSONAR
 #endif
@@ -689,6 +693,10 @@ namespace throttr
         _next_expiration = std::min(_next_expiration, _candidate);
       }
 
+#ifndef NDEBUG
+      fmt::println("{:%Y-%m-%d %H:%M:%S} GARBAGE COLLECTION COMPLETED", std::chrono::system_clock::now());
+#endif
+
       if (_next_expiration != std::chrono::steady_clock::time_point::max())
         schedule_expiration(_next_expiration);
     }
@@ -699,7 +707,7 @@ namespace throttr
     void schedule_expiration(const std::chrono::steady_clock::time_point proposed)
     {
 #ifndef NDEBUG
-      fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULER GARBAGE COLLECTION STARTED", std::chrono::system_clock::now());
+      fmt::println("{:%Y-%m-%d %H:%M:%S} GARBAGE COLLECTION SCHEDULED", std::chrono::system_clock::now());
 #endif
 
       const auto _now = std::chrono::steady_clock::now();
@@ -722,6 +730,9 @@ namespace throttr
 #ifdef ENABLED_FEATURE_METRICS
     void process_metrics()
     {
+#ifndef NDEBUG
+      fmt::println("{:%Y-%m-%d %H:%M:%S} METRICS SNAPSHOT STARTED", std::chrono::system_clock::now());
+#endif
       for (auto &_index = storage_.get<tag_by_key>(); auto &_entry : _index)
       {
         if (_entry.expired_) continue;
