@@ -58,6 +58,14 @@ include_directories(src/include)
 
 file(GLOB_RECURSE SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
+add_library(throttr_core ${SOURCES})
+
+target_link_libraries(throttr_core
+        ${Boost_LIBRARIES}
+        throttr::protocol
+        fmt::fmt
+)
+
 include(FetchContent)
 
 FetchContent_Declare(
@@ -88,29 +96,17 @@ if (BUILD_TESTS)
     enable_testing()
     file(GLOB_RECURSE TESTS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cc")
 
-    add_executable(tests
-            ${SOURCES}
-            ${TESTS}
-    )
+    add_executable(tests ${TESTS})
 
-    target_link_libraries(tests
-            GTest::gtest_main
-            ${Boost_LIBRARIES}
-            throttr::protocol
-            fmt::fmt
-    )
+    target_link_libraries(tests GTest::gtest_main throttr_core)
     target_compile_definitions(tests PRIVATE THROTTR_VALUE_SIZE_${RUNTIME_VALUE_SIZE})
 
     include(GoogleTest)
     gtest_discover_tests(tests)
 endif ()
 
-add_executable(throttr main.cpp ${SOURCES})
-target_link_libraries(throttr
-        ${Boost_LIBRARIES}
-        throttr::protocol
-        fmt::fmt
-)
+add_executable(throttr main.cpp)
+target_link_libraries(throttr throttr_core)
 target_compile_options(throttr PRIVATE -static -static-libgcc -static-libstdc++)
 target_link_options(throttr PRIVATE -static -static-libgcc -static-libstdc++)
 target_compile_definitions(throttr PUBLIC THROTTR_VALUE_SIZE_${RUNTIME_VALUE_SIZE})
