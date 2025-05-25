@@ -52,6 +52,11 @@ namespace throttr
     storage_type storage_;
 
     /**
+     * Storage iterator
+     */
+    using storage_iterator = decltype(storage_.get<tag_by_key>().begin());
+
+    /**
      * Expiration timer
      */
     boost::asio::steady_timer expiration_timer_;
@@ -196,6 +201,38 @@ namespace throttr
     }
 
     /**
+     * Find or fail base
+     *
+     * @param key
+     * @return
+     */
+    std::optional<storage_iterator> find_or_fail(const request_key & key) {
+      const auto &_index = storage_.get<tag_by_key>();
+      auto _it = _index.find(key);
+      if (_it == _index.end() || _it->expired_) // LCOV_EXCL_LINE
+      {
+        return std::nullopt;
+      }
+      return _it;
+    }
+
+    /**
+     * Find or fail
+     *
+     * @param key
+     * @param batch
+     * @return
+     */
+    std::optional<storage_iterator> find_or_fail_for_batch(const request_key & key, std::vector<boost::asio::const_buffer> &batch) {
+      const auto _it = find_or_fail(key);
+      if (!_it.has_value()) // LCOV_EXCL_LINE
+      {
+        batch.emplace_back(boost::asio::buffer(&failed_response_, 1));
+      }
+      return _it;
+    }
+
+    /**
      * Handle query
      *
      * @param request
@@ -211,13 +248,8 @@ namespace throttr
       std::vector<std::uint8_t> &write_buffer)
     {
       const request_key _key{request.key_};
-      const auto &_index = storage_.get<tag_by_key>();
-      auto _it = _index.find(_key);
-
-      if (_it == _index.end() || _it->expired_) // LCOV_EXCL_LINE
-      {
-        batch.emplace_back(boost::asio::buffer(&failed_response_, 1));
-
+      const auto _find = find_or_fail_for_batch(_key, batch);
+      if (!_find.has_value()) {
         // LCOV_EXCL_START
 #ifndef NDEBUG
         fmt::println(
@@ -229,11 +261,11 @@ namespace throttr
         // LCOV_EXCL_STOP
         return;
       }
-
+      const auto _it = _find.value();
       const value_type _ttl = get_ttl(_it->entry_.expires_at_, _it->entry_.ttl_type_);
 
 #ifdef ENABLED_FEATURE_METRICS
-      storage_.modify(_it, [&](const entry_wrapper &object) { object.metrics_->stats_reads_.fetch_add(1, std::memory_order_relaxed); });
+      storage_.modify(_it, [](const entry_wrapper &object) { object.metrics_->stats_reads_.fetch_add(1, std::memory_order_relaxed); });
 #endif
 
       // status_
@@ -315,11 +347,9 @@ namespace throttr
     {
       const request_key _key{request.key_};
       const auto _now = std::chrono::steady_clock::now();
+      const auto _it = find_or_fail(_key);
 
-      auto &_index = storage_.get<tag_by_key>();
-      const auto _it = _index.find(_key);
-
-      if (_it == _index.end() || _it->expired_) // LCOV_EXCL_LINE note: Partially covered.
+      if (!_it.has_value()) // LCOV_EXCL_LINE note: Partially covered.
       {
         return failed_response_;
       }
@@ -329,7 +359,7 @@ namespace throttr
       bool _modified = false;
 
       storage_.modify(
-        _it,
+        _it.value(),
         [&](entry_wrapper &object)
         {
           switch (request.header_->attribute_)
@@ -610,14 +640,15 @@ namespace throttr
       std::vector<boost::asio::const_buffer> &batch,
       std::vector<std::uint8_t> &write_buffer)
     {
+#ifndef ENABLED_FEATURE_METRICS
+      batch.emplace_back(boost::asio::buffer(&failed_response_, 1));
+      return;
+#endif
+
       const request_key _key{request.key_};
-      const auto &_index = storage_.get<tag_by_key>();
-      auto _it = _index.find(_key);
-
-      if (_it == _index.end() || _it->expired_) // LCOV_EXCL_LINE
+      const auto _find = find_or_fail_for_batch(_key, batch);
+      if (!_find.has_value()) // LCOV_EXCL_LINE
       {
-        batch.emplace_back(boost::asio::buffer(&failed_response_, 1));
-
         // LCOV_EXCL_START
 #ifndef NDEBUG
         fmt::println(
@@ -628,11 +659,7 @@ namespace throttr
         // LCOV_EXCL_STOP
         return;
       }
-
-#ifndef ENABLED_FEATURE_METRICS
-      batch.emplace_back(boost::asio::buffer(&failed_response_, 1));
-      return;
-#endif
+      const auto _it = _find.value();
 
       _it->metrics_->stats_reads_.fetch_add(1, std::memory_order_relaxed);
 
