@@ -360,7 +360,7 @@ namespace throttr
     static bool apply_quota_change(request_entry &entry, const request_update &request)
     {
       using enum change_types;
-      auto& _atomic = *reinterpret_cast<std::atomic<value_type>*>(entry.value_.data());
+      auto& _atomic = *reinterpret_cast<std::atomic<value_type>*>(entry.value_.data()); // NOSONAR
 
       switch (request.header_->change_)
       {
