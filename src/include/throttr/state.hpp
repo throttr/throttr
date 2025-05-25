@@ -600,8 +600,8 @@ namespace throttr
         batch,
         write_buffer,
         2048,
-        [_write_buffer_ref = std::ref(
-           write_buffer)](std::vector<boost::asio::const_buffer> *b, const entry_wrapper *e, const bool measure) -> std::size_t
+        [_write_buffer_ref =
+           std::ref(write_buffer)](std::vector<boost::asio::const_buffer> *b, const entry_wrapper *e, const bool measure)
         { return write_list_entry_to_buffer(b, e, _write_buffer_ref, measure); });
     }
 
@@ -718,7 +718,7 @@ namespace throttr
         batch,
         write_buffer,
         2048,
-        [&write_buffer](std::vector<boost::asio::const_buffer> *b, const entry_wrapper *e, const bool measure) -> std::size_t
+        [&write_buffer](std::vector<boost::asio::const_buffer> *b, const entry_wrapper *e, const bool measure)
         { return write_stats_entry_to_buffer(b, e, write_buffer, measure); });
     }
 
@@ -750,7 +750,7 @@ namespace throttr
         // LCOV_EXCL_START
         if (_item.expired_)
           continue;
-        // LCOV_EXCL_STOP
+          // LCOV_EXCL_STOP
 
 #ifdef ENABLED_FEATURE_METRICS
         _item.metrics_->stats_reads_.fetch_add(1, std::memory_order_relaxed);
