@@ -544,6 +544,49 @@ namespace throttr
     }
 
     /**
+     * Write LIST entry to buffer
+     * @param batch
+     * @param entry
+     * @param write_buffer
+     * @param measure
+     * @return
+     */
+    std::size_t write_list_entry_to_buffer(
+  std::vector<boost::asio::const_buffer> *batch,
+  const entry_wrapper *entry,
+  std::vector<std::uint8_t> &write_buffer,
+  const bool measure) const
+    {
+      if (measure)
+        return entry->key_.size() + entry->entry_.value_.size() + 11;
+
+      const auto _offset = write_buffer.size();
+      write_buffer.push_back(static_cast<std::uint8_t>(entry->key_.size()));
+      batch->emplace_back(boost::asio::buffer(&write_buffer[_offset], 1));
+      batch->emplace_back(boost::asio::buffer(&entry->entry_.type_, sizeof(entry->entry_.type_)));
+      batch->emplace_back(boost::asio::buffer(&entry->entry_.ttl_type_, sizeof(entry->entry_.ttl_type_)));
+
+      {
+        const auto _expires_at =
+          std::chrono::duration_cast<std::chrono::nanoseconds>(entry->entry_.expires_at_.time_since_epoch()).count();
+        const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&_expires_at); // NOSONAR
+        const auto _off = write_buffer.size();
+        write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(_expires_at));
+        batch->emplace_back(boost::asio::buffer(&write_buffer[_off], sizeof(_expires_at)));
+      }
+
+      {
+        const auto _bytes_used = static_cast<value_type>(entry->entry_.value_.size());
+        const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&_bytes_used); // NOSONAR
+        const auto _off = write_buffer.size();
+        write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(_bytes_used));
+        batch->emplace_back(boost::asio::buffer(&write_buffer[_off], sizeof(_bytes_used)));
+      }
+
+      return 0;
+    }
+
+    /**
      * Handle LIST
      *
      * @param write_buffer
@@ -552,40 +595,14 @@ namespace throttr
      */
     void handle_list(std::vector<boost::asio::const_buffer> &batch, std::vector<std::uint8_t> &write_buffer)
     {
+      auto _self = shared_from_this();
       handle_fragmented_response(
         batch,
         write_buffer,
         2048,
-        [&](std::vector<boost::asio::const_buffer> *b, const entry_wrapper *e, const bool measure) -> std::size_t
+        [_self, _write_buffer_ref = std::ref(write_buffer)](std::vector<boost::asio::const_buffer> *b, const entry_wrapper *e, const bool measure) -> std::size_t
         {
-          if (measure)
-            return e->key_.size() + e->entry_.value_.size() + 11;
-
-          const auto _offset = write_buffer.size();
-          write_buffer.push_back(static_cast<std::uint8_t>(e->key_.size()));
-          b->emplace_back(boost::asio::buffer(&write_buffer[_offset], 1));
-
-          b->emplace_back(boost::asio::buffer(&e->entry_.type_, sizeof(e->entry_.type_)));
-          b->emplace_back(boost::asio::buffer(&e->entry_.ttl_type_, sizeof(e->entry_.ttl_type_)));
-
-          {
-            const auto _expires_at =
-              std::chrono::duration_cast<std::chrono::nanoseconds>(e->entry_.expires_at_.time_since_epoch()).count();
-            const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&_expires_at);
-            const auto _off = write_buffer.size();
-            write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(_expires_at));
-            b->emplace_back(boost::asio::buffer(&write_buffer[_off], sizeof(_expires_at)));
-          }
-
-          {
-            const value_type _bytes_used = static_cast<value_type>(e->entry_.value_.size());
-            const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&_bytes_used);
-            const auto _off = write_buffer.size();
-            write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(_bytes_used));
-            b->emplace_back(boost::asio::buffer(&write_buffer[_off], sizeof(_bytes_used)));
-          }
-
-          return 0;
+          return _self->write_list_entry_to_buffer(b, e, _write_buffer_ref, measure);
         });
     }
 
@@ -666,7 +683,7 @@ namespace throttr
         batch,
         write_buffer,
         2048,
-        [&](std::vector<boost::asio::const_buffer> *b, const entry_wrapper *e, const bool measure) -> std::size_t
+        [&write_buffer](std::vector<boost::asio::const_buffer> *b, const entry_wrapper *e, const bool measure) -> std::size_t
         {
           if (measure)
             return e->key_.size() + 1 + 8 * 4;
@@ -675,15 +692,13 @@ namespace throttr
           write_buffer.push_back(static_cast<std::uint8_t>(e->key_.size()));
           b->emplace_back(boost::asio::buffer(&write_buffer[_offset], 1));
 
-          auto &_metric = *e->metrics_;
-
-          for (uint64_t _v :
+          for (const auto &_metric = *e->metrics_; uint64_t _v :
                {_metric.stats_reads_per_minute_.load(std::memory_order_relaxed),
-                _metric.stats_writes_per_minute_.load(std::memory_order_relaxed),
-                _metric.stats_reads_accumulator_.load(std::memory_order_relaxed),
-                _metric.stats_writes_accumulator_.load(std::memory_order_relaxed)})
+                 _metric.stats_writes_per_minute_.load(std::memory_order_relaxed),
+                 _metric.stats_reads_accumulator_.load(std::memory_order_relaxed),
+                 _metric.stats_writes_accumulator_.load(std::memory_order_relaxed)})
           {
-            const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&_v);
+            const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&_v); // NOSONAR
             const auto _off = write_buffer.size();
             write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(_v));
             b->emplace_back(boost::asio::buffer(&write_buffer[_off], sizeof(_v)));
@@ -694,7 +709,7 @@ namespace throttr
     }
 
     /**
-     * Handle fagmented response
+     * Handle fragmented response
      *
      * @tparam EntrySerializer
      * @param batch
@@ -746,7 +761,7 @@ namespace throttr
       {
         const auto _offset = write_buffer.size();
         const uint64_t _fragment_count = _fragments.size();
-        const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&_fragment_count);
+        const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&_fragment_count); // NOSONAR
         write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(_fragment_count));
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_fragment_count)));
       }
@@ -760,7 +775,7 @@ namespace throttr
         for (uint64_t value : {_fragment_index, _key_count})
         {
           const auto _offset = write_buffer.size();
-          const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&value);
+          const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&value); // NOSONAR
           write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(value));
           batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(value)));
         }
