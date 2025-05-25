@@ -44,8 +44,9 @@ namespace throttr
         state_(state)
     {
       state->acceptor_ready_ = true;
+      state->start_metrics_timer();
       do_accept();
-    };
+    }
 
   private:
     /**

@@ -22,6 +22,7 @@
 
 #include <atomic>
 #include <boost/asio/strand.hpp>
+#include <boost/asio/bind_executor.hpp>
 #include <boost/core/ignore_unused.hpp>
 #include <cstring>
 #include <deque>
@@ -55,6 +56,13 @@ namespace throttr
      */
     boost::asio::steady_timer expiration_timer_;
 
+#ifdef ENABLED_FEATURE_METRICS
+    /**
+     * Metrics timer
+     */
+    boost::asio::steady_timer metrics_timer_;
+#endif
+
     /**
      * Strand
      */
@@ -85,7 +93,12 @@ namespace throttr
      *
      * @param ioc
      */
-    explicit state(boost::asio::io_context &ioc) : expiration_timer_(ioc), strand_(ioc.get_executor())
+    explicit state(boost::asio::io_context &ioc) :
+      expiration_timer_(ioc),
+#ifdef ENABLED_FEATURE_METRICS
+      metrics_timer_(ioc),
+#endif
+      strand_(ioc.get_executor())
     {
     }
 
@@ -705,6 +718,51 @@ namespace throttr
             _self->expiration_timer();
         });
     }
+
+#ifdef ENABLED_FEATURE_METRICS
+    void process_metrics()
+    {
+      for (auto &_index = storage_.get<tag_by_key>(); auto &_entry : _index)
+      {
+        if (_entry.expired_) continue;
+
+        auto &_metric = *_entry.metrics_;
+        const auto reads = _metric.stats_reads_.exchange(0, std::memory_order_relaxed);
+        const auto writes = _metric.stats_writes_.exchange(0, std::memory_order_relaxed);
+
+        _metric.stats_reads_per_minute_.store(reads, std::memory_order_relaxed);
+        _metric.stats_writes_per_minute_.store(writes, std::memory_order_relaxed);
+
+        _metric.stats_reads_accumulator_.fetch_add(reads, std::memory_order_relaxed);
+        _metric.stats_writes_accumulator_.fetch_add(writes, std::memory_order_relaxed);
+      }
+
+#ifndef NDEBUG
+      fmt::println("{:%Y-%m-%d %H:%M:%S} METRICS SNAPSHOT COMPLETED", std::chrono::system_clock::now());
+#endif
+    }
+
+    void start_metrics_timer()
+    {
+#ifndef NDEBUG
+      fmt::println("{:%Y-%m-%d %H:%M:%S} METRICS SNAPSHOT SCHEDULED", std::chrono::system_clock::now());
+#endif
+
+      metrics_timer_.expires_after(std::chrono::minutes(1));
+      metrics_timer_.async_wait(
+        boost::asio::bind_executor(
+          strand_,
+          [_self = shared_from_this()](const boost::system::error_code &ec)
+          {
+            if (!ec)
+            {
+              _self->process_metrics();
+              _self->start_metrics_timer();  // reschedule
+            }
+          }));
+    }
+#endif
+
   };
 } // namespace throttr
 // LCOV_EXCL_STOP

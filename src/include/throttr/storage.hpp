@@ -49,6 +49,16 @@ namespace throttr
      * Stats write accumulator
      */
     std::atomic<uint64_t> stats_writes_accumulator_ = 0;
+
+    /**
+     * Stats read per minute (RPM)
+     */
+    std::atomic<uint64_t> stats_reads_per_minute_ = 0;
+
+    /**
+     * Stats write per minute (WPM)
+     */
+    std::atomic<uint64_t> stats_writes_per_minute_ = 0;
   };
 #endif
 
