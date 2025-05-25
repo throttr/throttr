@@ -244,6 +244,16 @@ namespace throttr
             state_->handle_list(_batch, write_buffer_);
             break;
           }
+          case request_types::stat:
+          {
+            state_->handle_stat(request_stat::from_buffer(_view), _batch, write_buffer_);
+            break;
+          }
+          case request_types::stats:
+          {
+            state_->handle_stats(_batch, write_buffer_);
+            break;
+          }
             // LCOV_EXCL_START
           default:
           {
@@ -281,21 +291,12 @@ namespace throttr
 
       // LCOV_EXCL_START
 #ifndef NDEBUG
-      auto _printable_buffer = buffers_to_hex(batch);
-      if (_printable_buffer.size() <= 64)
-      {
-        fmt::println(
-          "{:%Y-%m-%d %H:%M:%S} SESSION WRITE ip={} port={} buffer={}",
-          std::chrono::system_clock::now(),
-          ip_,
-          port_,
-          _printable_buffer);
-      }
-      else
-      {
-        fmt::println(
-          "{:%Y-%m-%d %H:%M:%S} SESSION WRITE ip={} port={} buffer=too many bytes", std::chrono::system_clock::now(), ip_, port_);
-      }
+      fmt::println(
+        "{:%Y-%m-%d %H:%M:%S} SESSION WRITE ip={} port={} buffer={}",
+        std::chrono::system_clock::now(),
+        ip_,
+        port_,
+        buffers_to_hex(batch));
 #endif
       // LCOV_EXCL_STOP
 
@@ -311,8 +312,6 @@ namespace throttr
     get_message_sized(const std::span<const std::byte> buffer, const std::size_t header_size, const std::size_t extra = 0)
     {
       // LCOV_EXCL_START
-      if (buffer.size() < header_size)
-        return 0;
       if (buffer.size() < header_size + extra)
         return 0;
       // LCOV_EXCL_STOP
@@ -367,6 +366,15 @@ namespace throttr
         case request_types::list:
         {
           return get_message_sized(buffer, request_list_header_size, 0);
+        }
+        case request_types::stat:
+        {
+          auto *_h = reinterpret_cast<const request_stat_header *>(_buffer); // NOSONAR
+          return get_message_sized(buffer, request_stat_header_size, _h->key_size_);
+        }
+        case request_types::stats:
+        {
+          return get_message_sized(buffer, request_stats_header_size, 0);
         }
           // LCOV_EXCL_START
         default:

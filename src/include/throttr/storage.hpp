@@ -21,14 +21,47 @@
 #include <boost/multi_index/composite_key.hpp>
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/multi_index/mem_fun.hpp>
-#include <boost/multi_index/member.hpp>
-#include <boost/multi_index/ordered_index.hpp>
 #include <boost/multi_index/tag.hpp>
 #include <boost/multi_index_container.hpp>
 #include <throttr/protocol_wrapper.hpp>
 
 namespace throttr
 {
+#ifdef ENABLED_FEATURE_METRICS
+  struct entry_metrics
+  {
+    /**
+     * Stats read
+     */
+    std::atomic<uint64_t> stats_reads_ = 0;
+
+    /**
+     * Stats write
+     */
+    std::atomic<uint64_t> stats_writes_ = 0;
+
+    /**
+     * Stats read accumulator
+     */
+    std::atomic<uint64_t> stats_reads_accumulator_ = 0;
+
+    /**
+     * Stats write accumulator
+     */
+    std::atomic<uint64_t> stats_writes_accumulator_ = 0;
+
+    /**
+     * Stats read per minute (RPM)
+     */
+    std::atomic<uint64_t> stats_reads_per_minute_ = 0;
+
+    /**
+     * Stats write per minute (WPM)
+     */
+    std::atomic<uint64_t> stats_writes_per_minute_ = 0;
+  };
+#endif
+
   /**
    * Entry wrapper
    */
@@ -48,6 +81,13 @@ namespace throttr
      * Expired
      */
     bool expired_ = false;
+
+#ifdef ENABLED_FEATURE_METRICS
+    /**
+     * Metrics
+     */
+    std::shared_ptr<entry_metrics> metrics_ = std::make_shared<entry_metrics>();
+#endif
 
     /**
      * Key
@@ -73,6 +113,7 @@ namespace throttr
     {
     }
   };
+
   /**
    * Tag: access by key
    */

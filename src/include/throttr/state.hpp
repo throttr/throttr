@@ -21,6 +21,7 @@
 #include <fmt/chrono.h>
 
 #include <atomic>
+#include <boost/asio/bind_executor.hpp>
 #include <boost/asio/strand.hpp>
 #include <boost/core/ignore_unused.hpp>
 #include <cstring>
@@ -51,9 +52,21 @@ namespace throttr
     storage_type storage_;
 
     /**
+     * Storage iterator
+     */
+    using storage_iterator = decltype(storage_.get<tag_by_key>().begin());
+
+    /**
      * Expiration timer
      */
     boost::asio::steady_timer expiration_timer_;
+
+#ifdef ENABLED_FEATURE_METRICS
+    /**
+     * Metrics timer
+     */
+    boost::asio::steady_timer metrics_timer_;
+#endif
 
     /**
      * Strand
@@ -85,12 +98,17 @@ namespace throttr
      *
      * @param ioc
      */
-    explicit state(boost::asio::io_context &ioc) : expiration_timer_(ioc), strand_(ioc.get_executor())
+    explicit state(boost::asio::io_context &ioc) :
+        expiration_timer_(ioc),
+#ifdef ENABLED_FEATURE_METRICS
+        metrics_timer_(ioc),
+#endif
+        strand_(ioc.get_executor())
     {
     }
 
     /**
-     * Handle entry
+     * Handle CREATE
      *
      * @param key
      * @param value
@@ -100,7 +118,7 @@ namespace throttr
      * @param as_insert
      * @return
      */
-    std::uint8_t handle_entry(
+    std::uint8_t handle_create(
       const std::string_view &key,
       const std::vector<std::byte> &value,
       const ttl_types ttl_type,
@@ -116,15 +134,24 @@ namespace throttr
         reinterpret_cast<const std::byte *>(key.data()), reinterpret_cast<const std::byte *>(key.data() + key.size())); // NOSONAR
       const auto _entry_ptr = entry_wrapper{_key, request_entry{type, value, ttl_type, _expires_at}};
 
-      auto [_it, _inserted] = storage_.insert(_entry_ptr);
+#ifdef ENABLED_FEATURE_METRICS
+      _entry_ptr.metrics_->stats_writes_.fetch_add(1, std::memory_order_relaxed);
+#endif
+
+      auto [_it, _inserted] = storage_.insert(std::move(_entry_ptr));
 
       boost::ignore_unused(_it);
 
       // LCOV_EXCL_START Note: Actually tested
       if (_inserted)
       {
+        // OPTIMIZATION AVAILABLE
+        // Optimize this as the current scheduled key is stored as member of this class
+        // This will reduce the number of reads operations at least to one instead of all the container
+        // Basically this operation is costly when a huge amount of keys are stored
         for (const auto &_item : _index)
         {
+          _item.metrics_->stats_reads_.fetch_add(1, std::memory_order_relaxed);
           if (!_item.expired_)
           {
             if (_expires_at <= _item.entry_.expires_at_)
@@ -156,7 +183,7 @@ namespace throttr
     }
 
     /**
-     * Handle insert
+     * Handle INSERT
      *
      * @param view
      * @return uint8_t
@@ -166,7 +193,7 @@ namespace throttr
       const auto _request = request_insert::from_buffer(view);
       std::vector<std::byte> value(sizeof(value_type));
       std::memcpy(value.data(), &_request.header_->quota_, sizeof(value_type));
-      return handle_entry(_request.key_, value, _request.header_->ttl_type_, _request.header_->ttl_, entry_types::counter);
+      return handle_create(_request.key_, value, _request.header_->ttl_type_, _request.header_->ttl_, entry_types::counter);
     }
 
     /**
@@ -179,11 +206,50 @@ namespace throttr
     {
       const auto _request = request_set::from_buffer(view);
       const std::vector value(_request.value_.begin(), _request.value_.end());
-      return handle_entry(_request.key_, value, _request.header_->ttl_type_, _request.header_->ttl_, entry_types::raw);
+      return handle_create(_request.key_, value, _request.header_->ttl_type_, _request.header_->ttl_, entry_types::raw);
     }
 
     /**
-     * Handle query
+     * Find or fail base
+     *
+     * @param key
+     * @return
+     */
+    std::optional<storage_iterator> find_or_fail(const request_key &key)
+    {
+      const auto &_index = storage_.get<tag_by_key>();
+      auto _it = _index.find(key);
+      if (_it == _index.end() || _it->expired_) // LCOV_EXCL_LINE
+      {
+        return std::nullopt;
+      }
+
+#ifdef ENABLED_FEATURE_METRICS
+      _it->metrics_->stats_reads_.fetch_add(1, std::memory_order_relaxed);
+#endif
+
+      return _it;
+    }
+
+    /**
+     * Find or fail
+     *
+     * @param key
+     * @param batch
+     * @return
+     */
+    std::optional<storage_iterator> find_or_fail_for_batch(const request_key &key, std::vector<boost::asio::const_buffer> &batch)
+    {
+      const auto _it = find_or_fail(key);
+      if (!_it.has_value()) // LCOV_EXCL_LINE
+      {
+        batch.emplace_back(boost::asio::buffer(&failed_response_, 1));
+      }
+      return _it;
+    }
+
+    /**
+     * Handle QUERY
      *
      * @param request
      * @param as_query
@@ -198,17 +264,9 @@ namespace throttr
       std::vector<std::uint8_t> &write_buffer)
     {
       const request_key _key{request.key_};
-      const auto &_index = storage_.get<tag_by_key>();
-      const auto _it = _index.find(_key);
-
-      const auto _write_buffer_size = write_buffer.size();
-
-      if (_it == _index.end() || _it->expired_) // LCOV_EXCL_LINE
+      const auto _find = find_or_fail_for_batch(_key, batch);
+      if (!_find.has_value()) // LCOV_EXCL_LINE Note: Partially tested.
       {
-        static constexpr std::uint8_t status = 0x00;
-        write_buffer.push_back(status);
-        batch.emplace_back(boost::asio::buffer(&write_buffer[_write_buffer_size], 1));
-
         // LCOV_EXCL_START
 #ifndef NDEBUG
         fmt::println(
@@ -220,12 +278,11 @@ namespace throttr
         // LCOV_EXCL_STOP
         return;
       }
-
+      const auto _it = _find.value();
       const value_type _ttl = get_ttl(_it->entry_.expires_at_, _it->entry_.ttl_type_);
 
       // status_
-      write_buffer.push_back(0x01);
-      batch.emplace_back(boost::asio::buffer(&write_buffer[_write_buffer_size], 1));
+      batch.emplace_back(boost::asio::buffer(&success_response_, 1));
 
       if (as_query) // LCOV_EXCL_LINE
       {
@@ -240,7 +297,8 @@ namespace throttr
           write_buffer.insert(write_buffer.end(), _ttl_ptr, _ttl_ptr + sizeof(_ttl));
           batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_ttl)));
         }
-      } else
+      }
+      else
       {
         // TTL Type
         batch.emplace_back(boost::asio::buffer(&_it->entry_.ttl_type_, sizeof(_it->entry_.ttl_type_)));
@@ -293,7 +351,7 @@ namespace throttr
     }
 
     /**
-     * Handle update
+     * Handle UPDATE
      *
      * @param request
      * @return uint8_t
@@ -302,11 +360,9 @@ namespace throttr
     {
       const request_key _key{request.key_};
       const auto _now = std::chrono::steady_clock::now();
+      const auto _it = find_or_fail(_key);
 
-      auto &_index = storage_.get<tag_by_key>();
-      const auto _it = _index.find(_key);
-
-      if (_it == _index.end() || _it->expired_) // LCOV_EXCL_LINE note: Partially covered.
+      if (!_it.has_value()) // LCOV_EXCL_LINE note: Partially covered.
       {
         return failed_response_;
       }
@@ -316,14 +372,14 @@ namespace throttr
       bool _modified = false;
 
       storage_.modify(
-        _it,
+        _it.value(),
         [&](entry_wrapper &object)
         {
           switch (request.header_->attribute_)
           {
             case quota:
               if (object.entry_.type_ == entry_types::counter)
-              { // LCOV_EXCL_LINE Note: Partially tested
+              { // LCOV_EXCL_LINE Note: Partially tested.
                 _modified = apply_quota_change(object.entry_, request);
               }
               break;
@@ -332,6 +388,13 @@ namespace throttr
               break;
           }
         });
+
+#ifdef ENABLED_FEATURE_METRICS
+      if (_modified) // LCOV_EXCL_LINE Note: Partially tested.
+      {
+        _it.value()->metrics_->stats_writes_.fetch_add(1, std::memory_order_relaxed);
+      }
+#endif
 
       // LCOV_EXCL_START
 #ifndef NDEBUG
@@ -360,7 +423,7 @@ namespace throttr
     static bool apply_quota_change(request_entry &entry, const request_update &request)
     {
       using enum change_types;
-      auto& _atomic = *reinterpret_cast<std::atomic<value_type>*>(entry.value_.data()); // NOSONAR
+      auto &_atomic = *reinterpret_cast<std::atomic<value_type> *>(entry.value_.data()); // NOSONAR
 
       switch (request.header_->change_)
       {
@@ -441,7 +504,7 @@ namespace throttr
     }
 
     /**
-     * Handle purge
+     * Handle PURGE
      *
      * @param request
      * @return uint8_t
@@ -460,6 +523,13 @@ namespace throttr
         _erased = false;
       }
 
+#ifdef ENABLED_FEATURE_METRICS
+      if (_it != _index.end()) // LCOV_EXCL_LINE Note: Partially tested.
+      {
+        _it->metrics_->stats_reads_.fetch_add(1, std::memory_order_relaxed);
+      }
+#endif
+
       // LCOV_EXCL_START
 #ifndef NDEBUG
       fmt::
@@ -474,7 +544,50 @@ namespace throttr
     }
 
     /**
-     * Handle list
+     * Write LIST entry to buffer
+     * @param batch
+     * @param entry
+     * @param write_buffer
+     * @param measure
+     * @return
+     */
+    static std::size_t write_list_entry_to_buffer(
+      std::vector<boost::asio::const_buffer> *batch,
+      const entry_wrapper *entry,
+      std::vector<std::uint8_t> &write_buffer,
+      const bool measure)
+    {
+      if (measure) // LCOV_EXCL_LINE Note: Partially tested.
+        return entry->key_.size() + entry->entry_.value_.size() + 11;
+
+      const auto _offset = write_buffer.size();
+      write_buffer.push_back(static_cast<std::uint8_t>(entry->key_.size()));
+      batch->emplace_back(boost::asio::buffer(&write_buffer[_offset], 1));
+      batch->emplace_back(boost::asio::buffer(&entry->entry_.type_, sizeof(entry->entry_.type_)));
+      batch->emplace_back(boost::asio::buffer(&entry->entry_.ttl_type_, sizeof(entry->entry_.ttl_type_)));
+
+      {
+        const auto _expires_at =
+          std::chrono::duration_cast<std::chrono::nanoseconds>(entry->entry_.expires_at_.time_since_epoch()).count();
+        const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&_expires_at); // NOSONAR
+        const auto _off = write_buffer.size();
+        write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(_expires_at));
+        batch->emplace_back(boost::asio::buffer(&write_buffer[_off], sizeof(_expires_at)));
+      }
+
+      {
+        const auto _bytes_used = static_cast<value_type>(entry->entry_.value_.size());
+        const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&_bytes_used); // NOSONAR
+        const auto _off = write_buffer.size();
+        write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(_bytes_used));
+        batch->emplace_back(boost::asio::buffer(&write_buffer[_off], sizeof(_bytes_used)));
+      }
+
+      return 0;
+    }
+
+    /**
+     * Handle LIST
      *
      * @param write_buffer
      * @param batch
@@ -482,20 +595,169 @@ namespace throttr
      */
     void handle_list(std::vector<boost::asio::const_buffer> &batch, std::vector<std::uint8_t> &write_buffer)
     {
+      auto _self = shared_from_this();
+      handle_fragmented_response(
+        batch,
+        write_buffer,
+        2048,
+        [_write_buffer_ref = // LCOV_EXCL_LINE Note: For some reason this line isn't tested ...
+           std::ref(write_buffer)](std::vector<boost::asio::const_buffer> *b, const entry_wrapper *e, const bool measure)
+        { return write_list_entry_to_buffer(b, e, _write_buffer_ref, measure); });
+    }
+
+    /**
+     * Handle STAT
+     *
+     * @param request
+     * @param write_buffer
+     * @param batch
+     * @return uint8_t
+     */
+    void handle_stat(
+      const request_stat &request,
+      std::vector<boost::asio::const_buffer> &batch,
+      std::vector<std::uint8_t> &write_buffer)
+    {
+#ifndef ENABLED_FEATURE_METRICS
+      batch.emplace_back(boost::asio::buffer(&failed_response_, 1));
+      return;
+#endif
+
+      const request_key _key{request.key_};
+      const auto _find = find_or_fail_for_batch(_key, batch);
+      if (!_find.has_value()) // LCOV_EXCL_LINE
+      {
+        // LCOV_EXCL_START
+#ifndef NDEBUG
+        fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST STAT key={} RESPONSE ok=false", std::chrono::system_clock::now(), _key.key_);
+#endif
+        return;
+        // LCOV_EXCL_STOP
+      }
+      const auto _it = _find.value();
+      batch.emplace_back(boost::asio::buffer(&success_response_, 1));
+
+      auto _append_uint64 = [&write_buffer, &batch](const uint64_t value)
+      {
+        const auto _offset = write_buffer.size();
+        const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&value); // NOSONAR
+        write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(uint64_t));
+        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(uint64_t)));
+      };
+
+      const auto &metrics = *_it->metrics_;
+      _append_uint64(metrics.stats_reads_per_minute_.load(std::memory_order_relaxed));
+      _append_uint64(metrics.stats_writes_per_minute_.load(std::memory_order_relaxed));
+      _append_uint64(metrics.stats_reads_accumulator_.load(std::memory_order_relaxed));
+      _append_uint64(metrics.stats_writes_accumulator_.load(std::memory_order_relaxed));
+
+      // LCOV_EXCL_START
+#ifndef NDEBUG
+      fmt::println(
+        "{:%Y-%m-%d %H:%M:%S} REQUEST STAT key={} RESPONSE ok=true rpm={} wpm={} r_total={} w_total={}",
+        std::chrono::system_clock::now(),
+        _key.key_,
+        metrics.stats_reads_per_minute_.load(),
+        metrics.stats_writes_per_minute_.load(),
+        metrics.stats_reads_accumulator_.load(),
+        metrics.stats_writes_accumulator_.load());
+#endif
+      // LCOV_EXCL_STOP
+    }
+
+    /**
+     * Write STATS entry to buffer
+     * @param batch
+     * @param entry
+     * @param write_buffer
+     * @param measure
+     * @return
+     */
+    static std::size_t write_stats_entry_to_buffer(
+      std::vector<boost::asio::const_buffer> *batch,
+      const entry_wrapper *entry,
+      std::vector<std::uint8_t> &write_buffer,
+      const bool measure)
+    {
+      if (measure) // LCOV_EXCL_LINE Note: Partially tested.
+        return entry->key_.size() + 1 + 8 * 4;
+
+      const auto _offset = write_buffer.size();
+      write_buffer.push_back(static_cast<std::uint8_t>(entry->key_.size()));
+      batch->emplace_back(boost::asio::buffer(&write_buffer[_offset], 1));
+
+      for (const auto &_metric = *entry->metrics_; uint64_t _v :
+                                                   {_metric.stats_reads_per_minute_.load(std::memory_order_relaxed),
+                                                    _metric.stats_writes_per_minute_.load(std::memory_order_relaxed),
+                                                    _metric.stats_reads_accumulator_.load(std::memory_order_relaxed),
+                                                    _metric.stats_writes_accumulator_.load(std::memory_order_relaxed)})
+      {
+        const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&_v); // NOSONAR
+        const auto _off = write_buffer.size();
+        write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(_v));
+        batch->emplace_back(boost::asio::buffer(&write_buffer[_off], sizeof(_v)));
+      }
+
+      return 0;
+    }
+
+    /**
+     * Handle STATS
+     *
+     * @param batch
+     * @param write_buffer
+     */
+    void handle_stats(std::vector<boost::asio::const_buffer> &batch, std::vector<std::uint8_t> &write_buffer)
+    {
+#ifndef ENABLED_FEATURE_METRICS
+      batch.emplace_back(boost::asio::buffer(&failed_response_, 1));
+      return;
+#endif
+
+      handle_fragmented_response(
+        batch,
+        write_buffer,
+        2048,
+        [&write_buffer](std::vector<boost::asio::const_buffer> *b, const entry_wrapper *e, const bool measure)
+        { return write_stats_entry_to_buffer(b, e, write_buffer, measure); });
+    }
+
+    /**
+     * Handle fragmented response
+     *
+     * @tparam EntrySerializer
+     * @param batch
+     * @param write_buffer
+     * @param max_fragment_size
+     * @param serialize_entry
+     */
+    template<typename EntrySerializer>
+    void handle_fragmented_response(
+      std::vector<boost::asio::const_buffer> &batch,
+      std::vector<std::uint8_t> &write_buffer,
+      const std::size_t max_fragment_size,
+      EntrySerializer &&serialize_entry)
+    {
+      const auto &_index = storage_.get<tag_by_key>();
       std::size_t _fragments_count = 1;
       std::size_t _fragment_size = 0;
-      constexpr std::size_t _max_fragment_size = 2048;
 
       std::vector<const entry_wrapper *> _fragment_items;
       std::vector<std::vector<const entry_wrapper *>> _fragments;
 
-      const auto &_index = storage_.get<tag_by_key>();
-
-      for (auto &_item : _index) // LCOV_EXCL_LINE Partially tested
+      for (auto &_item : _index) // LCOV_EXCL_LINE Note: Partially tested.
       {
-        const std::size_t _item_size = _item.key_.size() + _item.entry_.value_.size() + 11;
+        // LCOV_EXCL_START
+        if (_item.expired_)
+          continue;
+          // LCOV_EXCL_STOP
 
-        if (_fragment_size + _item_size > _max_fragment_size) // LCOV_EXCL_LINE Partially tested
+#ifdef ENABLED_FEATURE_METRICS
+        _item.metrics_->stats_reads_.fetch_add(1, std::memory_order_relaxed);
+#endif
+
+        const std::size_t _item_size = serialize_entry(nullptr, &_item, true);
+        if (_fragment_size + _item_size > max_fragment_size) // LCOV_EXCL_LINE Note: Partially tested.
         {
           _fragments.push_back(_fragment_items);
           _fragment_size = 0;
@@ -507,7 +769,7 @@ namespace throttr
         _fragment_size += _item_size;
       }
 
-      if (!_fragment_items.empty()) // LCOV_EXCL_LINE Partially tested
+      if (!_fragment_items.empty()) // LCOV_EXCL_LINE Note: Partially tested.
       {
         _fragments.push_back(std::move(_fragment_items));
       }
@@ -515,66 +777,35 @@ namespace throttr
       {
         const auto _offset = write_buffer.size();
         const uint64_t _fragment_count = _fragments.size();
-        const auto *_count_ptr = reinterpret_cast<const std::uint8_t *>(&_fragment_count); // NOSONAR
-        write_buffer.insert(write_buffer.end(), _count_ptr, _count_ptr + sizeof(_fragment_count));
-        batch.emplace_back(
-          boost::asio::buffer(&write_buffer[_offset], sizeof(_fragment_count)));
+        const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&_fragment_count); // NOSONAR
+        write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(_fragment_count));
+        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_fragment_count)));
       }
 
       std::size_t _i = 0;
-      for (const auto & _fragment : _fragments) // LCOV_EXCL_LINE Partially tested
+      for (const auto &_fragment : _fragments) // LCOV_EXCL_LINE Note: Partially tested.
       {
         const uint64_t _fragment_index = _i + 1;
         const uint64_t _key_count = _fragment.size();
 
+        for (uint64_t value : {_fragment_index, _key_count}) // LCOV_EXCL_LINE Note: Partially tested.
         {
           const auto _offset = write_buffer.size();
-          const auto *_fid_ptr = reinterpret_cast<const std::uint8_t *>(&_fragment_index); // NOSONAR
-          write_buffer.insert(write_buffer.end(), _fid_ptr, _fid_ptr + sizeof(_fragment_index));
-          batch.emplace_back(
-            boost::asio::buffer(&write_buffer[_offset], sizeof(_fragment_index)));
+          const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&value); // NOSONAR
+          write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(value));
+          batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(value)));
         }
 
+        for (const auto *_entry : _fragment) // LCOV_EXCL_LINE Note: Partially tested.
         {
-          const auto _offset = write_buffer.size();
-          const auto *_kcount_ptr = reinterpret_cast<const std::uint8_t *>(&_key_count); // NOSONAR
-          write_buffer.insert(write_buffer.end(), _kcount_ptr, _kcount_ptr + sizeof(_key_count));
-          batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_key_count)));
+          serialize_entry(&batch, _entry, false);
         }
 
-        for (const auto *_entry : _fragment) // LCOV_EXCL_LINE Partially tested
+        for (const auto &_entry : _fragment) // LCOV_EXCL_LINE Note: Partially tested.
         {
-          {
-            const auto _offset = write_buffer.size();
-            write_buffer.push_back(static_cast<std::uint8_t>(_entry->key_.size()));
-            batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], 1));
-          }
-
-          batch.emplace_back(boost::asio::buffer(&_entry->entry_.type_, sizeof(_entry->entry_.type_)));
-          batch.emplace_back(boost::asio::buffer(&_entry->entry_.ttl_type_, sizeof(_entry->entry_.ttl_type_)));
-
-          {
-            const auto _offset = write_buffer.size();
-            const uint64_t _expired_at =
-              std::chrono::duration_cast<std::chrono::nanoseconds>(_entry->entry_.expires_at_.time_since_epoch()).count();
-            const auto *_exp_ptr = reinterpret_cast<const std::uint8_t *>(&_expired_at); // NOSONAR
-            write_buffer.insert(write_buffer.end(), _exp_ptr, _exp_ptr + sizeof(uint64_t));
-            batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(uint64_t)));
-          }
-
-          {
-            const auto _offset = write_buffer.size();
-            value_type _bytes_used = static_cast<value_type>(_entry->entry_.value_.size());
-            const auto *_used_ptr = reinterpret_cast<const std::uint8_t *>(&_bytes_used); // NOSONAR
-            write_buffer.insert(write_buffer.end(), _used_ptr, _used_ptr + sizeof(value_type));
-            batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(value_type)));
-          }
+          batch.emplace_back(boost::asio::buffer(_entry->key_.data(), _entry->key_.size()));
         }
 
-        for (const auto &_item : _fragment) // LCOV_EXCL_LINE Partially tested
-        {
-          batch.emplace_back(boost::asio::const_buffer(_item->key_.data(), _item->key_.size()));
-        }
         _i++;
       }
     }
@@ -591,6 +822,10 @@ namespace throttr
     void expiration_timer()
     {
       std::scoped_lock guard(mutex_);
+#ifndef NDEBUG
+      fmt::println("{:%Y-%m-%d %H:%M:%S} GARBAGE COLLECTION STARTED", std::chrono::system_clock::now());
+#endif
+
       const auto _now = std::chrono::steady_clock::now();
       auto &_index = storage_.get<tag_by_key>();
 
@@ -627,7 +862,7 @@ namespace throttr
             {
 #ifndef NDEBUG
               fmt::println(
-                "{:%Y-%m-%d %H:%M:%S} SCHEDULER KEY EXPIRED key={}",
+                "{:%Y-%m-%d %H:%M:%S} GARBAGE COLLECTOR MARKED KEY AS EXPIRED key={}",
                 std::chrono::system_clock::now(),
                 std::string_view(
                   reinterpret_cast<const char *>(entry.key_.data()), // NOSONAR
@@ -645,7 +880,7 @@ namespace throttr
         {
 #ifndef NDEBUG
           fmt::println(
-            "{:%Y-%m-%d %H:%M:%S} SCHEDULER KEY ERASED key={}",
+            "{:%Y-%m-%d %H:%M:%S} GARBAGE COLLECTOR ERASED EXPIRED KEY key={}",
             std::chrono::system_clock::now(),
             std::string_view(reinterpret_cast<const char *>(_it->key_.data()), _it->key_.size())); // NOSONAR
 #endif
@@ -666,6 +901,10 @@ namespace throttr
         _next_expiration = std::min(_next_expiration, _candidate);
       }
 
+#ifndef NDEBUG
+      fmt::println("{:%Y-%m-%d %H:%M:%S} GARBAGE COLLECTION COMPLETED", std::chrono::system_clock::now());
+#endif
+
       if (_next_expiration != std::chrono::steady_clock::time_point::max())
         schedule_expiration(_next_expiration);
     }
@@ -676,7 +915,7 @@ namespace throttr
     void schedule_expiration(const std::chrono::steady_clock::time_point proposed)
     {
 #ifndef NDEBUG
-      fmt::println("{:%Y-%m-%d %H:%M:%S} SCHEDULER GARBAGE COLLECTION STARTED", std::chrono::system_clock::now());
+      fmt::println("{:%Y-%m-%d %H:%M:%S} GARBAGE COLLECTION SCHEDULED", std::chrono::system_clock::now());
 #endif
 
       const auto _now = std::chrono::steady_clock::now();
@@ -695,6 +934,53 @@ namespace throttr
             _self->expiration_timer();
         });
     }
+
+#ifdef ENABLED_FEATURE_METRICS
+    void process_metrics()
+    {
+#ifndef NDEBUG
+      fmt::println("{:%Y-%m-%d %H:%M:%S} METRICS SNAPSHOT STARTED", std::chrono::system_clock::now());
+#endif
+      for (auto &_index = storage_.get<tag_by_key>(); auto &_entry : _index)
+      {
+        if (_entry.expired_)
+          continue;
+
+        auto &_metric = *_entry.metrics_;
+        const auto reads = _metric.stats_reads_.exchange(0, std::memory_order_relaxed);
+        const auto writes = _metric.stats_writes_.exchange(0, std::memory_order_relaxed);
+
+        _metric.stats_reads_per_minute_.store(reads, std::memory_order_relaxed);
+        _metric.stats_writes_per_minute_.store(writes, std::memory_order_relaxed);
+
+        _metric.stats_reads_accumulator_.fetch_add(reads, std::memory_order_relaxed);
+        _metric.stats_writes_accumulator_.fetch_add(writes, std::memory_order_relaxed);
+      }
+
+#ifndef NDEBUG
+      fmt::println("{:%Y-%m-%d %H:%M:%S} METRICS SNAPSHOT COMPLETED", std::chrono::system_clock::now());
+#endif
+    }
+
+    void start_metrics_timer()
+    {
+#ifndef NDEBUG
+      fmt::println("{:%Y-%m-%d %H:%M:%S} METRICS SNAPSHOT SCHEDULED", std::chrono::system_clock::now());
+#endif
+
+      metrics_timer_.expires_after(std::chrono::minutes(1));
+      metrics_timer_.async_wait(boost::asio::bind_executor(
+        strand_,
+        [_self = shared_from_this()](const boost::system::error_code &ec)
+        {
+          if (!ec)
+          {
+            _self->process_metrics();
+            _self->start_metrics_timer(); // reschedule
+          }
+        }));
+    }
+#endif
   };
 } // namespace throttr
 // LCOV_EXCL_STOP
