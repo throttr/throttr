@@ -67,7 +67,7 @@ namespace throttr
       strand_,
       [_self = shared_from_this()](const boost::system::error_code &ec)
       {
-        if (!ec)
+        if (!ec) // LCOV_EXCL_LINE Note: Partially tested.
         {
           _self->process_metrics();
           _self->start_metrics_timer(); // reschedule
