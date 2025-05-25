@@ -360,21 +360,20 @@ namespace throttr
     static bool apply_quota_change(request_entry &entry, const request_update &request)
     {
       using enum change_types;
-
-      auto *_quota = reinterpret_cast<value_type *>(entry.value_.data()); // NOSONAR
+      auto& _atomic = *reinterpret_cast<std::atomic<value_type>*>(entry.value_.data());
 
       switch (request.header_->change_)
       {
         case patch:
-          *_quota = request.header_->value_;
+          _atomic.store(request.header_->value_);
           break;
         case increase:
-          *_quota += request.header_->value_;
+          _atomic.fetch_add(request.header_->value_, std::memory_order_relaxed);
           break;
         case decrease:
-          if (*_quota >= request.header_->value_) // LCOV_EXCL_LINE note: Partially covered.
+          if (_atomic.load(std::memory_order_relaxed) >= request.header_->value_) // LCOV_EXCL_LINE note: Partially covered.
           {
-            *_quota -= request.header_->value_;
+            _atomic.fetch_sub(request.header_->value_, std::memory_order_relaxed);
           }
           else
           {
