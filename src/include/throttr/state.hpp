@@ -552,7 +552,10 @@ namespace throttr
      */
     void handle_list(std::vector<boost::asio::const_buffer> &batch, std::vector<std::uint8_t> &write_buffer)
     {
-      handle_fragmented_response(batch, write_buffer, 2048,
+      handle_fragmented_response(
+        batch,
+        write_buffer,
+        2048,
         [&](std::vector<boost::asio::const_buffer> *b, const entry_wrapper *e, const bool measure) -> std::size_t
         {
           if (measure)
@@ -566,8 +569,8 @@ namespace throttr
           b->emplace_back(boost::asio::buffer(&e->entry_.ttl_type_, sizeof(e->entry_.ttl_type_)));
 
           {
-            const auto _expires_at = std::chrono::duration_cast<std::chrono::nanoseconds>(
-                                      e->entry_.expires_at_.time_since_epoch()).count();
+            const auto _expires_at =
+              std::chrono::duration_cast<std::chrono::nanoseconds>(e->entry_.expires_at_.time_since_epoch()).count();
             const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&_expires_at);
             const auto _off = write_buffer.size();
             write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(_expires_at));
@@ -659,7 +662,10 @@ namespace throttr
       return;
 #endif
 
-      handle_fragmented_response(batch, write_buffer, 2048,
+      handle_fragmented_response(
+        batch,
+        write_buffer,
+        2048,
         [&](std::vector<boost::asio::const_buffer> *b, const entry_wrapper *e, const bool measure) -> std::size_t
         {
           if (measure)
@@ -671,11 +677,11 @@ namespace throttr
 
           auto &_metric = *e->metrics_;
 
-          for (uint64_t _v : {
-                 _metric.stats_reads_per_minute_.load(std::memory_order_relaxed),
-                 _metric.stats_writes_per_minute_.load(std::memory_order_relaxed),
-                 _metric.stats_reads_accumulator_.load(std::memory_order_relaxed),
-                 _metric.stats_writes_accumulator_.load(std::memory_order_relaxed)})
+          for (uint64_t _v :
+               {_metric.stats_reads_per_minute_.load(std::memory_order_relaxed),
+                _metric.stats_writes_per_minute_.load(std::memory_order_relaxed),
+                _metric.stats_reads_accumulator_.load(std::memory_order_relaxed),
+                _metric.stats_writes_accumulator_.load(std::memory_order_relaxed)})
           {
             const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&_v);
             const auto _off = write_buffer.size();

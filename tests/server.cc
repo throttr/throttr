@@ -658,12 +658,11 @@ TEST_F(ServerTestFixture, HandlesStatsReturnsCorrectStructure)
   const auto _stats_buffer = request_stats_builder();
   const auto _response = send_and_receive(
     _stats_buffer,
-    8 +               // fragment count
-    8 +               // fragment id
-    8 +               // key count
-    2 * (1 + 8 * 4) + // metadata for 2 keys
-    _key1.size() +
-    _key2.size());
+    8 +                 // fragment count
+      8 +               // fragment id
+      8 +               // key count
+      2 * (1 + 8 * 4) + // metadata for 2 keys
+      _key1.size() + _key2.size());
 
   size_t _offset = 0;
 
