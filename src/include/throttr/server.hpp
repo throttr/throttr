@@ -20,7 +20,7 @@
 
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/intrusive_ptr.hpp>
-#include <throttr/session.hpp>
+#include <throttr/connection.hpp>
 #include <throttr/state.hpp>
 
 namespace throttr
@@ -58,9 +58,9 @@ namespace throttr
         socket_,
         [this](const boost::system::error_code &error)
         {
-          if (!error)
+          if (!error) // LCOV_EXCL_LINE Note: Partially tested.
           {
-            std::make_shared<session>(std::move(socket_), state_)->start();
+            std::make_shared<connection>(std::move(socket_), state_)->start();
           }
 
           do_accept();

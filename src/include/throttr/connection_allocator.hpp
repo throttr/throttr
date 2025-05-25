@@ -27,25 +27,25 @@ namespace throttr
   /**
    * Handler memory
    */
-  class handler_memory
+  class connection_handler_memory
   {
   public:
     /**
      * Constructor
      */
-    handler_memory() = default;
+    connection_handler_memory() = default;
 
     /**
      * Swap operator
      */
-    handler_memory(const handler_memory &) = delete;
+    connection_handler_memory(const connection_handler_memory &) = delete;
 
     /**
      * Assignment operator
      *
      * @return handler_memory
      */
-    handler_memory &operator=(const handler_memory &) = delete;
+    connection_handler_memory &operator=(const connection_handler_memory &) = delete;
 
     /**
      * Allocate
@@ -98,7 +98,7 @@ namespace throttr
   /**
    * Handler allocator
    */
-  template<typename T> class handler_allocator
+  template<typename T> class connection_handler_allocator
   {
   public:
     using value_type = T;
@@ -108,7 +108,7 @@ namespace throttr
      *
      * @param mem
      */
-    explicit handler_allocator(handler_memory &mem) noexcept : memory_(mem)
+    explicit connection_handler_allocator(connection_handler_memory &mem) noexcept : memory_(mem)
     {
     }
 
@@ -118,7 +118,8 @@ namespace throttr
      * @tparam U
      * @param other
      */
-    template<typename U> explicit handler_allocator(const handler_allocator<U> &other) noexcept : memory_(other.memory_)
+    template<typename U>
+    explicit connection_handler_allocator(const connection_handler_allocator<U> &other) noexcept : memory_(other.memory_)
     {
     } // NOSONAR
 
@@ -150,7 +151,7 @@ namespace throttr
      * @param other
      * @return bool
      */
-    template<typename U> bool operator==(const handler_allocator<U> &other) const noexcept
+    template<typename U> bool operator==(const connection_handler_allocator<U> &other) const noexcept
     {
       return &memory_ == &other.memory_;
     }
@@ -162,7 +163,7 @@ namespace throttr
      * @param other
      * @return bool
      */
-    template<typename U> bool operator!=(const handler_allocator<U> &other) const noexcept
+    template<typename U> bool operator!=(const connection_handler_allocator<U> &other) const noexcept
     {
       return !(*this == other);
     }
@@ -173,8 +174,8 @@ namespace throttr
      *
      * @tparam
      */
-    template<typename> friend class handler_allocator;
-    handler_memory &memory_;
+    template<typename> friend class connection_handler_allocator;
+    connection_handler_memory &memory_;
   };
 
   // LCOV_EXCL_STOP

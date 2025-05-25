@@ -17,6 +17,7 @@
 #include <numeric>
 
 #include <boost/asio.hpp>
+#include <boost/core/ignore_unused.hpp>
 #include <thread>
 #include <throttr/app.hpp>
 #include <throttr/state.hpp>
@@ -486,8 +487,6 @@ TEST_F(ServerTestFixture, HandlesListReturnsCorrectStructure)
   std::memcpy(&_key_count, _response.data() + _offset, sizeof(_key_count));
   _offset += sizeof(_key_count);
   ASSERT_EQ(_key_count, 2);
-
-  std::cout << span_to_hex(_response) << std::endl;
 
   // Key 1 metadata
   ASSERT_EQ(static_cast<uint8_t>(_response[_offset]), _key1.size());

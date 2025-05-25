@@ -26,11 +26,11 @@ using namespace throttr;
 class CompactBufferTest : public ::testing::Test
 {
 public:
-  static session create_dummy_session(std::shared_ptr<state> state)
+  static connection create_dummy_session(std::shared_ptr<state> state)
   {
     boost::asio::io_context ioc;
     tcp::socket socket(ioc);
-    return session(std::move(socket), state);
+    return connection(std::move(socket), state);
   }
 };
 

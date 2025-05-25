@@ -19,6 +19,7 @@
 #include <thread>
 #include <throttr/app.hpp>
 #include <throttr/state.hpp>
+#include <throttr/time.hpp>
 
 using boost::asio::ip::tcp;
 using namespace throttr;
