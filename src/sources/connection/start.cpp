@@ -1,0 +1,32 @@
+// Copyright (C) 2025 Ian Torres
+//
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU Affero General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+// GNU Affero General Public License for more details.
+//
+// You should have received a copy of the GNU Affero General Public License
+// along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+#include <throttr/connection.hpp>
+
+#include <fmt/chrono.h>
+
+namespace throttr
+{
+  void connection::start()
+  {
+    // LCOV_EXCL_START
+#ifndef NDEBUG
+    fmt::println("{:%Y-%m-%d %H:%M:%S} SESSION ESTABLISHED ip={} port={}", std::chrono::system_clock::now(), ip_, port_);
+#endif
+    // LCOV_EXCL_STOP
+    do_read();
+  }
+
+} // namespace throttr

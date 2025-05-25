@@ -20,6 +20,7 @@
 
 #include <fmt/chrono.h>
 
+#include <boost/asio/buffer.hpp>
 #include <throttr/protocol_wrapper.hpp>
 
 // LCOV_EXCL_START

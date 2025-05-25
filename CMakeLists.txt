@@ -12,6 +12,8 @@ set(BUILD_SHARED_LIBS OFF)
 option(BUILD_TESTS "Build tests cases" ON)
 option(ENABLE_FEATURE_METRICS "Enable metrics feature" ON)
 
+add_compile_options(-Wno-unused-function)
+
 if (ENABLE_FEATURE_METRICS)
     add_definitions(
             -DENABLED_FEATURE_METRICS

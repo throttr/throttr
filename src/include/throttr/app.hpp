@@ -18,10 +18,8 @@
 #ifndef THROTTR_APP_HPP
 #define THROTTR_APP_HPP
 
-#include <thread>
 #include <throttr/server.hpp>
 #include <throttr/state.hpp>
-#include <vector>
 
 namespace throttr
 {
@@ -57,50 +55,21 @@ namespace throttr
      * @param port
      * @param threads
      */
-    explicit app(const short port, const int threads) : ioc_(threads), port_(port), threads_(threads)
-    {
-    }
+    explicit app(short port, int threads);
 
     /**
      * Serve
      *
      * @return int
      */
-    int serve()
-    {
-      server _server(ioc_, port_, state_);
-
-      std::vector<std::jthread> _threads;
-      _threads.reserve(threads_);
-
-      // LCOV_EXCL_START
-      for (auto _i = threads_; _i > 0; --_i)
-      {
-        _threads.emplace_back([self = shared_from_this()] { self->ioc_.run(); });
-      }
-      // LCOV_EXCL_STOP
-
-      ioc_.run();
-
-      // LCOV_EXCL_START
-      for (auto &_thread : _threads)
-      {
-        _thread.join();
-      }
-      // LCOV_EXCL_STOP
-
-      return EXIT_SUCCESS;
-    }
+    int serve();
 
     /**
      * Stop
      *
      * @return void
      */
-    void stop()
-    {
-      ioc_.stop();
-    }
+    void stop();
   };
 } // namespace throttr
 
