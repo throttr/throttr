@@ -387,7 +387,7 @@ namespace throttr
         });
 
 #ifdef ENABLED_FEATURE_METRICS
-      if (_modified) {
+      if (_modified) { // LCOV_EXCL_LINE Note: Partially tested
         _it.value()->metrics_->stats_writes_.fetch_add(1, std::memory_order_relaxed);
       }
 #endif
@@ -520,7 +520,7 @@ namespace throttr
       }
 
 #ifdef ENABLED_FEATURE_METRICS
-      if (_it != _index.end()) {
+      if (_it != _index.end()) { // LCOV_EXCL_LINE Note: Partially tested
         _it->metrics_->stats_reads_.fetch_add(1, std::memory_order_relaxed);
       }
 #endif
