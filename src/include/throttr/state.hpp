@@ -214,13 +214,9 @@ namespace throttr
       const auto &_index = storage_.get<tag_by_key>();
       auto _it = _index.find(_key);
 
-      const auto _write_buffer_size = write_buffer.size();
-
       if (_it == _index.end() || _it->expired_) // LCOV_EXCL_LINE
       {
-        static constexpr std::uint8_t status = 0x00;
-        write_buffer.push_back(status);
-        batch.emplace_back(boost::asio::buffer(&write_buffer[_write_buffer_size], 1));
+        batch.emplace_back(boost::asio::buffer(&failed_response_, 1));
 
         // LCOV_EXCL_START
 #ifndef NDEBUG
@@ -241,8 +237,7 @@ namespace throttr
 #endif
 
       // status_
-      write_buffer.push_back(0x01);
-      batch.emplace_back(boost::asio::buffer(&write_buffer[_write_buffer_size], 1));
+      batch.emplace_back(boost::asio::buffer(&success_response_, 1));
 
       if (as_query) // LCOV_EXCL_LINE
       {
@@ -600,6 +595,73 @@ namespace throttr
         }
         _i++;
       }
+    }
+
+    /**
+     * Handle stat
+     *
+     * @param request
+     * @param write_buffer
+     * @param batch
+     * @return uint8_t
+     */
+    void handle_stat(
+      const request_stat &request,
+      std::vector<boost::asio::const_buffer> &batch,
+      std::vector<std::uint8_t> &write_buffer)
+    {
+      const request_key _key{request.key_};
+      const auto &_index = storage_.get<tag_by_key>();
+      auto _it = _index.find(_key);
+
+      if (_it == _index.end() || _it->expired_) // LCOV_EXCL_LINE
+      {
+        batch.emplace_back(boost::asio::buffer(&failed_response_, 1));
+
+        // LCOV_EXCL_START
+#ifndef NDEBUG
+        fmt::println(
+          "{:%Y-%m-%d %H:%M:%S} REQUEST STAT key={} RESPONSE ok=false",
+          std::chrono::system_clock::now(),
+          _key.key_);
+#endif
+        // LCOV_EXCL_STOP
+        return;
+      }
+
+#ifndef ENABLED_FEATURE_METRICS
+      batch.emplace_back(boost::asio::buffer(&failed_response_, 1));
+      return;
+#endif
+
+      _it->metrics_->stats_reads_.fetch_add(1, std::memory_order_relaxed);
+
+      batch.emplace_back(boost::asio::buffer(&success_response_, 1));
+
+      auto _append_uint64 = [&write_buffer, &batch](const uint64_t value) {
+        const auto _offset = write_buffer.size();
+        const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&value); // NOSONAR
+        write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(uint64_t));
+        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(uint64_t)));
+      };
+
+      const auto &metrics = *_it->metrics_;
+      _append_uint64(metrics.stats_reads_per_minute_.load(std::memory_order_relaxed));
+      _append_uint64(metrics.stats_writes_per_minute_.load(std::memory_order_relaxed));
+      _append_uint64(metrics.stats_reads_accumulator_.load(std::memory_order_relaxed));
+      _append_uint64(metrics.stats_writes_accumulator_.load(std::memory_order_relaxed));
+
+#ifndef NDEBUG
+      fmt::println(
+        "{:%Y-%m-%d %H:%M:%S} REQUEST STAT key={} RESPONSE ok=true rpm={} wpm={} r_total={} w_total={}",
+        std::chrono::system_clock::now(),
+        _key.key_,
+        metrics.stats_reads_per_minute_.load(),
+        metrics.stats_writes_per_minute_.load(),
+        metrics.stats_reads_accumulator_.load(),
+        metrics.stats_writes_accumulator_.load());
+#endif
+      // LCOV_EXCL_STOP
     }
 
     /**

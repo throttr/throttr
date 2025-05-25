@@ -246,7 +246,7 @@ namespace throttr
           }
           case request_types::stat:
           {
-            state_->handle_list(_batch, write_buffer_);
+            state_->handle_stat(request_stat::from_buffer(_view), _batch, write_buffer_);
             break;
           }
             // LCOV_EXCL_START
