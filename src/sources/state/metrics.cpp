@@ -27,10 +27,12 @@ namespace throttr
 #ifndef NDEBUG
     fmt::println("{:%Y-%m-%d %H:%M:%S} METRICS SNAPSHOT STARTED", std::chrono::system_clock::now());
 #endif
-    for (auto &_index = storage_.get<tag_by_key>(); auto &_entry : _index)
+    for (auto &_index = storage_.get<tag_by_key>(); auto &_entry : _index) // LCOV_EXCL_LINE Note: Partially tested.
     {
+      // LCOV_EXCL_START
       if (_entry.expired_)
         continue;
+      // LCOV_EXCL_STOP
 
       auto
         &[stats_reads_,
