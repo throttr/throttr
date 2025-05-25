@@ -90,7 +90,7 @@ namespace throttr
     }
 
     /**
-     * Handle entry
+     * Handle create
      *
      * @param key
      * @param value
@@ -100,7 +100,7 @@ namespace throttr
      * @param as_insert
      * @return
      */
-    std::uint8_t handle_entry(
+    std::uint8_t handle_create(
       const std::string_view &key,
       const std::vector<std::byte> &value,
       const ttl_types ttl_type,
@@ -116,7 +116,7 @@ namespace throttr
         reinterpret_cast<const std::byte *>(key.data()), reinterpret_cast<const std::byte *>(key.data() + key.size())); // NOSONAR
       const auto _entry_ptr = entry_wrapper{_key, request_entry{type, value, ttl_type, _expires_at}};
 
-      auto [_it, _inserted] = storage_.insert(_entry_ptr);
+      auto [_it, _inserted] = storage_.insert(std::move(_entry_ptr));
 
       boost::ignore_unused(_it);
 
@@ -166,7 +166,7 @@ namespace throttr
       const auto _request = request_insert::from_buffer(view);
       std::vector<std::byte> value(sizeof(value_type));
       std::memcpy(value.data(), &_request.header_->quota_, sizeof(value_type));
-      return handle_entry(_request.key_, value, _request.header_->ttl_type_, _request.header_->ttl_, entry_types::counter);
+      return handle_create(_request.key_, value, _request.header_->ttl_type_, _request.header_->ttl_, entry_types::counter);
     }
 
     /**
@@ -179,7 +179,7 @@ namespace throttr
     {
       const auto _request = request_set::from_buffer(view);
       const std::vector value(_request.value_.begin(), _request.value_.end());
-      return handle_entry(_request.key_, value, _request.header_->ttl_type_, _request.header_->ttl_, entry_types::raw);
+      return handle_create(_request.key_, value, _request.header_->ttl_type_, _request.header_->ttl_, entry_types::raw);
     }
 
     /**
@@ -199,7 +199,7 @@ namespace throttr
     {
       const request_key _key{request.key_};
       const auto &_index = storage_.get<tag_by_key>();
-      const auto _it = _index.find(_key);
+      auto _it = _index.find(_key);
 
       const auto _write_buffer_size = write_buffer.size();
 
@@ -223,6 +223,10 @@ namespace throttr
 
       const value_type _ttl = get_ttl(_it->entry_.expires_at_, _it->entry_.ttl_type_);
 
+#ifdef ENABLED_FEATURE_METRICS
+      storage_.modify(_it, [&](const entry_wrapper &object) { object.metrics_->stats_reads_.fetch_add(1, std::memory_order_relaxed); });
+#endif
+
       // status_
       write_buffer.push_back(0x01);
       batch.emplace_back(boost::asio::buffer(&write_buffer[_write_buffer_size], 1));
@@ -240,7 +244,8 @@ namespace throttr
           write_buffer.insert(write_buffer.end(), _ttl_ptr, _ttl_ptr + sizeof(_ttl));
           batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_ttl)));
         }
-      } else
+      }
+      else
       {
         // TTL Type
         batch.emplace_back(boost::asio::buffer(&_it->entry_.ttl_type_, sizeof(_it->entry_.ttl_type_)));
@@ -331,6 +336,13 @@ namespace throttr
               _modified = apply_ttl_change(object.entry_, request, _now, object.key_);
               break;
           }
+
+#ifdef ENABLED_FEATURE_METRICS
+          if (_modified)
+          {
+            object.metrics_->stats_writes_.fetch_add(1, std::memory_order_relaxed);
+          }
+#endif
         });
 
       // LCOV_EXCL_START
@@ -360,7 +372,7 @@ namespace throttr
     static bool apply_quota_change(request_entry &entry, const request_update &request)
     {
       using enum change_types;
-      auto& _atomic = *reinterpret_cast<std::atomic<value_type>*>(entry.value_.data()); // NOSONAR
+      auto &_atomic = *reinterpret_cast<std::atomic<value_type> *>(entry.value_.data()); // NOSONAR
 
       switch (request.header_->change_)
       {
@@ -517,12 +529,11 @@ namespace throttr
         const uint64_t _fragment_count = _fragments.size();
         const auto *_count_ptr = reinterpret_cast<const std::uint8_t *>(&_fragment_count); // NOSONAR
         write_buffer.insert(write_buffer.end(), _count_ptr, _count_ptr + sizeof(_fragment_count));
-        batch.emplace_back(
-          boost::asio::buffer(&write_buffer[_offset], sizeof(_fragment_count)));
+        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_fragment_count)));
       }
 
       std::size_t _i = 0;
-      for (const auto & _fragment : _fragments) // LCOV_EXCL_LINE Partially tested
+      for (const auto &_fragment : _fragments) // LCOV_EXCL_LINE Partially tested
       {
         const uint64_t _fragment_index = _i + 1;
         const uint64_t _key_count = _fragment.size();
@@ -531,8 +542,7 @@ namespace throttr
           const auto _offset = write_buffer.size();
           const auto *_fid_ptr = reinterpret_cast<const std::uint8_t *>(&_fragment_index); // NOSONAR
           write_buffer.insert(write_buffer.end(), _fid_ptr, _fid_ptr + sizeof(_fragment_index));
-          batch.emplace_back(
-            boost::asio::buffer(&write_buffer[_offset], sizeof(_fragment_index)));
+          batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_fragment_index)));
         }
 
         {

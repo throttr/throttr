@@ -10,6 +10,13 @@ set(BOOST_ALL_NO_LIB ON)
 set(BUILD_SHARED_LIBS OFF)
 
 option(BUILD_TESTS "Build tests cases" ON)
+option(ENABLE_FEATURE_METRICS "Enable metrics feature" ON)
+
+if (ENABLE_FEATURE_METRICS)
+    add_definitions(
+            -DENABLED_FEATURE_METRICS
+    )
+endif ()
 
 set(RUNTIME_VALUE_SIZE "UINT16" CACHE STRING "Set value type for Throttr (UINT8, UINT16, UINT32, UINT64)")
 set_property(CACHE RUNTIME_VALUE_SIZE PROPERTY STRINGS UINT8 UINT16 UINT32 UINT64)

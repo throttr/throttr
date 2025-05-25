@@ -618,7 +618,7 @@ TEST_F(ServerTestFixture, HandlesListWithMultipleFragments)
     }
   }
 
-  std::sort(_keys.begin(), _keys.end()); // NOSONAR
+  std::sort(_keys.begin(), _keys.end());           // NOSONAR
   std::sort(_read_keys.begin(), _read_keys.end()); // NOSONAR
 
   ASSERT_EQ(_read_keys.size(), _keys.size());
