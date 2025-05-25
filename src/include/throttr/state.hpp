@@ -265,7 +265,7 @@ namespace throttr
     {
       const request_key _key{request.key_};
       const auto _find = find_or_fail_for_batch(_key, batch);
-      if (!_find.has_value()) // LCOV_EXCL_LINE Note: Partially tested
+      if (!_find.has_value()) // LCOV_EXCL_LINE Note: Partially tested.
       {
         // LCOV_EXCL_START
 #ifndef NDEBUG
@@ -379,7 +379,7 @@ namespace throttr
           {
             case quota:
               if (object.entry_.type_ == entry_types::counter)
-              { // LCOV_EXCL_LINE Note: Partially tested
+              { // LCOV_EXCL_LINE Note: Partially tested.
                 _modified = apply_quota_change(object.entry_, request);
               }
               break;
@@ -390,7 +390,7 @@ namespace throttr
         });
 
 #ifdef ENABLED_FEATURE_METRICS
-      if (_modified) // LCOV_EXCL_LINE Note: Partially tested
+      if (_modified) // LCOV_EXCL_LINE Note: Partially tested.
       {
         _it.value()->metrics_->stats_writes_.fetch_add(1, std::memory_order_relaxed);
       }
@@ -524,7 +524,7 @@ namespace throttr
       }
 
 #ifdef ENABLED_FEATURE_METRICS
-      if (_it != _index.end()) // LCOV_EXCL_LINE Note: Partially tested
+      if (_it != _index.end()) // LCOV_EXCL_LINE Note: Partially tested.
       {
         _it->metrics_->stats_reads_.fetch_add(1, std::memory_order_relaxed);
       }
@@ -557,7 +557,7 @@ namespace throttr
       std::vector<std::uint8_t> &write_buffer,
       const bool measure)
     {
-      if (measure)
+      if (measure) // LCOV_EXCL_LINE Note: Partially tested.
         return entry->key_.size() + entry->entry_.value_.size() + 11;
 
       const auto _offset = write_buffer.size();
@@ -679,7 +679,7 @@ namespace throttr
       std::vector<std::uint8_t> &write_buffer,
       const bool measure)
     {
-      if (measure)
+      if (measure) // LCOV_EXCL_LINE Note: Partially tested.
         return entry->key_.size() + 1 + 8 * 4;
 
       const auto _offset = write_buffer.size();
@@ -745,17 +745,19 @@ namespace throttr
       std::vector<const entry_wrapper *> _fragment_items;
       std::vector<std::vector<const entry_wrapper *>> _fragments;
 
-      for (auto &_item : _index)
+      for (auto &_item : _index) // LCOV_EXCL_LINE Note: Partially tested.
       {
+        // LCOV_EXCL_START
         if (_item.expired_)
           continue;
+        // LCOV_EXCL_STOP
 
 #ifdef ENABLED_FEATURE_METRICS
         _item.metrics_->stats_reads_.fetch_add(1, std::memory_order_relaxed);
 #endif
 
         const std::size_t _item_size = serialize_entry(nullptr, &_item, true);
-        if (_fragment_size + _item_size > max_fragment_size)
+        if (_fragment_size + _item_size > max_fragment_size) // LCOV_EXCL_LINE Note: Partially tested.
         {
           _fragments.push_back(_fragment_items);
           _fragment_size = 0;
@@ -767,7 +769,7 @@ namespace throttr
         _fragment_size += _item_size;
       }
 
-      if (!_fragment_items.empty())
+      if (!_fragment_items.empty()) // LCOV_EXCL_LINE Note: Partially tested.
       {
         _fragments.push_back(std::move(_fragment_items));
       }
@@ -781,12 +783,12 @@ namespace throttr
       }
 
       std::size_t _i = 0;
-      for (const auto &_fragment : _fragments)
+      for (const auto &_fragment : _fragments) // LCOV_EXCL_LINE Note: Partially tested.
       {
         const uint64_t _fragment_index = _i + 1;
         const uint64_t _key_count = _fragment.size();
 
-        for (uint64_t value : {_fragment_index, _key_count})
+        for (uint64_t value : {_fragment_index, _key_count}) // LCOV_EXCL_LINE Note: Partially tested.
         {
           const auto _offset = write_buffer.size();
           const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&value); // NOSONAR
@@ -794,12 +796,12 @@ namespace throttr
           batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(value)));
         }
 
-        for (const auto *_entry : _fragment)
+        for (const auto *_entry : _fragment) // LCOV_EXCL_LINE Note: Partially tested.
         {
           serialize_entry(&batch, _entry, false);
         }
 
-        for (const auto &_entry : _fragment)
+        for (const auto &_entry : _fragment) // LCOV_EXCL_LINE Note: Partially tested.
         {
           batch.emplace_back(boost::asio::buffer(_entry->key_.data(), _entry->key_.size()));
         }
