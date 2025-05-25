@@ -134,6 +134,10 @@ namespace throttr
         reinterpret_cast<const std::byte *>(key.data()), reinterpret_cast<const std::byte *>(key.data() + key.size())); // NOSONAR
       const auto _entry_ptr = entry_wrapper{_key, request_entry{type, value, ttl_type, _expires_at}};
 
+#ifdef ENABLED_FEATURE_METRICS
+      _entry_ptr.metrics_->stats_writes_.fetch_add(1, std::memory_order_relaxed);
+#endif
+
       auto [_it, _inserted] = storage_.insert(std::move(_entry_ptr));
 
       boost::ignore_unused(_it);
@@ -141,8 +145,12 @@ namespace throttr
       // LCOV_EXCL_START Note: Actually tested
       if (_inserted)
       {
+        // TODO optimize this as the current scheduled key is stored as member of this class
+        // This will reduce the number of reads operations at least to one instead of all the container
+        // Basically this operation is costly when a huge amount of keys are stored
         for (const auto &_item : _index)
         {
+          _item.metrics_->stats_reads_.fetch_add(1, std::memory_order_relaxed);
           if (!_item.expired_)
           {
             if (_expires_at <= _item.entry_.expires_at_)
@@ -213,6 +221,11 @@ namespace throttr
       {
         return std::nullopt;
       }
+
+#ifdef ENABLED_FEATURE_METRICS
+      _it->metrics_->stats_reads_.fetch_add(1, std::memory_order_relaxed);
+#endif
+
       return _it;
     }
 
@@ -263,10 +276,6 @@ namespace throttr
       }
       const auto _it = _find.value();
       const value_type _ttl = get_ttl(_it->entry_.expires_at_, _it->entry_.ttl_type_);
-
-#ifdef ENABLED_FEATURE_METRICS
-      storage_.modify(_it, [](const entry_wrapper &object) { object.metrics_->stats_reads_.fetch_add(1, std::memory_order_relaxed); });
-#endif
 
       // status_
       batch.emplace_back(boost::asio::buffer(&success_response_, 1));
@@ -374,14 +383,13 @@ namespace throttr
               _modified = apply_ttl_change(object.entry_, request, _now, object.key_);
               break;
           }
+        });
 
 #ifdef ENABLED_FEATURE_METRICS
-          if (_modified)
-          {
-            object.metrics_->stats_writes_.fetch_add(1, std::memory_order_relaxed);
-          }
+      if (_modified) {
+        _it.value()->metrics_->stats_writes_.fetch_add(1, std::memory_order_relaxed);
+      }
 #endif
-        });
 
       // LCOV_EXCL_START
 #ifndef NDEBUG
@@ -510,6 +518,12 @@ namespace throttr
         _erased = false;
       }
 
+#ifdef ENABLED_FEATURE_METRICS
+      if (_it != _index.end()) {
+        _it->metrics_->stats_reads_.fetch_add(1, std::memory_order_relaxed);
+      }
+#endif
+
       // LCOV_EXCL_START
 #ifndef NDEBUG
       fmt::
@@ -544,6 +558,9 @@ namespace throttr
       for (auto &_item : _index) // LCOV_EXCL_LINE Partially tested
       {
         const std::size_t _item_size = _item.key_.size() + _item.entry_.value_.size() + 11;
+#ifdef ENABLED_FEATURE_METRICS
+        _item.metrics_->stats_reads_.fetch_add(1, std::memory_order_relaxed);
+#endif
 
         if (_fragment_size + _item_size > _max_fragment_size) // LCOV_EXCL_LINE Partially tested
         {
@@ -660,9 +677,6 @@ namespace throttr
         return;
       }
       const auto _it = _find.value();
-
-      _it->metrics_->stats_reads_.fetch_add(1, std::memory_order_relaxed);
-
       batch.emplace_back(boost::asio::buffer(&success_response_, 1));
 
       auto _append_uint64 = [&write_buffer, &batch](const uint64_t value) {

@@ -669,7 +669,11 @@ TEST_F(ServerTestFixture, HandlesStatReturnsCorrectMetrics)
 
   ASSERT_EQ(static_cast<uint8_t>(_stat_response[0]), 1);
 
-  uint64_t _rpm = 0, _wpm = 0, _reads_total = 0, _writes_total = 0;
+  uint64_t _rpm = 0;
+  uint64_t _wpm = 0;
+  uint64_t _reads_total = 0;
+  uint64_t _writes_total = 0;
+
   std::memcpy(&_rpm, _stat_response.data() + 1, sizeof(uint64_t));
   std::memcpy(&_wpm, _stat_response.data() + 1 + sizeof(uint64_t), sizeof(uint64_t));
   std::memcpy(&_reads_total, _stat_response.data() + 1 + sizeof(uint64_t) * 2, sizeof(uint64_t));
