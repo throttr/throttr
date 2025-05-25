@@ -145,7 +145,8 @@ namespace throttr
       // LCOV_EXCL_START Note: Actually tested
       if (_inserted)
       {
-        // TODO optimize this as the current scheduled key is stored as member of this class
+        // OPTIMIZATION AVAILABLE
+        // Optimize this as the current scheduled key is stored as member of this class
         // This will reduce the number of reads operations at least to one instead of all the container
         // Basically this operation is costly when a huge amount of keys are stored
         for (const auto &_item : _index)
@@ -262,7 +263,7 @@ namespace throttr
     {
       const request_key _key{request.key_};
       const auto _find = find_or_fail_for_batch(_key, batch);
-      if (!_find.has_value()) {
+      if (!_find.has_value()) { // LCOV_EXCL_LINE Note: Partially tested
         // LCOV_EXCL_START
 #ifndef NDEBUG
         fmt::println(
@@ -673,8 +674,8 @@ namespace throttr
           std::chrono::system_clock::now(),
           _key.key_);
 #endif
-        // LCOV_EXCL_STOP
         return;
+        // LCOV_EXCL_STOP
       }
       const auto _it = _find.value();
       batch.emplace_back(boost::asio::buffer(&success_response_, 1));
@@ -692,6 +693,7 @@ namespace throttr
       _append_uint64(metrics.stats_reads_accumulator_.load(std::memory_order_relaxed));
       _append_uint64(metrics.stats_writes_accumulator_.load(std::memory_order_relaxed));
 
+      // LCOV_EXCL_START
 #ifndef NDEBUG
       fmt::println(
         "{:%Y-%m-%d %H:%M:%S} REQUEST STAT key={} RESPONSE ok=true rpm={} wpm={} r_total={} w_total={}",
