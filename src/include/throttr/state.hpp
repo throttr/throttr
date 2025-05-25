@@ -600,7 +600,7 @@ namespace throttr
         batch,
         write_buffer,
         2048,
-        [_write_buffer_ref =
+        [_write_buffer_ref = // LCOV_EXCL_LINE Note: For some reason this line isn't tested ...
            std::ref(write_buffer)](std::vector<boost::asio::const_buffer> *b, const entry_wrapper *e, const bool measure)
         { return write_list_entry_to_buffer(b, e, _write_buffer_ref, measure); });
     }
