@@ -551,11 +551,11 @@ namespace throttr
      * @param measure
      * @return
      */
-    std::size_t write_list_entry_to_buffer(
-  std::vector<boost::asio::const_buffer> *batch,
-  const entry_wrapper *entry,
-  std::vector<std::uint8_t> &write_buffer,
-  const bool measure) const
+    static std::size_t write_list_entry_to_buffer(
+      std::vector<boost::asio::const_buffer> *batch,
+      const entry_wrapper *entry,
+      std::vector<std::uint8_t> &write_buffer,
+      const bool measure)
     {
       if (measure)
         return entry->key_.size() + entry->entry_.value_.size() + 11;
@@ -600,10 +600,9 @@ namespace throttr
         batch,
         write_buffer,
         2048,
-        [_self, _write_buffer_ref = std::ref(write_buffer)](std::vector<boost::asio::const_buffer> *b, const entry_wrapper *e, const bool measure) -> std::size_t
-        {
-          return _self->write_list_entry_to_buffer(b, e, _write_buffer_ref, measure);
-        });
+        [_write_buffer_ref = std::ref(
+           write_buffer)](std::vector<boost::asio::const_buffer> *b, const entry_wrapper *e, const bool measure) -> std::size_t
+        { return write_list_entry_to_buffer(b, e, _write_buffer_ref, measure); });
     }
 
     /**
@@ -667,6 +666,42 @@ namespace throttr
     }
 
     /**
+     * Write STATS entry to buffer
+     * @param batch
+     * @param entry
+     * @param write_buffer
+     * @param measure
+     * @return
+     */
+    static std::size_t write_stats_entry_to_buffer(
+      std::vector<boost::asio::const_buffer> *batch,
+      const entry_wrapper *entry,
+      std::vector<std::uint8_t> &write_buffer,
+      const bool measure)
+    {
+      if (measure)
+        return entry->key_.size() + 1 + 8 * 4;
+
+      const auto _offset = write_buffer.size();
+      write_buffer.push_back(static_cast<std::uint8_t>(entry->key_.size()));
+      batch->emplace_back(boost::asio::buffer(&write_buffer[_offset], 1));
+
+      for (const auto &_metric = *entry->metrics_; uint64_t _v :
+                                                   {_metric.stats_reads_per_minute_.load(std::memory_order_relaxed),
+                                                    _metric.stats_writes_per_minute_.load(std::memory_order_relaxed),
+                                                    _metric.stats_reads_accumulator_.load(std::memory_order_relaxed),
+                                                    _metric.stats_writes_accumulator_.load(std::memory_order_relaxed)})
+      {
+        const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&_v); // NOSONAR
+        const auto _off = write_buffer.size();
+        write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(_v));
+        batch->emplace_back(boost::asio::buffer(&write_buffer[_off], sizeof(_v)));
+      }
+
+      return 0;
+    }
+
+    /**
      * Handle STATS
      *
      * @param batch
@@ -684,28 +719,7 @@ namespace throttr
         write_buffer,
         2048,
         [&write_buffer](std::vector<boost::asio::const_buffer> *b, const entry_wrapper *e, const bool measure) -> std::size_t
-        {
-          if (measure)
-            return e->key_.size() + 1 + 8 * 4;
-
-          const auto _offset = write_buffer.size();
-          write_buffer.push_back(static_cast<std::uint8_t>(e->key_.size()));
-          b->emplace_back(boost::asio::buffer(&write_buffer[_offset], 1));
-
-          for (const auto &_metric = *e->metrics_; uint64_t _v :
-               {_metric.stats_reads_per_minute_.load(std::memory_order_relaxed),
-                 _metric.stats_writes_per_minute_.load(std::memory_order_relaxed),
-                 _metric.stats_reads_accumulator_.load(std::memory_order_relaxed),
-                 _metric.stats_writes_accumulator_.load(std::memory_order_relaxed)})
-          {
-            const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&_v); // NOSONAR
-            const auto _off = write_buffer.size();
-            write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(_v));
-            b->emplace_back(boost::asio::buffer(&write_buffer[_off], sizeof(_v)));
-          }
-
-          return 0;
-        });
+        { return write_stats_entry_to_buffer(b, e, write_buffer, measure); });
     }
 
     /**
