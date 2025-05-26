@@ -22,7 +22,7 @@ namespace throttr
   void state::join(connection *connection)
   {
     std::lock_guard lock(connections_mutex_);
-    connections_.emplace(connection->id_, connection);
+    connections_.try_emplace(connection->id_, connection);
   }
 
   void state::leave(const connection *connection)
