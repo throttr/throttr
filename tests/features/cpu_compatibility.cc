@@ -21,7 +21,7 @@ TEST(CPUCompatibility, VerifyAlign)
   std::vector<std::byte> _vec(sizeof(value_type));
   ASSERT_EQ(_vec.size(), sizeof(value_type));
   void *_raw_ptr = _vec.data();
-  const std::uintptr_t _address = reinterpret_cast<std::uintptr_t>(_raw_ptr);
+  const auto _address = reinterpret_cast<std::uintptr_t>(_raw_ptr);
   constexpr std::size_t _alignment = alignof(std::atomic<value_type>);
   ASSERT_EQ(_address % _alignment, 0) << "vec.data() isn't aligned to " << _alignment;
   auto *_atomic_ptr = reinterpret_cast<std::atomic<value_type> *>(_vec.data());
