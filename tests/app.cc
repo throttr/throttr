@@ -16,8 +16,37 @@
 #include <gtest/gtest.h>
 
 #include <throttr/version.hpp>
+#include <throttr/protocol_wrapper.hpp>
 
 TEST(Throttr, Version)
 {
   ASSERT_EQ(throttr::get_version(), "4.0.17");
+}
+
+TEST(Throttr, VerifyAlign)
+{
+  std::vector<std::byte> _vec(sizeof(value_type));
+  ASSERT_EQ(_vec.size(), sizeof(value_type));
+  void* _raw_ptr = _vec.data();
+  std::uintptr_t _address = reinterpret_cast<std::uintptr_t>(_raw_ptr);
+  std::size_t _alignment = alignof(std::atomic<value_type>);
+  ASSERT_EQ(_address % _alignment, 0) << "vec.data() no está alineado a " << _alignment;
+  auto* _atomic_ptr = reinterpret_cast<std::atomic<value_type>*>(_vec.data());
+  _atomic_ptr->store(33, std::memory_order_relaxed);
+  EXPECT_EQ(_atomic_ptr->load(std::memory_order_relaxed), 33);
+}
+
+TEST(Throttr, AtomicAlignmentForAllTypes)
+{
+  auto _check_align = [](std::size_t size, std::size_t alignment)
+  {
+    std::vector<std::byte> _vec(size);
+    std::uintptr_t _addr = reinterpret_cast<std::uintptr_t>(_vec.data());
+    EXPECT_EQ(_addr % alignment, 0) << "Buffer no alineado a " << alignment;
+  };
+
+  _check_align(sizeof(std::uint8_t), alignof(std::atomic<std::uint8_t>));
+  _check_align(sizeof(std::uint16_t), alignof(std::atomic<std::uint16_t>));
+  _check_align(sizeof(std::uint32_t), alignof(std::atomic<std::uint32_t>));
+  _check_align(sizeof(std::uint64_t), alignof(std::atomic<std::uint64_t>));
 }
