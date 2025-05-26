@@ -15,10 +15,10 @@ RUN mkdir -p build && \
     cd build && \
     if [ "$TYPE" = "debug" ]; then BUILD_TYPE="Debug"; else BUILD_TYPE="Release"; fi && \
     cmake .. -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DBUILD_TESTS=ON -DRUNTIME_VALUE_SIZE="$SIZE" && \
-    make -j4 && \
+    make -j16 && \
     strip --strip-all throttr  && \
     mv throttr /usr/bin/throttr && \
-    ctest && \
+    ctest --output-on-failure -V && \
     adduser --system --no-create-home --shell /bin/false throttr
 
 FROM scratch

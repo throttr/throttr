@@ -174,7 +174,7 @@ TEST_F(ServerTestFixture, HandleGetReturnsCorrectValue)
 
 TEST_F(ServerTestFixture, TTLExpiration)
 {
-  const auto _insert_buffer = request_insert_builder(32, ttl_types::milliseconds, 28, "consumer3/expire");
+  const auto _insert_buffer = request_insert_builder(32, ttl_types::seconds, 28, "consumer3/expire");
 
   auto _ignored = send_and_receive(_insert_buffer);
   boost::ignore_unused(_ignored);
@@ -194,7 +194,7 @@ TEST_F(ServerTestFixture, TTLExpiration)
 
   // [o] [o][o] [x] [o][o]
   const auto _success_response_ttl_type = static_cast<uint8_t>(_success_query_response[sizeof(value_type) + 1]);
-  ASSERT_EQ(_success_response_ttl_type, static_cast<uint8_t>(ttl_types::milliseconds));
+  ASSERT_EQ(_success_response_ttl_type, static_cast<uint8_t>(ttl_types::seconds));
 
   value_type _success_response_ttl;
 
@@ -400,7 +400,7 @@ TEST_F(ServerTestFixture, UpdatePatchTTLSeconds)
 
 TEST_F(ServerTestFixture, UpdateIncreaseTTL)
 {
-  const auto _insert = request_insert_builder(0, ttl_types::milliseconds, 32, "consumer_inc/resource_inc");
+  const auto _insert = request_insert_builder(0, ttl_types::seconds, 32, "consumer_inc/resource_inc");
   auto _ignored = send_and_receive(_insert);
   boost::ignore_unused(_ignored);
 
@@ -412,7 +412,7 @@ TEST_F(ServerTestFixture, UpdateIncreaseTTL)
 
 TEST_F(ServerTestFixture, UpdateDecreaseTTL)
 {
-  const auto _insert = request_insert_builder(0, ttl_types::milliseconds, 32, "consumer_dec/resource_dec");
+  const auto _insert = request_insert_builder(0, ttl_types::seconds, 32, "consumer_dec/resource_dec");
   auto _ignored = send_and_receive(_insert);
   boost::ignore_unused(_ignored);
 
