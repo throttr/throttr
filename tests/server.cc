@@ -174,7 +174,7 @@ TEST_F(ServerTestFixture, HandleGetReturnsCorrectValue)
 
 TEST_F(ServerTestFixture, TTLExpiration)
 {
-  const auto _insert_buffer = request_insert_builder(32, ttl_types::seconds, 28, "consumer3/expire");
+  const auto _insert_buffer = request_insert_builder(32, ttl_types::seconds, 5, "consumer3/expire");
 
   auto _ignored = send_and_receive(_insert_buffer);
   boost::ignore_unused(_ignored);
@@ -203,7 +203,7 @@ TEST_F(ServerTestFixture, TTLExpiration)
   ASSERT_GT(_success_response_ttl, 0);
   ;
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(1100));
+  std::this_thread::sleep_for(std::chrono::milliseconds(6600));
 
   auto _expired_query_response = send_and_receive(_query_buffer);
 
