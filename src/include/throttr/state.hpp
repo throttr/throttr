@@ -22,6 +22,7 @@
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/steady_timer.hpp>
 #include <boost/asio/strand.hpp>
+#include <boost/uuid/random_generator.hpp>
 #include <cstring>
 #include <deque>
 #include <memory>
@@ -31,6 +32,11 @@
 
 namespace throttr
 {
+  /**
+   * Forward connection
+   */
+  class connection;
+
   /**
    * State
    */
@@ -58,9 +64,19 @@ namespace throttr
     boost::asio::steady_timer expiration_timer_;
 
     /**
+     * UUID generator
+     */
+    boost::uuids::random_generator id_generator_ = boost::uuids::random_generator();
+
+    /**
      * Connections container
      */
-    std::vector<std::shared_ptr<void>> connections_;
+    std::unordered_map<boost::uuids::uuid, connection *, boost::hash<boost::uuids::uuid>> connections_;
+
+    /**
+     * Connections mutex
+     */
+    std::mutex connections_mutex_;
 
 #ifdef ENABLED_FEATURE_METRICS
     /**
@@ -358,6 +374,20 @@ namespace throttr
         _i++;
       }
     }
+
+    /**
+     * Join
+     *
+     * @param connection
+     */
+    void join(connection *connection);
+
+    /**
+     * Leave
+     *
+     * @param connection
+     */
+    void leave(const connection *connection);
 
     /**
      * Expiration timer
