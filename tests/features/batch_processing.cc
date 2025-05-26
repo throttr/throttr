@@ -13,12 +13,23 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include <gtest/gtest.h>
+#include "../service_test_fixture.hpp"
 
-#include <throttr/protocol_wrapper.hpp>
-#include <throttr/version.hpp>
+class BatchProcessingTestFixture : public ServiceTestFixture{
+};
 
-TEST(Throttr, Version)
+TEST_F(BatchProcessingTestFixture, OnSuccess)
 {
-  ASSERT_EQ(throttr::get_version(), "4.0.17");
+    const auto buffer1 = request_insert_builder(1, ttl_types::seconds, 64, "consumer3/resource3");
+    const auto buffer2 = request_insert_builder(1, ttl_types::seconds, 64, "consumer4/resource4");
+
+    std::vector<std::byte> batch;
+    batch.insert(batch.end(), buffer1.begin(), buffer1.end());
+    batch.insert(batch.end(), buffer2.begin(), buffer2.end());
+
+    auto responses = send_and_receive(batch, 2);
+    ASSERT_EQ(responses.size(), 2);
+
+    ASSERT_EQ(static_cast<uint8_t>(responses[0]), 1);
+    ASSERT_EQ(static_cast<uint8_t>(responses[1]), 1);
 }

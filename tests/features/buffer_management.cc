@@ -16,17 +16,16 @@
 #include <gtest/gtest.h>
 
 #include <boost/asio.hpp>
-#include <thread>
 #include <throttr/app.hpp>
 #include <throttr/state.hpp>
 
 using boost::asio::ip::tcp;
 using namespace throttr;
 
-class CompactBufferTest : public ::testing::Test
+class BufferManagementTestFixture : public ::testing::Test
 {
 public:
-  static connection create_dummy_session(std::shared_ptr<state> state)
+  static connection create_dummy_session(const std::shared_ptr<state> &state)
   {
     boost::asio::io_context ioc;
     tcp::socket socket(ioc);
@@ -34,7 +33,7 @@ public:
   }
 };
 
-TEST_F(CompactBufferTest, CompactBufferClearsWhenFullyConsumed)
+TEST_F(BufferManagementTestFixture, CompactBufferClearsWhenFullyConsumed)
 {
   boost::asio::io_context ioc;
   const auto _state = std::make_shared<state>(ioc);
@@ -49,7 +48,7 @@ TEST_F(CompactBufferTest, CompactBufferClearsWhenFullyConsumed)
   ASSERT_EQ(s.buffer_end_, 0);
 }
 
-TEST_F(CompactBufferTest, CompactBufferCompactsWhenHalfFull)
+TEST_F(BufferManagementTestFixture, CompactBufferCompactsWhenHalfFull)
 {
   boost::asio::io_context ioc;
   const auto _state = std::make_shared<state>(ioc);
