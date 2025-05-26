@@ -43,6 +43,7 @@ namespace throttr
         socket_(io_context),
         state_(state)
     {
+      state->exposed_port_ = acceptor_.local_endpoint().port();
       state->acceptor_ready_ = true;
       state->start_metrics_timer();
       do_accept();

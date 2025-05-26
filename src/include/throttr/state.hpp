@@ -49,6 +49,11 @@ namespace throttr
     std::atomic_bool acceptor_ready_;
 
     /**
+     * Port exposed
+     */
+    std::uint16_t exposed_port_;
+
+    /**
      * Storage
      */
     storage_type storage_;

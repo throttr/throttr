@@ -24,7 +24,7 @@
 using boost::asio::ip::tcp;
 using namespace throttr;
 
-class StateTestFixture : public testing::Test
+class StateManagementTestFixture : public testing::Test
 {
 public:
   boost::asio::io_context ioc_;
@@ -63,7 +63,7 @@ test_ttl_change(
   _header.change_ = _change_type;
   _header.value_ = static_cast<value_type>(_expected.count());
 
-  request_update _request{&_header, _key};
+  const request_update _request{&_header, _key};
 
   _entry.ttl_type_ = _ttl_type;
   const auto _now = steady_clock::now();
@@ -89,7 +89,7 @@ test_ttl_change(
   }
 }
 
-TEST(State, TTLChange)
+TEST(StateManagementTest, TTLChange)
 {
   using namespace throttr;
   using namespace std::chrono;
@@ -131,7 +131,7 @@ TEST(State, TTLChange)
   }
 }
 
-TEST(StateHelpersTest, CalculateExpirationPointNanoseconds)
+TEST(StateManagementTest, CalculateExpirationPointNanoseconds)
 {
   const auto _now = std::chrono::steady_clock::now();
   const auto _expires = get_expiration_point(_now, ttl_types::nanoseconds, 32);
@@ -140,7 +140,7 @@ TEST(StateHelpersTest, CalculateExpirationPointNanoseconds)
   ASSERT_NEAR(_diff, 32, 16);
 }
 
-TEST(StateHelpersTest, CalculateExpirationPointSeconds)
+TEST(StateManagementTest, CalculateExpirationPointSeconds)
 {
   const auto _now = std::chrono::steady_clock::now();
   const auto _expires = get_expiration_point(_now, ttl_types::seconds, 3);
@@ -149,7 +149,7 @@ TEST(StateHelpersTest, CalculateExpirationPointSeconds)
   ASSERT_NEAR(_diff, 3, 1);
 }
 
-TEST(StateHelpersTest, CalculateTTLRemainingNanosecondsNotExpired)
+TEST(StateManagementTest, CalculateTTLRemainingNanosecondsNotExpired)
 {
   const auto _now = std::chrono::steady_clock::now();
   const auto _expires = _now + std::chrono::nanoseconds(256);
@@ -158,7 +158,7 @@ TEST(StateHelpersTest, CalculateTTLRemainingNanosecondsNotExpired)
   ASSERT_GE(_ttl, 0);
 }
 
-TEST(StateHelpersTest, CalculateTTLRemainingSecondsNotExpired)
+TEST(StateManagementTest, CalculateTTLRemainingSecondsNotExpired)
 {
   const auto _now = std::chrono::steady_clock::now();
   const auto _expires = _now + std::chrono::seconds(10);
@@ -167,7 +167,7 @@ TEST(StateHelpersTest, CalculateTTLRemainingSecondsNotExpired)
   ASSERT_GE(_ttl, 0);
 }
 
-TEST(StateHelpersTest, CalculateTTLRemainingNanosecondsExpired)
+TEST(StateManagementTest, CalculateTTLRemainingNanosecondsExpired)
 {
   const auto _now = std::chrono::steady_clock::now();
   const auto _expires = _now - std::chrono::nanoseconds(100);
@@ -178,7 +178,7 @@ TEST(StateHelpersTest, CalculateTTLRemainingNanosecondsExpired)
   ASSERT_EQ(_quota, 0);
 }
 
-TEST(StateHelpersTest, CalculateTTLRemainingSecondsExpired)
+TEST(StateManagementTest, CalculateTTLRemainingSecondsExpired)
 {
   const auto _now = std::chrono::steady_clock::now();
   const auto _expires = _now - std::chrono::seconds(1);
@@ -189,7 +189,7 @@ TEST(StateHelpersTest, CalculateTTLRemainingSecondsExpired)
   ASSERT_EQ(_quota, 0);
 }
 
-TEST(State, QuotaChange)
+TEST(StateManagementTest, QuotaChange)
 {
   request_entry _entry;
   _entry.value_.resize(sizeof(value_type));
@@ -229,7 +229,7 @@ TEST(State, QuotaChange)
   EXPECT_FALSE(state::apply_quota_change(_entry, _dec_lt_req));
 }
 
-TEST_F(StateTestFixture, ScheduleExpiration_ReprogramsIfNextEntryExists)
+TEST_F(StateManagementTestFixture, ScheduleExpiration_ReprogramsIfNextEntryExists)
 {
   using namespace std::chrono;
   auto &_storage = state_->storage_;
