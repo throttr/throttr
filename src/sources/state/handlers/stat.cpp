@@ -60,7 +60,7 @@ namespace throttr
     // LCOV_EXCL_START
 #ifndef NDEBUG
     fmt::println(
-      "{:%Y-%m-%d %H:%M:%S} REQUEST STAT key={} RESPONSE ok=true rpm={} wpm={} r_total={} w_total={}",
+      "{:%Y-%m-%d %H:%M:%S} REQUEST STAT key={} RESPONSE ok=true read_per_minute={} write_per_minute={} read_total={} write_total={}",
       std::chrono::system_clock::now(),
       _key.key_,
       metrics.stats_reads_per_minute_.load(),

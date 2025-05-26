@@ -19,6 +19,7 @@
 #define THROTTR_SESSION_HPP
 
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/uuid/uuid.hpp>
 #include <memory>
 #include <span>
 #include <throttr/connection_allocator.hpp>
@@ -36,6 +37,11 @@ namespace throttr
   class connection : public std::enable_shared_from_this<connection>
   {
   public:
+    /**
+     * ID
+     */
+    boost::uuids::uuid id_;
+
     /**
      * Constructor
      *
@@ -84,7 +90,6 @@ namespace throttr
      */
     std::size_t buffer_end_ = 0;
 
-#ifndef NDEBUG
     /**
      * IP
      */
@@ -94,7 +99,7 @@ namespace throttr
      * Port
      */
     std::uint16_t port_ = 13579;
-#endif
+
   private:
     /**
      * Handler memory

@@ -17,6 +17,8 @@
 
 #include <fmt/chrono.h>
 
+#include "throttr/state.hpp"
+
 namespace throttr
 {
   void connection::start()
@@ -26,6 +28,9 @@ namespace throttr
     fmt::println("{:%Y-%m-%d %H:%M:%S} SESSION ESTABLISHED ip={} port={}", std::chrono::system_clock::now(), ip_, port_);
 #endif
     // LCOV_EXCL_STOP
+
+    state_->join(this);
+
     do_read();
   }
 

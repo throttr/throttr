@@ -15,20 +15,20 @@
 
 #include <throttr/connection.hpp>
 
+#include "throttr/state.hpp"
+
 namespace throttr
 {
   connection::connection(boost::asio::ip::tcp::socket socket, const std::shared_ptr<state> &state) :
-      socket_(std::move(socket)), state_(state)
+      id_(state->id_generator_()), socket_(std::move(socket)), state_(state)
   {
     // LCOV_EXCL_START
     if (socket_.is_open())
     {
       const boost::asio::ip::tcp::no_delay no_delay_option(true);
       socket_.set_option(no_delay_option);
-#ifndef NDEBUG
       ip_ = socket_.remote_endpoint().address().to_string();
       port_ = socket_.remote_endpoint().port();
-#endif
       write_buffer_.reserve(max_length_);
     }
     // LCOV_EXCL_STOP

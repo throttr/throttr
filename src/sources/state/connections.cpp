@@ -13,22 +13,21 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+#include <throttr/state.hpp>
+
 #include <throttr/connection.hpp>
-
-#include <fmt/chrono.h>
-
-#include "throttr/state.hpp"
 
 namespace throttr
 {
-  connection::~connection()
+  void state::join(connection *connection)
   {
-    // LCOV_EXCL_START
-#ifndef NDEBUG
-    fmt::println("{:%Y-%m-%d %H:%M:%S} SESSION CLOSED ip={} port={}", std::chrono::system_clock::now(), ip_, port_);
-#endif
-    // LCOV_EXCL_STOP
-    state_->leave(this);
+    std::lock_guard lock(connections_mutex_);
+    connections_.emplace(connection->id_, connection);
   }
 
+  void state::leave(const connection *connection)
+  {
+    std::lock_guard lock(connections_mutex_);
+    connections_.erase(connection->id_);
+  }
 } // namespace throttr

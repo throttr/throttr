@@ -15,8 +15,8 @@
 
 #include <gtest/gtest.h>
 
-#include <throttr/version.hpp>
 #include <throttr/protocol_wrapper.hpp>
+#include <throttr/version.hpp>
 
 TEST(Throttr, Version)
 {
@@ -27,11 +27,11 @@ TEST(Throttr, VerifyAlign)
 {
   std::vector<std::byte> _vec(sizeof(value_type));
   ASSERT_EQ(_vec.size(), sizeof(value_type));
-  void* _raw_ptr = _vec.data();
+  void *_raw_ptr = _vec.data();
   std::uintptr_t _address = reinterpret_cast<std::uintptr_t>(_raw_ptr);
   std::size_t _alignment = alignof(std::atomic<value_type>);
   ASSERT_EQ(_address % _alignment, 0) << "vec.data() no está alineado a " << _alignment;
-  auto* _atomic_ptr = reinterpret_cast<std::atomic<value_type>*>(_vec.data());
+  auto *_atomic_ptr = reinterpret_cast<std::atomic<value_type> *>(_vec.data());
   _atomic_ptr->store(33, std::memory_order_relaxed);
   EXPECT_EQ(_atomic_ptr->load(std::memory_order_relaxed), 33);
 }
