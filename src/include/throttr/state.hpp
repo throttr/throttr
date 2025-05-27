@@ -323,7 +323,7 @@ namespace throttr
           // LCOV_EXCL_STOP
 
 #ifdef ENABLED_FEATURE_METRICS
-        _item.metrics_->stats_reads_.fetch_add(1, std::memory_order_relaxed);
+        _item.metrics_->reads_.fetch_add(1, std::memory_order_relaxed);
 #endif
 
         const std::size_t _item_size = serialize_entry(nullptr, &_item, true);

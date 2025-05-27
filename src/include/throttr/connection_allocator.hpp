@@ -15,8 +15,8 @@
 
 #pragma once
 
-#ifndef THROTTR_SESSION_MEMORY_HPP
-#define THROTTR_SESSION_MEMORY_HPP
+#ifndef THROTTR_CONNECTION_ALLOCATOR_HPP
+#define THROTTR_CONNECTION_ALLOCATOR_HPP
 
 #include <cstddef>
 
@@ -181,4 +181,4 @@ namespace throttr
   // LCOV_EXCL_STOP
 } // namespace throttr
 
-#endif // THROTTR_SESSION_MEMORY_HPP
+#endif // THROTTR_CONNECTION_ALLOCATOR_HPP

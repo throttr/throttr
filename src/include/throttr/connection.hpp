@@ -15,14 +15,15 @@
 
 #pragma once
 
-#ifndef THROTTR_SESSION_HPP
-#define THROTTR_SESSION_HPP
+#ifndef THROTTR_CONNECTION_HPP
+#define THROTTR_CONNECTION_HPP
 
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <memory>
 #include <span>
 #include <throttr/connection_allocator.hpp>
+#include <throttr/connection_metrics.hpp>
 
 namespace throttr
 {
@@ -32,7 +33,7 @@ namespace throttr
   class state;
 
   /**
-   * Session
+   * Connection
    */
   class connection : public std::enable_shared_from_this<connection>
   {
@@ -41,6 +42,13 @@ namespace throttr
      * ID
      */
     boost::uuids::uuid id_;
+
+#ifdef ENABLED_FEATURE_METRICS
+    /**
+     * Metrics
+     */
+    std::shared_ptr<connection_metrics> metrics_ = std::make_shared<connection_metrics>();
+#endif
 
     /**
      * Constructor
@@ -177,4 +185,4 @@ namespace throttr
   };
 } // namespace throttr
 
-#endif // THROTTR_SESSION_HPP
+#endif // THROTTR_CONNECTION_HPP

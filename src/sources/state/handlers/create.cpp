@@ -39,7 +39,7 @@ namespace throttr
     const auto _entry_ptr = entry_wrapper{_key, request_entry{type, value, ttl_type, _expires_at}};
 
 #ifdef ENABLED_FEATURE_METRICS
-    _entry_ptr.metrics_->stats_writes_.fetch_add(1, std::memory_order_relaxed);
+    _entry_ptr.metrics_->writes_.fetch_add(1, std::memory_order_relaxed);
 #endif
 
     auto [_it, _inserted] = storage_.insert(std::move(_entry_ptr));
@@ -55,7 +55,7 @@ namespace throttr
       // Basically this operation is costly when a huge amount of keys are stored
       for (const auto &_item : _index)
       {
-        _item.metrics_->stats_reads_.fetch_add(1, std::memory_order_relaxed);
+        _item.metrics_->reads_.fetch_add(1, std::memory_order_relaxed);
         if (!_item.expired_)
         {
           if (_expires_at <= _item.entry_.expires_at_)

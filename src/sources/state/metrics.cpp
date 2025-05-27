@@ -35,20 +35,20 @@ namespace throttr
       // LCOV_EXCL_STOP
 
       auto
-        &[stats_reads_,
-          stats_writes_,
-          stats_reads_accumulator_,
-          stats_writes_accumulator_,
-          stats_reads_per_minute_,
-          stats_writes_per_minute_] = *_entry.metrics_;
-      const auto reads = stats_reads_.exchange(0, std::memory_order_relaxed);
-      const auto writes = stats_writes_.exchange(0, std::memory_order_relaxed);
+        &[reads_,
+          writes_,
+          reads_accumulator_,
+          writes_accumulator_,
+          reads_per_minute_,
+          writes_per_minute_] = *_entry.metrics_;
+      const auto reads = reads_.exchange(0, std::memory_order_relaxed);
+      const auto writes = writes_.exchange(0, std::memory_order_relaxed);
 
-      stats_reads_per_minute_.store(reads, std::memory_order_relaxed);
-      stats_writes_per_minute_.store(writes, std::memory_order_relaxed);
+      reads_per_minute_.store(reads, std::memory_order_relaxed);
+      writes_per_minute_.store(writes, std::memory_order_relaxed);
 
-      stats_reads_accumulator_.fetch_add(reads, std::memory_order_relaxed);
-      stats_writes_accumulator_.fetch_add(writes, std::memory_order_relaxed);
+      reads_accumulator_.fetch_add(reads, std::memory_order_relaxed);
+      writes_accumulator_.fetch_add(writes, std::memory_order_relaxed);
     }
 
 #ifndef NDEBUG
