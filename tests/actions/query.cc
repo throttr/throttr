@@ -17,76 +17,77 @@
 
 #include <boost/core/ignore_unused.hpp>
 
-class QueryTestFixture : public ServiceTestFixture{
+class QueryTestFixture : public ServiceTestFixture
+{
 };
 
 TEST_F(QueryTestFixture, OnSuccess)
 {
-    const auto _insert_buffer = request_insert_builder(10, ttl_types::seconds, 16, "consumer_query2/resource_query2");
+  const auto _insert_buffer = request_insert_builder(10, ttl_types::seconds, 16, "consumer_query2/resource_query2");
 
-    auto _ignored = send_and_receive(_insert_buffer);
-    boost::ignore_unused(_ignored);
+  auto _ignored = send_and_receive(_insert_buffer);
+  boost::ignore_unused(_ignored);
 
-    const auto _query_buffer = request_query_builder("consumer_query2/resource_query2");
-    auto _response = send_and_receive(_query_buffer, 2 + (sizeof(value_type) * 2));
+  const auto _query_buffer = request_query_builder("consumer_query2/resource_query2");
+  auto _response = send_and_receive(_query_buffer, 2 + (sizeof(value_type) * 2));
 
-    ASSERT_EQ(static_cast<uint8_t>(_response[0]), 1);
+  ASSERT_EQ(static_cast<uint8_t>(_response[0]), 1);
 
-    value_type _quota_remaining = 0;
-    std::memcpy(&_quota_remaining, _response.data() + 1, sizeof(_quota_remaining));
-    ASSERT_EQ(_quota_remaining, 10);
+  value_type _quota_remaining = 0;
+  std::memcpy(&_quota_remaining, _response.data() + 1, sizeof(_quota_remaining));
+  ASSERT_EQ(_quota_remaining, 10);
 }
 
 TEST_F(QueryTestFixture, OnFailedDueNonExistingKey)
 {
-    const auto _buffer = request_query_builder("consumer_query/resource_query");
-    auto _response = send_and_receive(_buffer);
+  const auto _buffer = request_query_builder("consumer_query/resource_query");
+  auto _response = send_and_receive(_buffer);
 
-    ASSERT_EQ(_response.size(), 1);
-    ASSERT_EQ(static_cast<uint8_t>(_response[0]), 0);
+  ASSERT_EQ(_response.size(), 1);
+  ASSERT_EQ(static_cast<uint8_t>(_response[0]), 0);
 }
 
 TEST_F(QueryTestFixture, OnFailedDueExpiredKey)
 {
-    const auto _insert_buffer = request_insert_builder(0, ttl_types::seconds, 1, "consumer_query3/resource_query3");
+  const auto _insert_buffer = request_insert_builder(0, ttl_types::seconds, 1, "consumer_query3/resource_query3");
 
-    auto _ignored = send_and_receive(_insert_buffer);
-    boost::ignore_unused(_ignored);
+  auto _ignored = send_and_receive(_insert_buffer);
+  boost::ignore_unused(_ignored);
 
-    std::this_thread::sleep_for(std::chrono::seconds(1));
-    const auto _query_buffer = request_query_builder("consumer_query3/resource_query3");
+  std::this_thread::sleep_for(std::chrono::seconds(1));
+  const auto _query_buffer = request_query_builder("consumer_query3/resource_query3");
 
-    auto _response = send_and_receive(_query_buffer);
-    ASSERT_EQ(static_cast<uint8_t>(_response[0]), 0);
+  auto _response = send_and_receive(_query_buffer);
+  ASSERT_EQ(static_cast<uint8_t>(_response[0]), 0);
 }
 
 TEST_F(QueryTestFixture, OnSuccessUntilExpired)
 {
-    const auto _insert_buffer = request_insert_builder(32, ttl_types::seconds, 3, "consumer3/expire");
+  const auto _insert_buffer = request_insert_builder(32, ttl_types::seconds, 3, "consumer3/expire");
 
-    auto _ignored = send_and_receive(_insert_buffer);
-    boost::ignore_unused(_ignored);
+  auto _ignored = send_and_receive(_insert_buffer);
+  boost::ignore_unused(_ignored);
 
-    const auto _query_buffer = request_query_builder("consumer3/expire");
-    auto _success_query_response = send_and_receive(_query_buffer, 2 + (sizeof(value_type) * 2));
+  const auto _query_buffer = request_query_builder("consumer3/expire");
+  auto _success_query_response = send_and_receive(_query_buffer, 2 + (sizeof(value_type) * 2));
 
-    ASSERT_EQ(static_cast<uint8_t>(_success_query_response[0]), 1);
+  ASSERT_EQ(static_cast<uint8_t>(_success_query_response[0]), 1);
 
-    value_type _success_response_quota;
-    std::memcpy(&_success_response_quota, _success_query_response.data() + 1,
-                sizeof(value_type)); // 2 bytes
-    ASSERT_EQ(_success_response_quota, 32);
+  value_type _success_response_quota;
+  std::memcpy(&_success_response_quota, _success_query_response.data() + 1,
+              sizeof(value_type)); // 2 bytes
+  ASSERT_EQ(_success_response_quota, 32);
 
-    const auto _success_response_ttl_type = static_cast<uint8_t>(_success_query_response[sizeof(value_type) + 1]);
-    ASSERT_EQ(_success_response_ttl_type, static_cast<uint8_t>(ttl_types::seconds));
+  const auto _success_response_ttl_type = static_cast<uint8_t>(_success_query_response[sizeof(value_type) + 1]);
+  ASSERT_EQ(_success_response_ttl_type, static_cast<uint8_t>(ttl_types::seconds));
 
-    value_type _success_response_ttl;
+  value_type _success_response_ttl;
 
-    std::memcpy(&_success_response_ttl, _success_query_response.data() + sizeof(value_type) + 2, sizeof(value_type));
-    ASSERT_GT(_success_response_ttl, 0);
+  std::memcpy(&_success_response_ttl, _success_query_response.data() + sizeof(value_type) + 2, sizeof(value_type));
+  ASSERT_GT(_success_response_ttl, 0);
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(3100));
+  std::this_thread::sleep_for(std::chrono::milliseconds(3100));
 
-    auto _expired_query_response = send_and_receive(_query_buffer);
-    ASSERT_EQ(static_cast<uint8_t>(_expired_query_response[0]), 0);
+  auto _expired_query_response = send_and_receive(_query_buffer);
+  ASSERT_EQ(static_cast<uint8_t>(_expired_query_response[0]), 0);
 }

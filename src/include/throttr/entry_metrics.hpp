@@ -20,44 +20,45 @@
 
 #include <atomic>
 
-namespace throttr {
+namespace throttr
+{
 #ifdef ENABLED_FEATURE_METRICS
+  /**
+   * Entry metrics
+   */
+  struct entry_metrics
+  {
     /**
-     * Entry metrics
+     * Reads
      */
-    struct entry_metrics
-    {
-        /**
-         * Reads
-         */
-        std::atomic<uint64_t> reads_ = 0;
+    std::atomic<uint64_t> reads_ = 0;
 
-        /**
-         * Writes
-         */
-        std::atomic<uint64_t> writes_ = 0;
+    /**
+     * Writes
+     */
+    std::atomic<uint64_t> writes_ = 0;
 
-        /**
-         * Reads accumulator
-         */
-        std::atomic<uint64_t> reads_accumulator_ = 0;
+    /**
+     * Reads accumulator
+     */
+    std::atomic<uint64_t> reads_accumulator_ = 0;
 
-        /**
-         * Write accumulator
-         */
-        std::atomic<uint64_t> writes_accumulator_ = 0;
+    /**
+     * Write accumulator
+     */
+    std::atomic<uint64_t> writes_accumulator_ = 0;
 
-        /**
-         * Reads per minute (RPM)
-         */
-        std::atomic<uint64_t> reads_per_minute_ = 0;
+    /**
+     * Reads per minute (RPM)
+     */
+    std::atomic<uint64_t> reads_per_minute_ = 0;
 
-        /**
-         * Writes per minute (WPM)
-         */
-        std::atomic<uint64_t> writes_per_minute_ = 0;
-    };
+    /**
+     * Writes per minute (WPM)
+     */
+    std::atomic<uint64_t> writes_per_minute_ = 0;
+  };
 #endif
-}
+} // namespace throttr
 
 #endif // THROTTR_ENTRY_METRICS_HPP

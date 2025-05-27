@@ -99,6 +99,11 @@ namespace throttr
           state_->handle_stats(_batch, write_buffer_);
           break;
         }
+        case request_types::connections:
+        {
+          state_->handle_connections(_batch, write_buffer_);
+          break;
+        }
           // LCOV_EXCL_START
         default:
         {

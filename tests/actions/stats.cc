@@ -15,7 +15,8 @@
 
 #include "../service_test_fixture.hpp"
 
-class StatsTestFixture : public ServiceTestFixture{
+class StatsTestFixture : public ServiceTestFixture
+{
 };
 
 TEST_F(StatsTestFixture, OnSuccessSingleFragment)

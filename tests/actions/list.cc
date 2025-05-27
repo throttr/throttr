@@ -15,7 +15,8 @@
 
 #include "../service_test_fixture.hpp"
 
-class ListTestFixture : public ServiceTestFixture {
+class ListTestFixture : public ServiceTestFixture
+{
 };
 
 TEST_F(ListTestFixture, OnSuccessSingleFragment)
@@ -113,7 +114,6 @@ TEST_F(ListTestFixture, OnSuccessSingleFragment)
 
   ASSERT_EQ(_offset, _response.size());
 }
-
 
 TEST_F(ListTestFixture, OnSuccessMultipleFragments)
 {

@@ -24,7 +24,7 @@ namespace throttr
     return;
 #endif
 
-    handle_fragmented_response(
+    handle_fragmented_entries_response(
       batch,
       write_buffer,
       2048,

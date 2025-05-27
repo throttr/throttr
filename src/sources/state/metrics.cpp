@@ -34,13 +34,7 @@ namespace throttr
         continue;
       // LCOV_EXCL_STOP
 
-      auto
-        &[reads_,
-          writes_,
-          reads_accumulator_,
-          writes_accumulator_,
-          reads_per_minute_,
-          writes_per_minute_] = *_entry.metrics_;
+      auto &[reads_, writes_, reads_accumulator_, writes_accumulator_, reads_per_minute_, writes_per_minute_] = *_entry.metrics_;
       const auto reads = reads_.exchange(0, std::memory_order_relaxed);
       const auto writes = writes_.exchange(0, std::memory_order_relaxed);
 

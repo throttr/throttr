@@ -26,7 +26,8 @@ namespace throttr
   /**
    * Connection network metrics
    */
-  struct connection_network_metrics {
+  struct connection_network_metrics
+  {
     /**
      * Read bytes
      */
@@ -48,7 +49,11 @@ namespace throttr
     std::atomic<uint64_t> received_bytes_ = 0;
   };
 
-  struct connection_memory_metrics {
+  /**
+   * Connection memory metrics
+   */
+  struct connection_memory_metrics
+  {
     /**
      * Allocated bytes
      */
@@ -63,7 +68,8 @@ namespace throttr
   /**
    * Connection service metrics
    */
-  struct connection_service_metrics {
+  struct connection_service_metrics
+  {
     /**
      * INSERT requests
      */

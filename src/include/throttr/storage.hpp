@@ -23,8 +23,8 @@
 #include <boost/multi_index/mem_fun.hpp>
 #include <boost/multi_index/tag.hpp>
 #include <boost/multi_index_container.hpp>
-#include <throttr/protocol_wrapper.hpp>
 #include <throttr/entry_wrapper.hpp>
+#include <throttr/protocol_wrapper.hpp>
 
 namespace throttr
 {

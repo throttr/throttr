@@ -15,46 +15,47 @@
 
 #include "../service_test_fixture.hpp"
 
-class GetTestFixture : public ServiceTestFixture {
+class GetTestFixture : public ServiceTestFixture
+{
 };
 
 TEST_F(GetTestFixture, OnSuccess)
 {
-    const std::string _key = "consumer/get_test";
-    const std::vector<std::byte> _value = {std::byte{0xBA}, std::byte{0xAD}, std::byte{0xF0}, std::byte{0x0D}};
+  const std::string _key = "consumer/get_test";
+  const std::vector<std::byte> _value = {std::byte{0xBA}, std::byte{0xAD}, std::byte{0xF0}, std::byte{0x0D}};
 
-    // 1. SET
-    const auto _set_buffer = request_set_builder(_value, ttl_types::seconds, 3, _key);
-    const auto _set_response = send_and_receive(_set_buffer);
-    ASSERT_EQ(_set_response.size(), 1);
-    ASSERT_EQ(static_cast<uint8_t>(_set_response[0]), 1);
+  // 1. SET
+  const auto _set_buffer = request_set_builder(_value, ttl_types::seconds, 3, _key);
+  const auto _set_response = send_and_receive(_set_buffer);
+  ASSERT_EQ(_set_response.size(), 1);
+  ASSERT_EQ(static_cast<uint8_t>(_set_response[0]), 1);
 
-    // 2. GET
-    const auto _get_buffer = request_get_builder(_key);
-    const auto _get_response = send_and_receive(_get_buffer, 1 + 1 + sizeof(value_type) * 2 + _value.size());
+  // 2. GET
+  const auto _get_buffer = request_get_builder(_key);
+  const auto _get_response = send_and_receive(_get_buffer, 1 + 1 + sizeof(value_type) * 2 + _value.size());
 
-    ASSERT_EQ(_get_response.size(), 1 + 1 + sizeof(value_type) * 2 + _value.size());
+  ASSERT_EQ(_get_response.size(), 1 + 1 + sizeof(value_type) * 2 + _value.size());
 
-    // Verifica status
-    ASSERT_EQ(static_cast<uint8_t>(_get_response[0]), 1);
+  // Verifica status
+  ASSERT_EQ(static_cast<uint8_t>(_get_response[0]), 1);
 
-    // ttl_type
-    ASSERT_EQ(static_cast<uint8_t>(_get_response[1]), static_cast<uint8_t>(ttl_types::seconds));
+  // ttl_type
+  ASSERT_EQ(static_cast<uint8_t>(_get_response[1]), static_cast<uint8_t>(ttl_types::seconds));
 
-    // ttl
-    value_type _ttl;
-    std::memcpy(&_ttl, _get_response.data() + 2, sizeof(_ttl));
-    ASSERT_GT(_ttl, 0);
+  // ttl
+  value_type _ttl;
+  std::memcpy(&_ttl, _get_response.data() + 2, sizeof(_ttl));
+  ASSERT_GT(_ttl, 0);
 
-    // value_size
-    value_type _value_size;
-    std::memcpy(&_value_size, _get_response.data() + 2 + sizeof(_ttl), sizeof(_value_size));
-    ASSERT_EQ(_value_size, _value.size());
+  // value_size
+  value_type _value_size;
+  std::memcpy(&_value_size, _get_response.data() + 2 + sizeof(_ttl), sizeof(_value_size));
+  ASSERT_EQ(_value_size, _value.size());
 
-    // value
-    const auto *_value_ptr = _get_response.data() + 2 + sizeof(_ttl) + sizeof(_value_size);
-    for (std::size_t i = 0; i < _value.size(); ++i)
-    {
-        ASSERT_EQ(_value_ptr[i], _value[i]);
-    }
+  // value
+  const auto *_value_ptr = _get_response.data() + 2 + sizeof(_ttl) + sizeof(_value_size);
+  for (std::size_t i = 0; i < _value.size(); ++i)
+  {
+    ASSERT_EQ(_value_ptr[i], _value[i]);
+  }
 }

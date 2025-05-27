@@ -15,21 +15,22 @@
 
 #include "../service_test_fixture.hpp"
 
-class BatchProcessingTestFixture : public ServiceTestFixture{
+class BatchProcessingTestFixture : public ServiceTestFixture
+{
 };
 
 TEST_F(BatchProcessingTestFixture, OnSuccess)
 {
-    const auto buffer1 = request_insert_builder(1, ttl_types::seconds, 64, "consumer3/resource3");
-    const auto buffer2 = request_insert_builder(1, ttl_types::seconds, 64, "consumer4/resource4");
+  const auto buffer1 = request_insert_builder(1, ttl_types::seconds, 64, "consumer3/resource3");
+  const auto buffer2 = request_insert_builder(1, ttl_types::seconds, 64, "consumer4/resource4");
 
-    std::vector<std::byte> batch;
-    batch.insert(batch.end(), buffer1.begin(), buffer1.end());
-    batch.insert(batch.end(), buffer2.begin(), buffer2.end());
+  std::vector<std::byte> batch;
+  batch.insert(batch.end(), buffer1.begin(), buffer1.end());
+  batch.insert(batch.end(), buffer2.begin(), buffer2.end());
 
-    auto responses = send_and_receive(batch, 2);
-    ASSERT_EQ(responses.size(), 2);
+  auto responses = send_and_receive(batch, 2);
+  ASSERT_EQ(responses.size(), 2);
 
-    ASSERT_EQ(static_cast<uint8_t>(responses[0]), 1);
-    ASSERT_EQ(static_cast<uint8_t>(responses[1]), 1);
+  ASSERT_EQ(static_cast<uint8_t>(responses[0]), 1);
+  ASSERT_EQ(static_cast<uint8_t>(responses[1]), 1);
 }

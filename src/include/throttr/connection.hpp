@@ -43,6 +43,11 @@ namespace throttr
      */
     boost::uuids::uuid id_;
 
+    /**
+     * Connected at
+     */
+    std::uint64_t connected_at_ = 0;
+
 #ifdef ENABLED_FEATURE_METRICS
     /**
      * Metrics

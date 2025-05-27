@@ -19,62 +19,63 @@
 #define THROTTR_ENTRY_WRAPPER_HPP
 
 #include <memory>
-#include <vector>
-#include <throttr/protocol_wrapper.hpp>
 #include <throttr/entry_metrics.hpp>
+#include <throttr/protocol_wrapper.hpp>
+#include <vector>
 
-namespace throttr {
+namespace throttr
+{
+  /**
+   * Entry wrapper
+   */
+  struct entry_wrapper
+  {
     /**
-      * Entry wrapper
-      */
-    struct entry_wrapper
-    {
-        /**
-         * Key
-         */
-        std::vector<std::byte> key_;
+     * Key
+     */
+    std::vector<std::byte> key_;
 
-        /**
-         * Entry
-         */
-        request_entry entry_;
+    /**
+     * Entry
+     */
+    request_entry entry_;
 
-        /**
-         * Expired
-         */
-        bool expired_ = false;
+    /**
+     * Expired
+     */
+    bool expired_ = false;
 
 #ifdef ENABLED_FEATURE_METRICS
-        /**
-         * Metrics
-         */
-        std::shared_ptr<entry_metrics> metrics_ = std::make_shared<entry_metrics>();
+    /**
+     * Metrics
+     */
+    std::shared_ptr<entry_metrics> metrics_ = std::make_shared<entry_metrics>();
 #endif
 
-        /**
-         * Key
-         *
-         * @return
-         */
-        [[nodiscard]] request_key key() const
-        {
-            return {
-                std::string_view(
-                  reinterpret_cast<const char *>(key_.data()), // NOSONAR
-                  key_.size()),                            // NOSONAR
-              };
-        }
+    /**
+     * Key
+     *
+     * @return
+     */
+    [[nodiscard]] request_key key() const
+    {
+      return {
+        std::string_view(
+          reinterpret_cast<const char *>(key_.data()), // NOSONAR
+          key_.size()),                                // NOSONAR
+      };
+    }
 
-        /**
-         * Entry wrapper
-         *
-         * @param k
-         * @param e
-         */
-        entry_wrapper(std::vector<std::byte> k, request_entry e) : key_(std::move(k)), entry_(std::move(e))
-        {
-        }
-    };
-}
+    /**
+     * Entry wrapper
+     *
+     * @param k
+     * @param e
+     */
+    entry_wrapper(std::vector<std::byte> k, request_entry e) : key_(std::move(k)), entry_(std::move(e))
+    {
+    }
+  };
+} // namespace throttr
 
 #endif // THROTTR_ENTRY_WRAPPER_HPP
