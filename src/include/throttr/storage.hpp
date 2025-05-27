@@ -24,96 +24,10 @@
 #include <boost/multi_index/tag.hpp>
 #include <boost/multi_index_container.hpp>
 #include <throttr/protocol_wrapper.hpp>
+#include <throttr/entry_wrapper.hpp>
 
 namespace throttr
 {
-#ifdef ENABLED_FEATURE_METRICS
-  struct entry_metrics
-  {
-    /**
-     * Stats read
-     */
-    std::atomic<uint64_t> stats_reads_ = 0;
-
-    /**
-     * Stats write
-     */
-    std::atomic<uint64_t> stats_writes_ = 0;
-
-    /**
-     * Stats read accumulator
-     */
-    std::atomic<uint64_t> stats_reads_accumulator_ = 0;
-
-    /**
-     * Stats write accumulator
-     */
-    std::atomic<uint64_t> stats_writes_accumulator_ = 0;
-
-    /**
-     * Stats read per minute (RPM)
-     */
-    std::atomic<uint64_t> stats_reads_per_minute_ = 0;
-
-    /**
-     * Stats write per minute (WPM)
-     */
-    std::atomic<uint64_t> stats_writes_per_minute_ = 0;
-  };
-#endif
-
-  /**
-   * Entry wrapper
-   */
-  struct entry_wrapper
-  {
-    /**
-     * Key
-     */
-    std::vector<std::byte> key_;
-
-    /**
-     * Entry
-     */
-    request_entry entry_;
-
-    /**
-     * Expired
-     */
-    bool expired_ = false;
-
-#ifdef ENABLED_FEATURE_METRICS
-    /**
-     * Metrics
-     */
-    std::shared_ptr<entry_metrics> metrics_ = std::make_shared<entry_metrics>();
-#endif
-
-    /**
-     * Key
-     *
-     * @return
-     */
-    [[nodiscard]] request_key key() const
-    {
-      return {
-        std::string_view(
-          reinterpret_cast<const char *>(key_.data()), // NOSONAR
-          key_.size()),                                // NOSONAR
-      };
-    }
-
-    /**
-     * Entry wrapper
-     *
-     * @param k
-     * @param e
-     */
-    entry_wrapper(std::vector<std::byte> k, request_entry e) : key_(std::move(k)), entry_(std::move(e))
-    {
-    }
-  };
-
   /**
    * Tag: access by key
    */

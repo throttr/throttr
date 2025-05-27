@@ -56,7 +56,7 @@ namespace throttr
 #ifdef ENABLED_FEATURE_METRICS
     if (_modified) // LCOV_EXCL_LINE Note: Partially tested.
     {
-      _it.value()->metrics_->stats_writes_.fetch_add(1, std::memory_order_relaxed);
+      _it.value()->metrics_->writes_.fetch_add(1, std::memory_order_relaxed);
     }
 #endif
 

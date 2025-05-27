@@ -46,10 +46,10 @@ namespace throttr
     batch->emplace_back(boost::asio::buffer(&write_buffer[_offset], 1));
 
     for (const auto &_metric = *entry->metrics_; uint64_t _v :
-                                                 {_metric.stats_reads_per_minute_.load(std::memory_order_relaxed),
-                                                  _metric.stats_writes_per_minute_.load(std::memory_order_relaxed),
-                                                  _metric.stats_reads_accumulator_.load(std::memory_order_relaxed),
-                                                  _metric.stats_writes_accumulator_.load(std::memory_order_relaxed)})
+                                                 {_metric.reads_per_minute_.load(std::memory_order_relaxed),
+                                                  _metric.writes_per_minute_.load(std::memory_order_relaxed),
+                                                  _metric.reads_accumulator_.load(std::memory_order_relaxed),
+                                                  _metric.writes_accumulator_.load(std::memory_order_relaxed)})
     {
       const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&_v); // NOSONAR
       const auto _off = write_buffer.size();

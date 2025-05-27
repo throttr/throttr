@@ -52,10 +52,10 @@ namespace throttr
     };
 
     const auto &metrics = *_it->metrics_;
-    _append_uint64(metrics.stats_reads_per_minute_.load(std::memory_order_relaxed));
-    _append_uint64(metrics.stats_writes_per_minute_.load(std::memory_order_relaxed));
-    _append_uint64(metrics.stats_reads_accumulator_.load(std::memory_order_relaxed));
-    _append_uint64(metrics.stats_writes_accumulator_.load(std::memory_order_relaxed));
+    _append_uint64(metrics.reads_per_minute_.load(std::memory_order_relaxed));
+    _append_uint64(metrics.writes_per_minute_.load(std::memory_order_relaxed));
+    _append_uint64(metrics.reads_accumulator_.load(std::memory_order_relaxed));
+    _append_uint64(metrics.writes_accumulator_.load(std::memory_order_relaxed));
 
     // LCOV_EXCL_START
 #ifndef NDEBUG
@@ -63,10 +63,10 @@ namespace throttr
       "{:%Y-%m-%d %H:%M:%S} REQUEST STAT key={} RESPONSE ok=true read_per_minute={} write_per_minute={} read_total={} write_total={}",
       std::chrono::system_clock::now(),
       _key.key_,
-      metrics.stats_reads_per_minute_.load(),
-      metrics.stats_writes_per_minute_.load(),
-      metrics.stats_reads_accumulator_.load(),
-      metrics.stats_writes_accumulator_.load());
+      metrics.reads_per_minute_.load(),
+      metrics.writes_per_minute_.load(),
+      metrics.reads_accumulator_.load(),
+      metrics.writes_accumulator_.load());
 #endif
     // LCOV_EXCL_STOP
   }

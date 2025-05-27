@@ -27,7 +27,7 @@ namespace throttr
     }
 
 #ifdef ENABLED_FEATURE_METRICS
-    _it->metrics_->stats_reads_.fetch_add(1, std::memory_order_relaxed);
+    _it->metrics_->reads_.fetch_add(1, std::memory_order_relaxed);
 #endif
 
     return _it;
