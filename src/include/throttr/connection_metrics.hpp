@@ -23,8 +23,10 @@
 namespace throttr
 {
 #ifdef ENABLED_FEATURE_METRICS
-  struct connection_metrics
-  {
+  /**
+   * Connection network metrics
+   */
+  struct connection_network_metrics {
     /**
      * Read bytes
      */
@@ -44,7 +46,9 @@ namespace throttr
      * Received bytes
      */
     std::atomic<uint64_t> received_bytes_ = 0;
+  };
 
+  struct connection_memory_metrics {
     /**
      * Allocated bytes
      */
@@ -54,7 +58,12 @@ namespace throttr
      * Consumed bytes
      */
     std::atomic<uint64_t> consumed_bytes_ = 0;
+  };
 
+  /**
+   * Connection service metrics
+   */
+  struct connection_service_metrics {
     /**
      * INSERT requests
      */
@@ -139,6 +148,27 @@ namespace throttr
      * WHOAMI requests
      */
     std::atomic<uint64_t> whoami_request_ = 0;
+  };
+
+  /**
+   * Connection metrics
+   */
+  struct connection_metrics
+  {
+    /**
+     * Network metrics
+     */
+    connection_network_metrics network_;
+
+    /**
+     * Memory metrics
+     */
+    connection_memory_metrics memory_;
+
+    /**
+     * Service metrics
+     */
+    connection_service_metrics service_;
   };
 #endif
 } // namespace throttr
