@@ -17,7 +17,8 @@
 
 #include <boost/core/ignore_unused.hpp>
 
-class UpdateTestFixture : public ServiceTestFixture{
+class UpdateTestFixture : public ServiceTestFixture
+{
 };
 
 TEST_F(UpdateTestFixture, IncreaseQuota)

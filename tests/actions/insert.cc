@@ -15,48 +15,49 @@
 
 #include "../service_test_fixture.hpp"
 
-class InsertTestFixture : public ServiceTestFixture {
+class InsertTestFixture : public ServiceTestFixture
+{
 };
 
 TEST_F(InsertTestFixture, OnSuccess)
 {
-    const auto _buffer = request_insert_builder(1, ttl_types::seconds, 32, "consumer1/resource1");
-    auto _response = send_and_receive(_buffer);
+  const auto _buffer = request_insert_builder(1, ttl_types::seconds, 32, "consumer1/resource1");
+  auto _response = send_and_receive(_buffer);
 
-    ASSERT_EQ(_response.size(), 1);
-    ASSERT_EQ(static_cast<uint8_t>(_response[0]), 1);
+  ASSERT_EQ(_response.size(), 1);
+  ASSERT_EQ(static_cast<uint8_t>(_response[0]), 1);
 }
 
 TEST_F(InsertTestFixture, OnSuccessOnDifferentKeys)
 {
-    const auto _buffer_a = request_insert_builder(3, ttl_types::seconds, 7, "consumerA/resourceA");
-    const auto _buffer_b = request_insert_builder(5, ttl_types::seconds, 7, "consumerB/resourceB");
+  const auto _buffer_a = request_insert_builder(3, ttl_types::seconds, 7, "consumerA/resourceA");
+  const auto _buffer_b = request_insert_builder(5, ttl_types::seconds, 7, "consumerB/resourceB");
 
-    const auto _response_a1 = send_and_receive(_buffer_a);
-    ASSERT_EQ(_response_a1.size(), 1);
-    ASSERT_EQ(static_cast<uint8_t>(_response_a1[0]), 1);
+  const auto _response_a1 = send_and_receive(_buffer_a);
+  ASSERT_EQ(_response_a1.size(), 1);
+  ASSERT_EQ(static_cast<uint8_t>(_response_a1[0]), 1);
 
-    const auto _response_b1 = send_and_receive(_buffer_b);
-    ASSERT_EQ(_response_b1.size(), 1);
-    ASSERT_EQ(static_cast<uint8_t>(_response_b1[0]), 1);
+  const auto _response_b1 = send_and_receive(_buffer_b);
+  ASSERT_EQ(_response_b1.size(), 1);
+  ASSERT_EQ(static_cast<uint8_t>(_response_b1[0]), 1);
 }
 
 TEST_F(InsertTestFixture, OnFailedDueAlreadyCreatedKey)
 {
-    const auto _buffer = request_insert_builder(1, ttl_types::seconds, 32, "consumer2/resource2");
+  const auto _buffer = request_insert_builder(1, ttl_types::seconds, 32, "consumer2/resource2");
 
-    for (int _i = 0; _i < 5; ++_i)
+  for (int _i = 0; _i < 5; ++_i)
+  {
+    auto _response = send_and_receive(_buffer);
+    ASSERT_EQ(_response.size(), 1);
+
+    if (_i == 0)
     {
-        auto _response = send_and_receive(_buffer);
-        ASSERT_EQ(_response.size(), 1);
-
-        if (_i == 0)
-        {
-            ASSERT_EQ(static_cast<uint8_t>(_response[0]), 1);
-        }
-        else
-        {
-            ASSERT_EQ(static_cast<uint8_t>(_response[0]), 0);
-        }
+      ASSERT_EQ(static_cast<uint8_t>(_response[0]), 1);
     }
+    else
+    {
+      ASSERT_EQ(static_cast<uint8_t>(_response[0]), 0);
+    }
+  }
 }

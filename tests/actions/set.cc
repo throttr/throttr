@@ -15,18 +15,19 @@
 
 #include "../service_test_fixture.hpp"
 
-class SetTestFixture : public ServiceTestFixture{
+class SetTestFixture : public ServiceTestFixture
+{
 };
 
 TEST_F(SetTestFixture, OnSuccess)
 {
-    const std::string _key = "consumer/set_value";
-    const std::vector _value = {std::byte{0xBE}, std::byte{0xEF}, std::byte{0xCA}, std::byte{0xFE}};
+  const std::string _key = "consumer/set_value";
+  const std::vector _value = {std::byte{0xBE}, std::byte{0xEF}, std::byte{0xCA}, std::byte{0xFE}};
 
-    const auto _buffer = request_set_builder(_value, ttl_types::seconds, 10, _key);
+  const auto _buffer = request_set_builder(_value, ttl_types::seconds, 10, _key);
 
-    auto _response = send_and_receive(_buffer);
+  auto _response = send_and_receive(_buffer);
 
-    ASSERT_EQ(_response.size(), 1);
-    ASSERT_EQ(static_cast<uint8_t>(_response[0]), 1);
+  ASSERT_EQ(_response.size(), 1);
+  ASSERT_EQ(static_cast<uint8_t>(_response[0]), 1);
 }

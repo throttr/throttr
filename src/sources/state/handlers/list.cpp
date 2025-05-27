@@ -20,7 +20,7 @@ namespace throttr
   void state::handle_list(std::vector<boost::asio::const_buffer> &batch, std::vector<std::uint8_t> &write_buffer)
   {
     auto _self = shared_from_this();
-    handle_fragmented_response(
+    handle_fragmented_entries_response(
       batch,
       write_buffer,
       2048,

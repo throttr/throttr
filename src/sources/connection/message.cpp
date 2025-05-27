@@ -80,6 +80,10 @@ namespace throttr
       {
         return get_message_sized(buffer, request_stats_header_size, 0);
       }
+      case request_types::connections:
+      {
+        return get_message_sized(buffer, request_connections_header_size, 0);
+      }
         // LCOV_EXCL_START
       default:
         return 0;

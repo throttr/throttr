@@ -271,7 +271,17 @@ namespace throttr
       std::vector<std::uint8_t> &write_buffer);
 
     /**
+     * Handle CONNECTIONS
+     *
+     * @param write_buffer
+     * @param batch
+     * @return uint8_t
+     */
+    void handle_connections(std::vector<boost::asio::const_buffer> &batch, std::vector<std::uint8_t> &write_buffer);
+
+    /**
      * Write STATS entry to buffer
+     *
      * @param batch
      * @param entry
      * @param write_buffer
@@ -285,6 +295,21 @@ namespace throttr
       bool measure);
 
     /**
+     * Write CONNECTIONS entry to buffer
+     *
+     * @param batch
+     * @param conn
+     * @param write_buffer
+     * @param measure
+     * @return
+     */
+    static std::size_t write_connections_entry_to_buffer(
+      std::vector<boost::asio::const_buffer> *batch,
+      const connection *conn,
+      std::vector<std::uint8_t> &write_buffer,
+      bool measure);
+
+    /**
      * Handle STATS
      *
      * @param batch
@@ -293,7 +318,16 @@ namespace throttr
     void handle_stats(std::vector<boost::asio::const_buffer> &batch, std::vector<std::uint8_t> &write_buffer);
 
     /**
-     * Handle fragmented response
+     * Handle fragmented connections response
+     * @param batch
+     * @param write_buffer
+     */
+    void handle_fragmented_connections_response(
+      std::vector<boost::asio::const_buffer> &batch,
+      std::vector<std::uint8_t> &write_buffer);
+
+    /**
+     * Handle fragmented entries response
      *
      * @tparam EntrySerializer
      * @param batch
@@ -302,7 +336,7 @@ namespace throttr
      * @param serialize_entry
      */
     template<typename EntrySerializer>
-    void handle_fragmented_response(
+    void handle_fragmented_entries_response(
       std::vector<boost::asio::const_buffer> &batch,
       std::vector<std::uint8_t> &write_buffer,
       const std::size_t max_fragment_size,

@@ -17,7 +17,8 @@
 
 #include <boost/core/ignore_unused.hpp>
 
-class PurgeTestFixture : public ServiceTestFixture {
+class PurgeTestFixture : public ServiceTestFixture
+{
 };
 
 TEST_F(PurgeTestFixture, OnSuccess)
@@ -46,4 +47,3 @@ TEST_F(PurgeTestFixture, OnFailed)
 
   ASSERT_EQ(static_cast<uint8_t>(_purge_response[0]), 0);
 }
-
