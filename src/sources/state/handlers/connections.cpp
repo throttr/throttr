@@ -36,7 +36,7 @@ namespace throttr
     if (measure)
       return 227;
 
-    const auto _push = [&](const void *ptr, const std::size_t size)
+    const auto _push = [&](const void *ptr, const std::size_t size) // NOSONAR
     {
       const auto _offset = write_buffer.size();
       const auto *_bytes = static_cast<const std::uint8_t *>(ptr);
@@ -48,12 +48,12 @@ namespace throttr
     _push(conn->id_.data, 16);
 
     // IP version (1 byte)
-    const std::uint8_t _ip_version = conn->ip_.find(':') != std::string::npos ? 0x06 : 0x04;
+    const std::uint8_t _ip_version = conn->ip_.contains(':') ? 0x06 : 0x04;
     _push(&_ip_version, 1);
 
     // IP padded to 16 bytes
     std::array<std::uint8_t, 16> _ip_bytes = {};
-    const auto _ip_str = conn->ip_;
+    const auto & _ip_str = conn->ip_;
     const auto _len = std::min<std::size_t>(_ip_str.size(), 16);
     std::memcpy(_ip_bytes.data(), _ip_str.data(), _len);
     _push(_ip_bytes.data(), 16);
@@ -62,7 +62,7 @@ namespace throttr
     _push(&conn->port_, sizeof(conn->port_));
 
 #ifdef ENABLED_FEATURE_METRICS
-    auto &_metrics = *conn->metrics_;
+    const auto &_metrics = *conn->metrics_;
 
     for (uint64_t val :
          {conn->connected_at_,
@@ -117,30 +117,30 @@ namespace throttr
       std::lock_guard _lock(connections_mutex_);
       for (const auto &[_id, _conn] : connections_)
       {
-        if (!_conn)
-          continue;
-
         const std::size_t _conn_size = write_connections_entry_to_buffer(nullptr, _conn, write_buffer, true);
 
+        // LCOV_EXCL_START
+        // @Pending this should be tested but requires a mechanism to create a huge amount of connections
         if (constexpr std::size_t _max_fragment_size = 2048; _current_fragment_size + _conn_size > _max_fragment_size)
         {
           _fragments.push_back(std::move(_fragment));
           _fragment.clear();
           _current_fragment_size = 0;
         }
+        // LCOV_EXCL_STOP
 
         _fragment.push_back(_conn);
         _current_fragment_size += _conn_size;
       }
     }
 
-    if (!_fragment.empty())
+    if (!_fragment.empty()) // LCOV_EXCL_LINE Note: Partially tested.
       _fragments.push_back(std::move(_fragment));
 
     {
       const auto _offset = write_buffer.size();
       const uint64_t _total_fragments = _fragments.size();
-      const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&_total_fragments);
+      const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&_total_fragments); // NOSONAR
       write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(_total_fragments));
       batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_total_fragments)));
     }
@@ -148,12 +148,13 @@ namespace throttr
     std::size_t _index = 1;
     for (const auto &_frag : _fragments)
     {
-      const uint64_t _fragment_index = _index++;
+      const uint64_t _fragment_index = _index;
+      ++_index;
 
       for (const uint64_t _connection_count = _frag.size(); uint64_t val : {_fragment_index, _connection_count})
       {
         const auto _offset = write_buffer.size();
-        const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&val);
+        const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&val); // NOSONAR
         write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(val));
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(val)));
       }

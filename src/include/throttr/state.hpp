@@ -236,7 +236,7 @@ namespace throttr
 
     /**
      * Write LIST entry to buffer
-     * 
+     *
      * @param batch
      * @param entry
      * @param write_buffer
