@@ -17,18 +17,6 @@
 
 namespace throttr
 {
-  void state::handle_list(std::vector<boost::asio::const_buffer> &batch, std::vector<std::uint8_t> &write_buffer)
-  {
-    auto _self = shared_from_this();
-    handle_fragmented_entries_response(
-      batch,
-      write_buffer,
-      2048,
-      [_write_buffer_ref = // LCOV_EXCL_LINE Note: For some reason this line isn't tested ...
-       std::ref(write_buffer)](std::vector<boost::asio::const_buffer> *b, const entry_wrapper *e, const bool measure)
-      { return write_list_entry_to_buffer(b, e, _write_buffer_ref, measure); });
-  }
-
   std::size_t state::write_list_entry_to_buffer(
     std::vector<boost::asio::const_buffer> *batch,
     const entry_wrapper *entry,

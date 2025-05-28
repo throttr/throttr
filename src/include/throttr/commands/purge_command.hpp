@@ -13,14 +13,28 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include <throttr/state.hpp>
+#ifndef THROTTR_COMMANDS_PURGE_COMMAND_HPP
+#define THROTTR_COMMANDS_PURGE_COMMAND_HPP
+
+#include <boost/asio/buffer.hpp>
+#include <memory>
+#include <span>
+#include <vector>
+
+#include <throttr/commands/base_command.hpp>
+#include <throttr/protocol/request_types.hpp>
 
 namespace throttr
 {
-  std::uint8_t state::handle_set(const std::span<const std::byte> view)
-  {
-    const auto [header_, key_, value_] = request_set::from_buffer(view);
-    const std::vector value(value_.begin(), value_.end());
-    return handle_create(key_, value, header_->ttl_type_, header_->ttl_, entry_types::raw);
-  }
+  class purge_command final : public base_command {
+  public:
+    void call(
+      const std::shared_ptr<state> & state,
+      const request_types type,
+      const std::span<const std::byte> view,
+      std::vector<boost::asio::const_buffer> &batch,
+      std::vector<std::uint8_t> &write_buffer) override;
+  };
 } // namespace throttr
+
+#endif // THROTTR_COMMANDS_PURGE_COMMAND_HPP

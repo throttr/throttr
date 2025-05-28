@@ -51,57 +51,17 @@ namespace throttr
       switch (const auto _type = static_cast<request_types>(std::to_integer<uint8_t>(_view[0])); _type)
       {
         case request_types::insert:
-        {
-          const auto _value = state_->handle_insert(_view);
-          write_buffer_.push_back(_value);
-          _batch.emplace_back(boost::asio::buffer(&write_buffer_[_write_buffer_size], 1));
-          break;
-        }
         case request_types::set:
-        {
-          const auto _value = state_->handle_set(_view);
-          write_buffer_.push_back(_value);
-          _batch.emplace_back(boost::asio::buffer(&write_buffer_[_write_buffer_size], 1));
-          break;
-        }
         case request_types::query:
         case request_types::get:
-        {
-          state_->handle_query(request_query::from_buffer(_view), _type == request_types::query, _batch, write_buffer_);
-          break;
-        }
         case request_types::update:
-        {
-          const auto _value = state_->handle_update(request_update::from_buffer(_view));
-          write_buffer_.push_back(_value);
-          _batch.emplace_back(boost::asio::buffer(&write_buffer_[_write_buffer_size], 1));
-          break;
-        }
         case request_types::purge:
-        {
-          const auto _value = state_->handle_purge(request_purge::from_buffer(_view));
-          write_buffer_.push_back(_value);
-          _batch.emplace_back(boost::asio::buffer(&write_buffer_[_write_buffer_size], 1));
-          break;
-        }
         case request_types::list:
-        {
-          state_->handle_list(_batch, write_buffer_);
-          break;
-        }
         case request_types::stat:
-        {
-          state_->handle_stat(request_stat::from_buffer(_view), _batch, write_buffer_);
-          break;
-        }
         case request_types::stats:
-        {
-          state_->handle_stats(_batch, write_buffer_);
-          break;
-        }
         case request_types::connections:
         {
-          state_->handle_connections(_batch, write_buffer_);
+          state_->commands_->commands_[_type]->call(state_, _type, _view, _batch, write_buffer_);
           break;
         }
           // LCOV_EXCL_START

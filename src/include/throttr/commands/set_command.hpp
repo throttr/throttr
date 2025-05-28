@@ -13,15 +13,30 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include <throttr/state.hpp>
+
+#ifndef THROTTR_COMMANDS_SET_COMMAND_HPP
+#define THROTTR_COMMANDS_SET_COMMAND_HPP
+
+#include <boost/asio/buffer.hpp>
+#include <memory>
+#include <span>
+#include <vector>
+
+#include <throttr/commands/base_command.hpp>
+#include <throttr/protocol/request_types.hpp>
 
 namespace throttr
 {
-  std::uint8_t state::handle_insert(const std::span<const std::byte> view)
+  class set_command final : public base_command
   {
-    const auto [header_, key_] = request_insert::from_buffer(view);
-    std::vector<std::byte> value(sizeof(value_type));
-    std::memcpy(value.data(), &header_->quota_, sizeof(value_type));
-    return handle_create(key_, value, header_->ttl_type_, header_->ttl_, entry_types::counter);
-  }
+  public:
+    void call(
+      const std::shared_ptr<state> & state,
+      const request_types type,
+      const std::span<const std::byte> view,
+      std::vector<boost::asio::const_buffer> &batch,
+      std::vector<std::uint8_t> &write_buffer) override;
+  };
 } // namespace throttr
+
+#endif // THROTTR_COMMANDS_SET_COMMAND_HPP
