@@ -27,12 +27,12 @@ namespace throttr
 
     while (true)
     {
-      std::span<const std::byte> _span(buffer_.data() + buffer_start_, buffer_end_ - buffer_start_);
+      const std::span<const std::byte> _span(buffer_.data() + buffer_start_, buffer_end_ - buffer_start_);
       const std::size_t _msg_size = get_message_size(_span);
       if (_msg_size == 0 || _span.size() < _msg_size) // LCOV_EXCL_LINE note: Ignored.
         break;
 
-      std::span<const std::byte> _view(buffer_.data() + buffer_start_, _msg_size);
+      const std::span<const std::byte> _view(buffer_.data() + buffer_start_, _msg_size);
       buffer_start_ += _msg_size;
 
       // LCOV_EXCL_START
@@ -46,32 +46,9 @@ namespace throttr
 #endif
       // LCOV_EXCL_STOP
 
-      const auto _write_buffer_size = write_buffer_.size();
-
-      switch (const auto _type = static_cast<request_types>(std::to_integer<uint8_t>(_view[0])); _type)
-      {
-        case request_types::insert:
-        case request_types::set:
-        case request_types::query:
-        case request_types::get:
-        case request_types::update:
-        case request_types::purge:
-        case request_types::list:
-        case request_types::stat:
-        case request_types::stats:
-        case request_types::connections:
-        {
-          state_->commands_->commands_[_type]->call(state_, _type, _view, _batch, write_buffer_);
-          break;
-        }
-          // LCOV_EXCL_START
-        default:
-        {
-          write_buffer_.push_back(0x00);
-          _batch.emplace_back(boost::asio::buffer(&write_buffer_[_write_buffer_size], 1));
-          break;
-        }
-      }
+      const auto _type = static_cast<request_types>(std::to_integer<uint8_t>(_view[0]));
+      state_->commands_->commands_[static_cast<std::size_t>(_type)]->call(state_, _type, _view, _batch, write_buffer_);
+      break;
       // LCOV_EXCL_STOP
     }
 

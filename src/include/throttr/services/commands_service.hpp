@@ -32,7 +32,7 @@ namespace throttr
     /**
      * Commands
      */
-    std::unordered_map<request_types, std::unique_ptr<base_command>> commands_;
+    std::array<std::unique_ptr<base_command>, 32> commands_;
 
     /**
      * Constructor
