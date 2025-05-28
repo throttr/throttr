@@ -26,10 +26,11 @@
 
 namespace throttr
 {
-  class stat_command final : public base_command {
+  class stat_command final : public base_command
+  {
   public:
     void call(
-      const std::shared_ptr<state> & state,
+      const std::shared_ptr<state> &state,
       request_types type,
       std::span<const std::byte> view,
       std::vector<boost::asio::const_buffer> &batch,

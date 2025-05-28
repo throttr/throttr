@@ -86,8 +86,9 @@ namespace throttr
     // LCOV_EXCL_START
     if (scheduled_key_.size() == key.size() && std::equal(scheduled_key_.begin(), scheduled_key_.end(), key.begin()))
     {
-      boost::asio::
-        post(strand_, [_self = shared_from_this(), _expires_at = entry.expires_at_] { _self->schedule_expiration(_expires_at); });
+      boost::asio::post(
+        strand_,
+        [_self = shared_from_this(), _expires_at = entry.expires_at_] { _self->garbage_collector_->schedule_timer(_self, _expires_at); });
     }
     // LCOV_EXCL_STOP
 

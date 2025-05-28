@@ -13,21 +13,46 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include <throttr/state.hpp>
+#include <throttr/services/garbage_collector_service.hpp>
 
-#include <fmt/chrono.h>
+#include <throttr/state.hpp>
 
 namespace throttr
 {
-  void state::expiration_timer()
+  void garbage_collector_service::schedule_timer(
+    const std::shared_ptr<state> &state,
+    const std::chrono::steady_clock::time_point proposed)
   {
-    std::scoped_lock guard(mutex_);
+#ifndef NDEBUG
+    fmt::println("{:%Y-%m-%d %H:%M:%S} GARBAGE COLLECTION SCHEDULED", std::chrono::system_clock::now());
+#endif
+
+    const auto _now = std::chrono::steady_clock::now();
+    if (proposed <= _now) // LCOV_EXCL_LINE Note: Partially tested.
+    {
+      run(state);
+      return;
+    }
+
+    const auto _delay = proposed - _now;
+    state->expiration_timer_.expires_after(_delay);
+    state->expiration_timer_.async_wait(
+      [_self = shared_from_this(), _state = state->shared_from_this()](const boost::system::error_code &ec)
+      {
+        if (!ec)
+          _self->run(_state);
+      });
+  }
+
+  void garbage_collector_service::run(const std::shared_ptr<state> &state)
+  {
+    std::scoped_lock guard(state->mutex_);
 #ifndef NDEBUG
     fmt::println("{:%Y-%m-%d %H:%M:%S} GARBAGE COLLECTION STARTED", std::chrono::system_clock::now());
 #endif
 
     const auto _now = std::chrono::steady_clock::now();
-    auto &_index = storage_.get<tag_by_key>();
+    auto &_index = state->storage_.get<tag_by_key>();
 
     std::vector<request_key> _to_expire;
     std::vector<request_key> _to_erase;
@@ -73,7 +98,7 @@ namespace throttr
       }
     }
 
-    auto &_erase_index = storage_.get<tag_by_key>();
+    auto &_erase_index = state->storage_.get<tag_by_key>();
     for (const auto &_key : _to_erase) // LCOV_EXCL_LINE Note: Partially tested.
     {
       if (auto _it = _erase_index.find(_key);         // LCOV_EXCL_LINE Note: Partially tested.
@@ -89,8 +114,8 @@ namespace throttr
       }
     }
 
-    for (auto &_candidate_index = storage_.get<tag_by_key>(); // LCOV_EXCL_LINE Note: Partially tested.
-         const auto &_item : _candidate_index)                // LCOV_EXCL_LINE Note: Partially tested.
+    for (auto &_candidate_index = state->storage_.get<tag_by_key>(); // LCOV_EXCL_LINE Note: Partially tested.
+         const auto &_item : _candidate_index)                       // LCOV_EXCL_LINE Note: Partially tested.
     {
       const auto &_expires_at = _item.entry_.expires_at_;
       std::chrono::steady_clock::time_point _candidate;
@@ -108,29 +133,6 @@ namespace throttr
 #endif
 
     if (_next_expiration != std::chrono::steady_clock::time_point::max()) // LCOV_EXCL_LINE Note: Partially tested.
-      schedule_expiration(_next_expiration);
-  }
-
-  void state::schedule_expiration(const std::chrono::steady_clock::time_point proposed)
-  {
-#ifndef NDEBUG
-    fmt::println("{:%Y-%m-%d %H:%M:%S} GARBAGE COLLECTION SCHEDULED", std::chrono::system_clock::now());
-#endif
-
-    const auto _now = std::chrono::steady_clock::now();
-    if (proposed <= _now) // LCOV_EXCL_LINE Note: Partially tested.
-    {
-      expiration_timer();
-      return;
-    }
-
-    const auto _delay = proposed - _now;
-    expiration_timer_.expires_after(_delay);
-    expiration_timer_.async_wait(
-      [_self = shared_from_this()](const boost::system::error_code &ec)
-      {
-        if (!ec)
-          _self->expiration_timer();
-      });
+      schedule_timer(state, _next_expiration);
   }
 } // namespace throttr

@@ -16,9 +16,9 @@
 #ifndef THROTTR_SERVICES_CREATE_SERVICE_HPP
 #define THROTTR_SERVICES_CREATE_SERVICE_HPP
 
+#include <memory>
 #include <string_view>
 #include <vector>
-#include <memory>
 
 #include <throttr/protocol_wrapper.hpp>
 

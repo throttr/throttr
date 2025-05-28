@@ -15,27 +15,29 @@
 
 #include <throttr/services/commands_service.hpp>
 
+#include <throttr/commands/connections_command.hpp>
 #include <throttr/commands/insert_command.hpp>
-#include <throttr/commands/set_command.hpp>
-#include <throttr/commands/query_command.hpp>
-#include <throttr/commands/update_command.hpp>
-#include <throttr/commands/purge_command.hpp>
 #include <throttr/commands/list_command.hpp>
+#include <throttr/commands/purge_command.hpp>
+#include <throttr/commands/query_command.hpp>
+#include <throttr/commands/set_command.hpp>
 #include <throttr/commands/stat_command.hpp>
 #include <throttr/commands/stats_command.hpp>
-#include <throttr/commands/connections_command.hpp>
+#include <throttr/commands/update_command.hpp>
 
-namespace throttr {
-    commands_service::commands_service()  {
-        commands_[request_types::insert] = std::make_unique<insert_command>();
-        commands_[request_types::set] = std::make_unique<set_command>();
-        commands_[request_types::query] = std::make_unique<query_command>();
-        commands_[request_types::get] = std::make_unique<query_command>();
-        commands_[request_types::update] = std::make_unique<update_command>();
-        commands_[request_types::purge] = std::make_unique<purge_command>();
-        commands_[request_types::list] = std::make_unique<list_command>();
-        commands_[request_types::stat] = std::make_unique<stat_command>();
-        commands_[request_types::stats] = std::make_unique<stats_command>();
-        commands_[request_types::connections] = std::make_unique<connections_command>();
-    }
-}
+namespace throttr
+{
+  commands_service::commands_service()
+  {
+    commands_[request_types::insert] = std::make_unique<insert_command>();
+    commands_[request_types::set] = std::make_unique<set_command>();
+    commands_[request_types::query] = std::make_unique<query_command>();
+    commands_[request_types::get] = std::make_unique<query_command>();
+    commands_[request_types::update] = std::make_unique<update_command>();
+    commands_[request_types::purge] = std::make_unique<purge_command>();
+    commands_[request_types::list] = std::make_unique<list_command>();
+    commands_[request_types::stat] = std::make_unique<stat_command>();
+    commands_[request_types::stats] = std::make_unique<stats_command>();
+    commands_[request_types::connections] = std::make_unique<connections_command>();
+  }
+} // namespace throttr

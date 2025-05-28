@@ -17,24 +17,29 @@
 
 #include <throttr/state.hpp>
 
-namespace throttr {
-    void stats_command::call(const std::shared_ptr<state> &state, const request_types type,
-        const std::span<const std::byte> view, std::vector<boost::asio::const_buffer> &batch,
-        std::vector<std::uint8_t> &write_buffer)
-    {
+namespace throttr
+{
+  void stats_command::call(
+    const std::shared_ptr<state> &state,
+    const request_types type,
+    const std::span<const std::byte> view,
+    std::vector<boost::asio::const_buffer> &batch,
+    std::vector<std::uint8_t> &write_buffer)
+  {
 
-        boost::ignore_unused(type, view);
+    boost::ignore_unused(type, view);
 
 #ifndef ENABLED_FEATURE_METRICS
-        batch.emplace_back(boost::asio::buffer(&failed_response_, 1));
-        return;
+    batch.emplace_back(boost::asio::buffer(&failed_response_, 1));
+    return;
 #endif
 
-        state->handle_fragmented_entries_response(
-          batch,
-          write_buffer,
-          2048,
-          [_state = state->shared_from_this(), &write_buffer](std::vector<boost::asio::const_buffer> *b, const entry_wrapper *e, const bool measure)
-          { return _state->write_stats_entry_to_buffer(b, e, write_buffer, measure); });
-    }
-}
+    state->handle_fragmented_entries_response(
+      batch,
+      write_buffer,
+      2048,
+      [_state = state->shared_from_this(),
+       &write_buffer](std::vector<boost::asio::const_buffer> *b, const entry_wrapper *e, const bool measure)
+      { return _state->write_stats_entry_to_buffer(b, e, write_buffer, measure); });
+  }
+} // namespace throttr
