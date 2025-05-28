@@ -48,13 +48,14 @@ TEST_F(StatsTestFixture, OnSuccessSingleFragment)
   const auto _stats_buffer = request_stats_builder();
   const auto _response = send_and_receive(
     _stats_buffer,
-    8 +                 // fragment count
+    1 +                 // status
+      8 +               // fragment count
       8 +               // fragment id
       8 +               // key count
       2 * (1 + 8 * 4) + // metadata for 2 keys
       _key1.size() + _key2.size());
 
-  size_t _offset = 0;
+  size_t _offset = 1;
 
   // Fragment count
   uint64_t _fragment_count;
@@ -136,6 +137,10 @@ TEST_F(StatsTestFixture, OnSuccessMultipleFragments)
   tcp::socket _socket(_io_context);
   boost::asio::connect(_socket, _endpoints);
   boost::asio::write(_socket, boost::asio::buffer(_stats_buffer.data(), _stats_buffer.size()));
+
+  uint8_t _status = 0;
+  boost::asio::read(_socket, boost::asio::buffer(&_status, 1));
+  ASSERT_EQ(_status, 0x01);
 
   uint64_t _fragment_count = 0;
   boost::asio::read(_socket, boost::asio::buffer(&_fragment_count, 8));

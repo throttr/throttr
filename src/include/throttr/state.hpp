@@ -348,6 +348,8 @@ namespace throttr
       std::size_t _fragments_count = 1;
       std::size_t _fragment_size = 0;
 
+      batch.emplace_back(boost::asio::buffer(&success_response_, 1));
+
       std::vector<const entry_wrapper *> _fragment_items;
       std::vector<std::vector<const entry_wrapper *>> _fragments;
 

@@ -53,7 +53,7 @@ namespace throttr
 
     // IP padded to 16 bytes
     std::array<std::uint8_t, 16> _ip_bytes = {};
-    const auto & _ip_str = conn->ip_;
+    const auto &_ip_str = conn->ip_;
     const auto _len = std::min<std::size_t>(_ip_str.size(), 16);
     std::memcpy(_ip_bytes.data(), _ip_str.data(), _len);
     _push(_ip_bytes.data(), 16);
@@ -109,6 +109,7 @@ namespace throttr
     batch.emplace_back(boost::asio::buffer(&failed_response_, 1));
     return;
 #endif
+    batch.emplace_back(boost::asio::buffer(&success_response_, 1));
 
     std::vector<const connection *> _fragment;
     std::vector<std::vector<const connection *>> _fragments;

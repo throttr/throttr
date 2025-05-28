@@ -10,13 +10,14 @@ TEST_F(ConnectionsTestFixture, OnSuccessSingleFragment)
   const auto _conn_buffer = request_connections_builder();
   const auto _response = send_and_receive(
     _conn_buffer,
-    8 +   // fragment count
+    1 +   // status
+      8 + // fragment count
       8 + // fragment id
       8 + // connection count
       227 // una conexión con ENABLED_FEATURE_METRICS
   );
 
-  size_t _offset = 0;
+  size_t _offset = 1;
 
   // Fragment count
   uint64_t _fragment_count;
@@ -63,7 +64,7 @@ TEST_F(ConnectionsTestFixture, OnSuccessSingleFragment)
     _offset += sizeof(_metric);
   }
 
-  ASSERT_EQ(_offset, 8 + 8 + 8 + 227);
+  ASSERT_EQ(_offset, 1 + 8 + 8 + 8 + 227);
   ASSERT_LE(_offset, _response.size());
 }
 #endif

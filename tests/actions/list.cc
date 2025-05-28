@@ -46,9 +46,10 @@ TEST_F(ListTestFixture, OnSuccessSingleFragment)
 
   // LIST request
   const auto _list_buffer = request_list_builder();
-  const auto _response = send_and_receive(_list_buffer, 8 + 16 + ((11 + sizeof(value_type)) * 2) + _key1.size() + _key2.size());
+  const auto _response =
+    send_and_receive(_list_buffer, 1 + 8 + 16 + ((11 + sizeof(value_type)) * 2) + _key1.size() + _key2.size());
 
-  size_t _offset = 0;
+  size_t _offset = 1;
 
   // Fragment count
   uint64_t _fragment_count;
@@ -142,6 +143,11 @@ TEST_F(ListTestFixture, OnSuccessMultipleFragments)
   tcp::socket _socket(_io_context);
   boost::asio::connect(_socket, _endpoints);
   boost::asio::write(_socket, boost::asio::buffer(_list_buffer.data(), _list_buffer.size()));
+
+  uint8_t _status = 0;
+  boost::asio::read(_socket, boost::asio::buffer(&_status, 1));
+  ASSERT_EQ(_status, 0x01);
+
   uint64_t _fragment_count = 0;
   boost::asio::read(_socket, boost::asio::buffer(&_fragment_count, 8));
   ASSERT_GE(_fragment_count, 2);
