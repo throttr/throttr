@@ -29,7 +29,8 @@ namespace throttr
   /**
    * Metrics collector service
    */
-  class metrics_collector_service : public std::enable_shared_from_this<metrics_collector_service> {
+  class metrics_collector_service : public std::enable_shared_from_this<metrics_collector_service>
+  {
   public:
     /**
      * Schedule timer
@@ -50,4 +51,3 @@ namespace throttr
 } // namespace throttr
 
 #endif // THROTTR_SERVICES_METRICS_COLLECTOR_SERVICE_HPP
-

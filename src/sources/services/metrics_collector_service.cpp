@@ -23,8 +23,7 @@
 namespace throttr
 {
 #ifdef ENABLED_FEATURE_METRICS
-  void metrics_collector_service::schedule_timer(
-    const std::shared_ptr<state> &state)
+  void metrics_collector_service::schedule_timer(const std::shared_ptr<state> &state)
   {
 #ifndef NDEBUG
     fmt::println("{:%Y-%m-%d %H:%M:%S} METRICS SNAPSHOT SCHEDULED", std::chrono::system_clock::now());
@@ -47,7 +46,7 @@ namespace throttr
   {
 #ifndef NDEBUG
     fmt::println("{:%Y-%m-%d %H:%M:%S} METRICS SNAPSHOT STARTED", std::chrono::system_clock::now());
-#endif // NDEBUG
+#endif                                                                            // NDEBUG
     for (auto &_index = state->storage_.get<tag_by_key>(); auto &_entry : _index) // LCOV_EXCL_LINE Note: Partially tested.
     {
       // LCOV_EXCL_START

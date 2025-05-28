@@ -18,9 +18,9 @@
 #include <boost/asio.hpp>
 #include <thread>
 #include <throttr/app.hpp>
+#include <throttr/services/update_service.hpp>
 #include <throttr/state.hpp>
 #include <throttr/time.hpp>
-#include <throttr/services/update_service.hpp>
 
 using boost::asio::ip::tcp;
 using namespace throttr;

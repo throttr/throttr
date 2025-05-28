@@ -32,34 +32,35 @@ namespace throttr
   /**
    * Update service
    */
-  class update_service {
+  class update_service
+  {
   public:
-      /**
-   * Apply quota change
-   *
-   * @param state
-   * @param entry
-   * @param request
-   * @return bool
-   */
-      static bool apply_quota_change(const std::shared_ptr<state> & state, request_entry &entry, const request_update &request);
+    /**
+     * Apply quota change
+     *
+     * @param state
+     * @param entry
+     * @param request
+     * @return bool
+     */
+    static bool apply_quota_change(const std::shared_ptr<state> &state, request_entry &entry, const request_update &request);
 
-      /**
-       * Apply TTL change
-       *
-       * @param state
-       * @param entry
-       * @param request
-       * @param now
-       * @param key
-       * @return bool
-       */
-      static bool apply_ttl_change(
-        const std::shared_ptr<state> & state,
-        request_entry &entry,
-        const request_update &request,
-        const std::chrono::steady_clock::time_point &now,
-        std::span<const std::byte> key);
+    /**
+     * Apply TTL change
+     *
+     * @param state
+     * @param entry
+     * @param request
+     * @param now
+     * @param key
+     * @return bool
+     */
+    static bool apply_ttl_change(
+      const std::shared_ptr<state> &state,
+      request_entry &entry,
+      const request_update &request,
+      const std::chrono::steady_clock::time_point &now,
+      std::span<const std::byte> key);
   };
 } // namespace throttr
 

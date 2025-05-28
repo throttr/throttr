@@ -32,7 +32,8 @@ namespace throttr
   /**
    * Garbage collector service
    */
-  class garbage_collector_service : public std::enable_shared_from_this<garbage_collector_service> {
+  class garbage_collector_service : public std::enable_shared_from_this<garbage_collector_service>
+  {
   public:
     /**
      * Schedule timer

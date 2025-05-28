@@ -63,7 +63,8 @@ namespace throttr
           {
             boost::asio::post(
               state->strand_,
-              [_state = state->shared_from_this(), _expires_at] { _state->garbage_collector_->schedule_timer(_state, _expires_at); });
+              [_state = state->shared_from_this(), _expires_at]
+              { _state->garbage_collector_->schedule_timer(_state, _expires_at); });
           }
           break;
         }
