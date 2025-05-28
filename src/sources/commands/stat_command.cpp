@@ -15,6 +15,7 @@
 
 #include <throttr/commands/stat_command.hpp>
 
+#include <boost/core/ignore_unused.hpp>
 #include <throttr/state.hpp>
 #include <throttr/utils.hpp>
 

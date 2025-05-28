@@ -17,7 +17,6 @@
 #define THROTTR_COMMANDS_BASE_COMMAND_HPP
 
 #include <boost/asio/buffer.hpp>
-#include <boost/core/ignore_unused.hpp>
 #include <memory>
 #include <span>
 #include <vector>
@@ -38,11 +37,6 @@ namespace throttr
   {
   public:
     /**
-     * Destructor
-     */
-    virtual ~base_command() = default;
-
-    /**
      * Call
      *
      * @param state
@@ -52,15 +46,12 @@ namespace throttr
      * @param write_buffer
      */
     // LCOV_EXCL_START Note: Other classes extends from this.
-    virtual void call(
+    static void call(
       const std::shared_ptr<state> &state,
-      const request_types type,
-      const std::span<const std::byte> view,
+      request_types type,
+      std::span<const std::byte> view,
       std::vector<boost::asio::const_buffer> &batch,
-      std::vector<std::uint8_t> &write_buffer)
-    {
-      boost::ignore_unused(state, type, view, batch, write_buffer);
-    }
+      std::vector<std::uint8_t> &write_buffer);
     // LCOV_EXCL_STOP
   };
 } // namespace throttr

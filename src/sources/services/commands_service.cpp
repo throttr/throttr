@@ -15,6 +15,7 @@
 
 #include <throttr/services/commands_service.hpp>
 
+#include <throttr/commands/base_command.hpp>
 #include <throttr/commands/connections_command.hpp>
 #include <throttr/commands/insert_command.hpp>
 #include <throttr/commands/list_command.hpp>
@@ -29,15 +30,20 @@ namespace throttr
 {
   commands_service::commands_service()
   {
-    commands_[static_cast<std::size_t>(request_types::insert)] = std::make_unique<insert_command>();
-    commands_[static_cast<std::size_t>(request_types::set)] = std::make_unique<set_command>();
-    commands_[static_cast<std::size_t>(request_types::query)] = std::make_unique<query_command>();
-    commands_[static_cast<std::size_t>(request_types::get)] = std::make_unique<query_command>();
-    commands_[static_cast<std::size_t>(request_types::update)] = std::make_unique<update_command>();
-    commands_[static_cast<std::size_t>(request_types::purge)] = std::make_unique<purge_command>();
-    commands_[static_cast<std::size_t>(request_types::list)] = std::make_unique<list_command>();
-    commands_[static_cast<std::size_t>(request_types::stat)] = std::make_unique<stat_command>();
-    commands_[static_cast<std::size_t>(request_types::stats)] = std::make_unique<stats_command>();
-    commands_[static_cast<std::size_t>(request_types::connections)] = std::make_unique<connections_command>();
+    commands_[static_cast<std::size_t>(request_types::insert)] = &insert_command::call;
+    commands_[static_cast<std::size_t>(request_types::set)] = &set_command::call;
+    commands_[static_cast<std::size_t>(request_types::query)] = &query_command::call;
+    commands_[static_cast<std::size_t>(request_types::get)] = &query_command::call;
+    commands_[static_cast<std::size_t>(request_types::update)] = &update_command::call;
+    commands_[static_cast<std::size_t>(request_types::purge)] = &purge_command::call;
+    commands_[static_cast<std::size_t>(request_types::list)] = &list_command::call;
+    commands_[static_cast<std::size_t>(request_types::stat)] = &stat_command::call;
+    commands_[static_cast<std::size_t>(request_types::stats)] = &stats_command::call;
+    commands_[static_cast<std::size_t>(request_types::connections)] = &connections_command::call;
+    for (std::size_t i = 0; i < commands_.size(); ++i)
+    {
+      if (commands_[i] == nullptr)
+        commands_[i] = &base_command::call;
+    }
   }
 } // namespace throttr

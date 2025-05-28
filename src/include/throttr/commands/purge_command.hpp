@@ -21,15 +21,19 @@
 #include <span>
 #include <vector>
 
-#include <throttr/commands/base_command.hpp>
 #include <throttr/protocol/request_types.hpp>
 
 namespace throttr
 {
   /**
+   * Forward state
+   */
+  class state;
+
+  /**
    * Purge command
    */
-  class purge_command final : public base_command
+  class purge_command
   {
   public:
     /**
@@ -41,12 +45,12 @@ namespace throttr
      * @param batch
      * @param write_buffer
      */
-    void call(
+    static void call(
       const std::shared_ptr<state> &state,
       request_types type,
       std::span<const std::byte> view,
       std::vector<boost::asio::const_buffer> &batch,
-      std::vector<std::uint8_t> &write_buffer) override;
+      std::vector<std::uint8_t> &write_buffer);
   };
 } // namespace throttr
 

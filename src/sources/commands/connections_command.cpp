@@ -15,6 +15,7 @@
 
 #include <throttr/commands/connections_command.hpp>
 
+#include <boost/core/ignore_unused.hpp>
 #include <throttr/services/response_builder_service.hpp>
 #include <throttr/state.hpp>
 

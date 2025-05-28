@@ -13,45 +13,25 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef THROTTR_COMMANDS_STATS_COMMAND_HPP
-#define THROTTR_COMMANDS_STATS_COMMAND_HPP
+#include <throttr/commands/base_command.hpp>
 
-#include <boost/asio/buffer.hpp>
-#include <memory>
-#include <span>
-#include <vector>
-
-#include <throttr/protocol/request_types.hpp>
+#include <boost/core/ignore_unused.hpp>
+#include <throttr/services/response_builder_service.hpp>
+#include <throttr/state.hpp>
 
 namespace throttr
 {
-  /**
-   * Forward state
-   */
-  class state;
-
-  /**
-   * Stats command
-   */
-  class stats_command
+  // LCOV_EXCL_START
+  void base_command::call(
+    const std::shared_ptr<state> &state,
+    const request_types type,
+    const std::span<const std::byte> view,
+    std::vector<boost::asio::const_buffer> &batch,
+    std::vector<std::uint8_t> &write_buffer)
   {
-  public:
-    /**
-     * Call
-     *
-     * @param state
-     * @param type
-     * @param view
-     * @param batch
-     * @param write_buffer
-     */
-    static void call(
-      const std::shared_ptr<state> &state,
-      request_types type,
-      std::span<const std::byte> view,
-      std::vector<boost::asio::const_buffer> &batch,
-      std::vector<std::uint8_t> &write_buffer);
-  };
-} // namespace throttr
+    boost::ignore_unused(state, type, view, batch, write_buffer);
 
-#endif // THROTTR_COMMANDS_STATS_COMMAND_HPP
+    batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
+  }
+  // LCOV_EXCL_STOP
+} // namespace throttr
