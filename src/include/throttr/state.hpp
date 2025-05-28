@@ -28,6 +28,7 @@
 #include <memory>
 #include <throttr/protocol_wrapper.hpp>
 #include <throttr/storage.hpp>
+#include <throttr/services/commands_service.hpp>
 #include <vector>
 
 namespace throttr
@@ -121,46 +122,16 @@ namespace throttr
     std::deque<std::pair<entry_wrapper, std::chrono::steady_clock::time_point>> expired_entries_;
 
     /**
+     * Commands service
+     */
+    std::shared_ptr<commands_service> commands_ = std::make_shared<commands_service>();
+
+    /**
      * Constructor
      *
      * @param ioc
      */
     explicit state(boost::asio::io_context &ioc);
-
-    /**
-     * Handle CREATE
-     *
-     * @param key
-     * @param value
-     * @param ttl_type
-     * @param ttl
-     * @param type
-     * @param as_insert
-     * @return
-     */
-    std::uint8_t handle_create(
-      const std::string_view &key,
-      const std::vector<std::byte> &value,
-      ttl_types ttl_type,
-      uint64_t ttl,
-      entry_types type,
-      bool as_insert = false);
-
-    /**
-     * Handle INSERT
-     *
-     * @param view
-     * @return uint8_t
-     */
-    std::uint8_t handle_insert(std::span<const std::byte> view);
-
-    /**
-     * Handle set
-     *
-     * @param view
-     * @return uint8_t
-     */
-    std::uint8_t handle_set(std::span<const std::byte> view);
 
     /**
      * Find or fail base
@@ -178,29 +149,6 @@ namespace throttr
      * @return
      */
     std::optional<storage_iterator> find_or_fail_for_batch(const request_key &key, std::vector<boost::asio::const_buffer> &batch);
-
-    /**
-     * Handle QUERY
-     *
-     * @param request
-     * @param as_query
-     * @param write_buffer
-     * @param batch
-     * @return uint8_t
-     */
-    void handle_query(
-      const request_query &request,
-      bool as_query,
-      std::vector<boost::asio::const_buffer> &batch,
-      std::vector<std::uint8_t> &write_buffer);
-
-    /**
-     * Handle UPDATE
-     *
-     * @param request
-     * @return uint8_t
-     */
-    std::uint8_t handle_update(const request_update &request);
 
     /**
      * Apply quota change
@@ -227,14 +175,6 @@ namespace throttr
       std::span<const std::byte> key);
 
     /**
-     * Handle PURGE
-     *
-     * @param request
-     * @return uint8_t
-     */
-    std::uint8_t handle_purge(const request_purge &request);
-
-    /**
      * Write LIST entry to buffer
      *
      * @param batch
@@ -248,37 +188,6 @@ namespace throttr
       const entry_wrapper *entry,
       std::vector<std::uint8_t> &write_buffer,
       bool measure);
-
-    /**
-     * Handle LIST
-     *
-     * @param write_buffer
-     * @param batch
-     * @return uint8_t
-     */
-    void handle_list(std::vector<boost::asio::const_buffer> &batch, std::vector<std::uint8_t> &write_buffer);
-
-    /**
-     * Handle STAT
-     *
-     * @param request
-     * @param write_buffer
-     * @param batch
-     * @return uint8_t
-     */
-    void handle_stat(
-      const request_stat &request,
-      std::vector<boost::asio::const_buffer> &batch,
-      std::vector<std::uint8_t> &write_buffer);
-
-    /**
-     * Handle CONNECTIONS
-     *
-     * @param write_buffer
-     * @param batch
-     * @return uint8_t
-     */
-    void handle_connections(std::vector<boost::asio::const_buffer> &batch, std::vector<std::uint8_t> &write_buffer);
 
     /**
      * Write STATS entry to buffer
@@ -309,14 +218,6 @@ namespace throttr
       const connection *conn,
       std::vector<std::uint8_t> &write_buffer,
       bool measure);
-
-    /**
-     * Handle STATS
-     *
-     * @param batch
-     * @param write_buffer
-     */
-    void handle_stats(std::vector<boost::asio::const_buffer> &batch, std::vector<std::uint8_t> &write_buffer);
 
     /**
      * Handle fragmented connections response

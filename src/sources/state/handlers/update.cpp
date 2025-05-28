@@ -20,63 +20,6 @@
 
 namespace throttr
 {
-  std::uint8_t state::handle_update(const request_update &request)
-  {
-    const request_key _key{request.key_};
-    const auto _now = std::chrono::steady_clock::now();
-    const auto _it = find_or_fail(_key);
-
-    if (!_it.has_value()) // LCOV_EXCL_LINE note: Partially covered.
-    {
-      return failed_response_;
-    }
-
-    using enum attribute_types;
-
-    bool _modified = false;
-
-    storage_.modify(
-      _it.value(),
-      [&](entry_wrapper &object)
-      {
-        switch (request.header_->attribute_)
-        {
-          case quota:
-            if (object.entry_.type_ == entry_types::counter) // LCOV_EXCL_LINE Note: Partially tested.
-            {
-              _modified = apply_quota_change(object.entry_, request);
-            }
-            break;
-          case ttl:
-            _modified = apply_ttl_change(object.entry_, request, _now, object.key_);
-            break;
-        }
-      });
-
-#ifdef ENABLED_FEATURE_METRICS
-    if (_modified) // LCOV_EXCL_LINE Note: Partially tested.
-    {
-      _it.value()->metrics_->writes_.fetch_add(1, std::memory_order_relaxed);
-    }
-#endif
-
-    // LCOV_EXCL_START
-#ifndef NDEBUG
-    fmt::println(
-      "{:%Y-%m-%d %H:%M:%S} REQUEST UPDATE key={} attribute={} change={} "
-      "value={} RESPONSE ok={}",
-      std::chrono::system_clock::now(),
-      _key.key_,
-      to_string(request.header_->attribute_),
-      to_string(request.header_->change_),
-      request.header_->value_,
-      _modified);
-#endif
-    // LCOV_EXCL_STOP
-
-    return _modified ? success_response_ : failed_response_;
-  }
-
   bool state::apply_quota_change(request_entry &entry, const request_update &request)
   {
     using enum change_types;

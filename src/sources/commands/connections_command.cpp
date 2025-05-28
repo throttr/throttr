@@ -13,14 +13,21 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+#include <throttr/commands/connections_command.hpp>
+
 #include <throttr/state.hpp>
 
-namespace throttr
-{
-  std::uint8_t state::handle_set(const std::span<const std::byte> view)
-  {
-    const auto [header_, key_, value_] = request_set::from_buffer(view);
-    const std::vector value(value_.begin(), value_.end());
-    return handle_create(key_, value, header_->ttl_type_, header_->ttl_, entry_types::raw);
-  }
-} // namespace throttr
+namespace throttr {
+    void connections_command::call(const std::shared_ptr<state> &state, const request_types type,
+        const std::span<const std::byte> view, std::vector<boost::asio::const_buffer> &batch,
+        std::vector<std::uint8_t> &write_buffer)
+    {
+        boost::ignore_unused(type, view);
+
+#ifndef ENABLED_FEATURE_METRICS
+        batch.emplace_back(boost::asio::buffer(&failed_response_, 1));
+        return;
+#endif
+        state->handle_fragmented_connections_response(batch, write_buffer);
+    }
+}

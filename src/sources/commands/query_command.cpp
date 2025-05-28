@@ -13,23 +13,24 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include <throttr/state.hpp>
+#include <throttr/commands/query_command.hpp>
 
+#include <throttr/state.hpp>
+#include <throttr/utils.hpp>
 #include <throttr/time.hpp>
 
-#include <fmt/chrono.h>
-#include <throttr/utils.hpp>
+namespace throttr {
+    void query_command::call(const std::shared_ptr<state> &state, const request_types type,
+        const std::span<const std::byte> view, std::vector<boost::asio::const_buffer> &batch,
+        std::vector<std::uint8_t> &write_buffer)
+    {
+      const auto _request = request_query::from_buffer(view);
 
-namespace throttr
-{
-  void state::handle_query(
-    const request_query &request,
-    const bool as_query,
-    std::vector<boost::asio::const_buffer> &batch,
-    std::vector<std::uint8_t> &write_buffer)
-  {
-    const request_key _key{request.key_};
-    const auto _find = find_or_fail_for_batch(_key, batch);
+      const bool _as_query = type == request_types::query;
+
+    const request_key _key{_request.key_};
+    const auto _find = state->find_or_fail_for_batch(_key, batch);
+
     if (!_find.has_value()) // LCOV_EXCL_LINE Note: Partially tested.
     {
       // LCOV_EXCL_START
@@ -37,7 +38,7 @@ namespace throttr
       fmt::println(
         "{:%Y-%m-%d %H:%M:%S} REQUEST {} key={} RESPONSE ok=false",
         std::chrono::system_clock::now(),
-        as_query ? "QUERY" : "GET",
+        _as_query ? "QUERY" : "GET",
         _key.key_);
 #endif
       // LCOV_EXCL_STOP
@@ -47,9 +48,9 @@ namespace throttr
     const value_type _ttl = get_ttl(_it->entry_.expires_at_, _it->entry_.ttl_type_);
 
     // status_
-    batch.emplace_back(boost::asio::buffer(&success_response_, 1));
+    batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
 
-    if (as_query) // LCOV_EXCL_LINE
+    if (_as_query) // LCOV_EXCL_LINE
     {
       // Value
       batch.push_back(boost::asio::buffer(_it->entry_.value_.data(), sizeof(value_type)));
@@ -88,7 +89,7 @@ namespace throttr
 
     // LCOV_EXCL_START
 #ifndef NDEBUG
-    if (as_query)
+    if (_as_query)
     {
       auto *_quota = reinterpret_cast<const value_type *>(_it->entry_.value_.data()); // NOSONAR
       fmt::println(
@@ -112,6 +113,5 @@ namespace throttr
         _ttl);
     }
 #endif
-    // LCOV_EXCL_STOP
-  }
-} // namespace throttr
+    }
+}

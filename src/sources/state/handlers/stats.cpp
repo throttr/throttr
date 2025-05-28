@@ -17,21 +17,6 @@
 
 namespace throttr
 {
-  void state::handle_stats(std::vector<boost::asio::const_buffer> &batch, std::vector<std::uint8_t> &write_buffer)
-  {
-#ifndef ENABLED_FEATURE_METRICS
-    batch.emplace_back(boost::asio::buffer(&failed_response_, 1));
-    return;
-#endif
-
-    handle_fragmented_entries_response(
-      batch,
-      write_buffer,
-      2048,
-      [&write_buffer](std::vector<boost::asio::const_buffer> *b, const entry_wrapper *e, const bool measure)
-      { return write_stats_entry_to_buffer(b, e, write_buffer, measure); });
-  }
-
   std::size_t state::write_stats_entry_to_buffer(
     std::vector<boost::asio::const_buffer> *batch,
     const entry_wrapper *entry,
