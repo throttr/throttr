@@ -44,7 +44,7 @@ namespace throttr {
             // LCOV_EXCL_STOP
         }
         const auto _it = _find.value();
-        batch.emplace_back(boost::asio::buffer(&state->success_response_, 1));
+        batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
 
         auto _append_uint64 = [&write_buffer, &batch](const uint64_t value)
         {

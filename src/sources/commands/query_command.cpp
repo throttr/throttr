@@ -48,7 +48,7 @@ namespace throttr {
     const value_type _ttl = get_ttl(_it->entry_.expires_at_, _it->entry_.ttl_type_);
 
     // status_
-    batch.emplace_back(boost::asio::buffer(&state->success_response_, 1));
+    batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
 
     if (_as_query) // LCOV_EXCL_LINE
     {

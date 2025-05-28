@@ -29,6 +29,6 @@ namespace throttr {
         const std::vector _value(value_.begin(), value_.end());
 
         const auto _inserted = create_service::use(state, key_, _value, header_->ttl_type_, header_->ttl_, entry_types::raw);
-        batch.emplace_back(boost::asio::buffer(_inserted ? &state->success_response_ : &state->failed_response_, 1));
+        batch.emplace_back(boost::asio::buffer(_inserted ? &state::success_response_ : &state::failed_response_, 1));
     }
 }

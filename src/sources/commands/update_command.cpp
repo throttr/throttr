@@ -33,7 +33,7 @@ namespace throttr {
 
         if (!_it.has_value()) // LCOV_EXCL_LINE note: Partially covered.
         {
-            batch.emplace_back(boost::asio::buffer(&state->failed_response_, 1));
+            batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
             return;
         }
 
@@ -82,9 +82,9 @@ namespace throttr {
 
 
         if (_modified) {
-            batch.emplace_back(boost::asio::buffer(&state->success_response_, 1));
+            batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
         } else {
-            batch.emplace_back(boost::asio::buffer(&state->failed_response_, 1));
+            batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
         }
     }
 }

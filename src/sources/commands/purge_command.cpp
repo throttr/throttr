@@ -57,9 +57,9 @@ namespace throttr {
             _index.erase(_it);
 
         if (_erased) {
-            batch.emplace_back(boost::asio::buffer(&state->success_response_, 1));
+            batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
         } else {
-            batch.emplace_back(boost::asio::buffer(&state->failed_response_, 1));
+            batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
         }
     }
 }

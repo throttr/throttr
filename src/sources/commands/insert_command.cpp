@@ -29,6 +29,6 @@ namespace throttr {
         std::memcpy(_value.data(), &header_->quota_, sizeof(value_type));
 
         const auto _inserted = create_service::use(state, key_, _value, header_->ttl_type_, header_->ttl_, entry_types::counter);
-        batch.emplace_back(boost::asio::buffer(_inserted ? &state->success_response_ : &state->failed_response_, 1));
+        batch.emplace_back(boost::asio::buffer(_inserted ? &state::success_response_ : &state::failed_response_, 1));
     }
 }
