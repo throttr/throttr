@@ -13,14 +13,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef THROTTR_SERVICES_GARBAGE_COLLECTOR_SERVICE_HPP
-#define THROTTR_SERVICES_GARBAGE_COLLECTOR_SERVICE_HPP
+#ifndef THROTTR_SERVICES_METRICS_COLLECTOR_SERVICE_HPP
+#define THROTTR_SERVICES_METRICS_COLLECTOR_SERVICE_HPP
 
 #include <memory>
-#include <string_view>
-#include <vector>
-
-#include <throttr/protocol_wrapper.hpp>
 
 namespace throttr
 {
@@ -29,27 +25,29 @@ namespace throttr
    */
   class state;
 
+#ifdef ENABLED_FEATURE_METRICS
   /**
-   * Garbage collector service
+   * Metrics collector service
    */
-  class garbage_collector_service : public std::enable_shared_from_this<garbage_collector_service> {
+  class metrics_collector_service : public std::enable_shared_from_this<metrics_collector_service> {
   public:
     /**
      * Schedule timer
      *
      * @param state
-     * @param proposed
      * @return
      */
-    void schedule_timer(const std::shared_ptr<state> &state, std::chrono::steady_clock::time_point proposed);
+    void schedule_timer(const std::shared_ptr<state> &state);
 
     /**
      * Run
      *
      * @param state
      */
-    void run(const std::shared_ptr<state> &state);
+    static void run(const std::shared_ptr<state> &state);
   };
+#endif
 } // namespace throttr
 
-#endif // THROTTR_SERVICES_GARBAGE_COLLECTOR_SERVICE_HPP
+#endif // THROTTR_SERVICES_METRICS_COLLECTOR_SERVICE_HPP
+

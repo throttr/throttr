@@ -13,21 +13,42 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+#include <throttr/services/metrics_collector_service.hpp>
+
 #include <throttr/state.hpp>
+#include <throttr/utils.hpp>
 
 #include <boost/asio/bind_executor.hpp>
-
-#include <fmt/chrono.h>
 
 namespace throttr
 {
 #ifdef ENABLED_FEATURE_METRICS
-  void state::process_metrics()
+  void metrics_collector_service::schedule_timer(
+    const std::shared_ptr<state> &state)
+  {
+#ifndef NDEBUG
+    fmt::println("{:%Y-%m-%d %H:%M:%S} METRICS SNAPSHOT SCHEDULED", std::chrono::system_clock::now());
+#endif // NDEBUG
+
+    state->metrics_timer_.expires_after(std::chrono::minutes(1));
+    state->metrics_timer_.async_wait(boost::asio::bind_executor(
+      state->strand_,
+      [_self = shared_from_this(), _state = state->shared_from_this()](const boost::system::error_code &ec)
+      {
+        if (!ec) // LCOV_EXCL_LINE Note: Partially tested.
+        {
+          _self->run(_state);
+          _self->schedule_timer(_state); // reschedule
+        }
+      }));
+  }
+
+  void metrics_collector_service::run(const std::shared_ptr<state> &state)
   {
 #ifndef NDEBUG
     fmt::println("{:%Y-%m-%d %H:%M:%S} METRICS SNAPSHOT STARTED", std::chrono::system_clock::now());
-#endif
-    for (auto &_index = storage_.get<tag_by_key>(); auto &_entry : _index) // LCOV_EXCL_LINE Note: Partially tested.
+#endif // NDEBUG
+    for (auto &_index = state->storage_.get<tag_by_key>(); auto &_entry : _index) // LCOV_EXCL_LINE Note: Partially tested.
     {
       // LCOV_EXCL_START
       if (_entry.expired_)
@@ -47,26 +68,7 @@ namespace throttr
 
 #ifndef NDEBUG
     fmt::println("{:%Y-%m-%d %H:%M:%S} METRICS SNAPSHOT COMPLETED", std::chrono::system_clock::now());
-#endif
+#endif // NDEBUG
   }
-
-  void state::start_metrics_timer()
-  {
-#ifndef NDEBUG
-    fmt::println("{:%Y-%m-%d %H:%M:%S} METRICS SNAPSHOT SCHEDULED", std::chrono::system_clock::now());
-#endif
-
-    metrics_timer_.expires_after(std::chrono::minutes(1));
-    metrics_timer_.async_wait(boost::asio::bind_executor(
-      strand_,
-      [_self = shared_from_this()](const boost::system::error_code &ec)
-      {
-        if (!ec) // LCOV_EXCL_LINE Note: Partially tested.
-        {
-          _self->process_metrics();
-          _self->start_metrics_timer(); // reschedule
-        }
-      }));
-  }
-#endif
+#endif // ENABLED_FEATURE_METRICS
 } // namespace throttr
