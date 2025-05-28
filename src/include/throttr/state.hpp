@@ -28,6 +28,7 @@
 #include <memory>
 #include <throttr/protocol_wrapper.hpp>
 #include <throttr/services/commands_service.hpp>
+#include <throttr/services/find_service.hpp>
 #include <throttr/services/garbage_collector_service.hpp>
 #include <throttr/services/metrics_collector_service.hpp>
 #include <throttr/storage.hpp>
@@ -60,11 +61,6 @@ namespace throttr
      * Storage
      */
     storage_type storage_;
-
-    /**
-     * Storage iterator
-     */
-    using storage_iterator = decltype(storage_.get<tag_by_key>().begin());
 
     /**
      * Expiration timer
@@ -129,6 +125,11 @@ namespace throttr
     std::shared_ptr<commands_service> commands_ = std::make_shared<commands_service>();
 
     /**
+     * Find service
+     */
+    std::shared_ptr<find_service> finder_ = std::make_shared<find_service>();
+
+    /**
      * Garbage collector service
      */
     std::shared_ptr<garbage_collector_service> garbage_collector_ = std::make_shared<garbage_collector_service>();
@@ -146,23 +147,6 @@ namespace throttr
      * @param ioc
      */
     explicit state(boost::asio::io_context &ioc);
-
-    /**
-     * Find or fail base
-     *
-     * @param key
-     * @return
-     */
-    std::optional<storage_iterator> find_or_fail(const request_key &key);
-
-    /**
-     * Find or fail
-     *
-     * @param key
-     * @param batch
-     * @return
-     */
-    std::optional<storage_iterator> find_or_fail_for_batch(const request_key &key, std::vector<boost::asio::const_buffer> &batch);
 
     /**
      * Write LIST entry to buffer

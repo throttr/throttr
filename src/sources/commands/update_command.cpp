@@ -35,7 +35,7 @@ namespace throttr
     const auto request = request_update::from_buffer(view);
     const request_key _key{request.key_};
     const auto _now = std::chrono::steady_clock::now();
-    const auto _it = state->find_or_fail(_key);
+    const auto _it = state->finder_->find_or_fail(state, _key);
 
     if (!_it.has_value()) // LCOV_EXCL_LINE note: Partially covered.
     {

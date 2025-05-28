@@ -33,7 +33,7 @@ namespace throttr
     const bool _as_query = type == request_types::query;
 
     const request_key _key{_request.key_};
-    const auto _find = state->find_or_fail_for_batch(_key, batch);
+    const auto _find = state->finder_->find_or_fail_for_batch(state, _key, batch);
 
     if (!_find.has_value()) // LCOV_EXCL_LINE Note: Partially tested.
     {
