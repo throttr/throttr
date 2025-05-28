@@ -30,7 +30,7 @@ namespace throttr
 
     boost::ignore_unused(type, view);
 
-    state->response_builder_->handle_fragmented_entries_response(
+    response_builder_service::handle_fragmented_entries_response(
       state,
       batch,
       write_buffer,
