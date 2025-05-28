@@ -51,6 +51,7 @@ namespace throttr
      * @param batch
      * @param write_buffer
      */
+    // LCOV_EXCL_START Note: Other classes extends from this.
     virtual void call(
       const std::shared_ptr<state> & state,
       const request_types type,
@@ -60,6 +61,7 @@ namespace throttr
     {
       boost::ignore_unused(state, type, view, batch, write_buffer);
     }
+    // LCOV_EXCL_STOP
   };
 } // namespace throttr
 

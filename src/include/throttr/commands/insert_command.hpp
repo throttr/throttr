@@ -26,13 +26,25 @@
 
 namespace throttr
 {
+  /**
+   * Insert command
+   */
   class insert_command final : public base_command
   {
   public:
+    /**
+     * Call
+     *
+     * @param state
+     * @param type
+     * @param view
+     * @param batch
+     * @param write_buffer
+     */
     void call(
       const std::shared_ptr<state> & state,
-      const request_types type,
-      const std::span<const std::byte> view,
+      request_types type,
+      std::span<const std::byte> view,
       std::vector<boost::asio::const_buffer> &batch,
       std::vector<std::uint8_t> &write_buffer) override;
   };
