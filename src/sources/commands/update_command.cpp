@@ -19,6 +19,7 @@
 
 #include <throttr/state.hpp>
 #include <throttr/utils.hpp>
+#include <boost/core/ignore_unused.hpp>
 
 namespace throttr
 {
