@@ -28,7 +28,7 @@
 
 namespace throttr
 {
-  commands_service::commands_service() : commands_()
+  commands_service::commands_service()
   {
     commands_[static_cast<std::size_t>(request_types::insert)] = &insert_command::call;
     commands_[static_cast<std::size_t>(request_types::set)] = &set_command::call;
