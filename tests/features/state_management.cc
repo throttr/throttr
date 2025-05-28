@@ -20,6 +20,7 @@
 #include <throttr/app.hpp>
 #include <throttr/state.hpp>
 #include <throttr/time.hpp>
+#include <throttr/services/update_service.hpp>
 
 using boost::asio::ip::tcp;
 using namespace throttr;
@@ -47,7 +48,7 @@ auto to_bytes = [](const char *str)
 template<typename T>
 void
 test_ttl_change(
-  state &_state,
+  std::shared_ptr<state> &_state,
   request_entry &_entry,
   const std::string &_key,
   const ttl_types _ttl_type,
@@ -73,7 +74,7 @@ test_ttl_change(
     std::byte>{reinterpret_cast<const std::byte *>(_key.data()), reinterpret_cast<const std::byte *>(_key.data() + _key.size())};
   const std::span _span_key{_key_bytes};
 
-  ASSERT_TRUE(_state.apply_ttl_change(_entry, _request, _now, _span_key));
+  ASSERT_TRUE(update_service::apply_ttl_change(_state, _entry, _request, _now, _span_key));
 
   switch (_change_type)
   {
@@ -95,7 +96,7 @@ TEST(StateManagementTest, TTLChange)
   using namespace std::chrono;
 
   boost::asio::io_context _ioc;
-  state _state(_ioc);
+  auto _state = std::make_shared<state>(_ioc);
   request_entry _entry;
   _entry.expires_at_ = steady_clock::now();
   const std::string _key = "user";
@@ -191,6 +192,8 @@ TEST(StateManagementTest, CalculateTTLRemainingSecondsExpired)
 
 TEST(StateManagementTest, QuotaChange)
 {
+  boost::asio::io_context _ioc;
+  auto _state = std::make_shared<state>(_ioc);
   request_entry _entry;
   _entry.value_.resize(sizeof(value_type));
 
@@ -198,35 +201,35 @@ TEST(StateManagementTest, QuotaChange)
   *reinterpret_cast<value_type *>(_entry.value_.data()) = 0;
   request_update_header _patch_header{request_types::update, attribute_types::quota, change_types::patch, 42, 0};
   request_update _patch_req{&_patch_header, ""};
-  EXPECT_TRUE(state::apply_quota_change(_entry, _patch_req));
+  EXPECT_TRUE(update_service::apply_quota_change(_state, _entry, _patch_req));
   EXPECT_EQ(*reinterpret_cast<value_type *>(_entry.value_.data()), 42);
 
   // increase
   *reinterpret_cast<value_type *>(_entry.value_.data()) = 10;
   request_update_header _inc_header{request_types::update, attribute_types::quota, change_types::increase, 5, 0};
   request_update _inc_req{&_inc_header, ""};
-  EXPECT_TRUE(state::apply_quota_change(_entry, _inc_req));
+  EXPECT_TRUE(update_service::apply_quota_change(_state, _entry, _inc_req));
   EXPECT_EQ(*reinterpret_cast<value_type *>(_entry.value_.data()), 15);
 
   // decrease (quota > value)
   *reinterpret_cast<value_type *>(_entry.value_.data()) = 20;
   request_update_header _dec_gt_header{request_types::update, attribute_types::quota, change_types::decrease, 10, 0};
   request_update _dec_gt_req{&_dec_gt_header, ""};
-  EXPECT_TRUE(state::apply_quota_change(_entry, _dec_gt_req));
+  EXPECT_TRUE(update_service::apply_quota_change(_state, _entry, _dec_gt_req));
   EXPECT_EQ(*reinterpret_cast<value_type *>(_entry.value_.data()), 10);
 
   // decrease (quota == value)
   *reinterpret_cast<value_type *>(_entry.value_.data()) = 10;
   request_update_header _dec_eq_header{request_types::update, attribute_types::quota, change_types::decrease, 10, 0};
   request_update _dec_eq_req{&_dec_eq_header, ""};
-  EXPECT_TRUE(state::apply_quota_change(_entry, _dec_eq_req));
+  EXPECT_TRUE(update_service::apply_quota_change(_state, _entry, _dec_eq_req));
   EXPECT_EQ(*reinterpret_cast<value_type *>(_entry.value_.data()), 0);
 
   // decrease (quota < value)
   *reinterpret_cast<value_type *>(_entry.value_.data()) = 5;
   request_update_header _dec_lt_header{request_types::update, attribute_types::quota, change_types::decrease, 10, 0};
   request_update _dec_lt_req{&_dec_lt_header, ""};
-  EXPECT_FALSE(state::apply_quota_change(_entry, _dec_lt_req));
+  EXPECT_FALSE(update_service::apply_quota_change(_state, _entry, _dec_lt_req));
 }
 
 TEST_F(StateManagementTestFixture, ScheduleExpiration_ReprogramsIfNextEntryExists)
