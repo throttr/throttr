@@ -13,10 +13,12 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef THROTTR_SERVICES_METRICS_COLLECTOR_SERVICE_HPP
-#define THROTTR_SERVICES_METRICS_COLLECTOR_SERVICE_HPP
+#ifndef THROTTR_SERVICES_UPDATE_SERVICE_HPP
+#define THROTTR_SERVICES_UPDATE_SERVICE_HPP
 
 #include <memory>
+
+#include <throttr/protocol_wrapper.hpp>
 
 namespace throttr
 {
@@ -25,29 +27,39 @@ namespace throttr
    */
   class state;
 
-#ifdef ENABLED_FEATURE_METRICS
   /**
-   * Metrics collector service
+   * Update service
    */
-  class metrics_collector_service : public std::enable_shared_from_this<metrics_collector_service>
+  class update_service
   {
   public:
     /**
-     * Schedule timer
+     * Apply quota change
      *
      * @param state
-     * @return
+     * @param entry
+     * @param request
+     * @return bool
      */
-    void schedule_timer(const std::shared_ptr<state> &state);
+    static bool apply_quota_change(const std::shared_ptr<state> &state, request_entry &entry, const request_update &request);
 
     /**
-     * Run
+     * Apply TTL change
      *
      * @param state
+     * @param entry
+     * @param request
+     * @param now
+     * @param key
+     * @return bool
      */
-    static void run(const std::shared_ptr<state> &state);
+    static bool apply_ttl_change(
+      const std::shared_ptr<state> &state,
+      request_entry &entry,
+      const request_update &request,
+      const std::chrono::steady_clock::time_point &now,
+      std::span<const std::byte> key);
   };
-#endif
 } // namespace throttr
 
-#endif // THROTTR_SERVICES_METRICS_COLLECTOR_SERVICE_HPP
+#endif // THROTTR_SERVICES_UPDATE_SERVICE_HPP

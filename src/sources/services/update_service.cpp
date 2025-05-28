@@ -13,15 +13,19 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include <throttr/state.hpp>
+#include <throttr/services/update_service.hpp>
 
-#include <fmt/chrono.h>
+#include <boost/core/ignore_unused.hpp>
+#include <throttr/state.hpp>
 #include <throttr/utils.hpp>
 
 namespace throttr
 {
-  bool state::apply_quota_change(request_entry &entry, const request_update &request)
+  bool
+  update_service::apply_quota_change(const std::shared_ptr<state> &state, request_entry &entry, const request_update &request)
   {
+    boost::ignore_unused(state);
+
     using enum change_types;
     auto &_atomic = *reinterpret_cast<std::atomic<value_type> *>(entry.value_.data()); // NOSONAR
 
@@ -47,7 +51,8 @@ namespace throttr
     return true;
   }
 
-  bool state::apply_ttl_change(
+  bool update_service::apply_ttl_change(
+    const std::shared_ptr<state> &state,
     request_entry &entry,
     const request_update &request,
     const std::chrono::steady_clock::time_point &now,
@@ -84,11 +89,14 @@ namespace throttr
     }
 
     // LCOV_EXCL_START
-    if (scheduled_key_.size() == key.size() && std::equal(scheduled_key_.begin(), scheduled_key_.end(), key.begin()))
+    if (
+      state->scheduled_key_.size() == key.size() &&
+      std::equal(state->scheduled_key_.begin(), state->scheduled_key_.end(), key.begin()))
     {
       boost::asio::post(
-        strand_,
-        [_self = shared_from_this(), _expires_at = entry.expires_at_] { _self->garbage_collector_->schedule_timer(_self, _expires_at); });
+        state->strand_,
+        [_state = state->shared_from_this(), _expires_at = entry.expires_at_]
+        { _state->garbage_collector_->schedule_timer(_state, _expires_at); });
     }
     // LCOV_EXCL_STOP
 

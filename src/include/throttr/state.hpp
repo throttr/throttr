@@ -165,30 +165,6 @@ namespace throttr
     std::optional<storage_iterator> find_or_fail_for_batch(const request_key &key, std::vector<boost::asio::const_buffer> &batch);
 
     /**
-     * Apply quota change
-     *
-     * @param entry
-     * @param request
-     * @return bool
-     */
-    static bool apply_quota_change(request_entry &entry, const request_update &request);
-
-    /**
-     * Apply TTL change
-     *
-     * @param entry
-     * @param request
-     * @param now
-     * @param key
-     * @return bool
-     */
-    bool apply_ttl_change(
-      request_entry &entry,
-      const request_update &request,
-      const std::chrono::steady_clock::time_point &now,
-      std::span<const std::byte> key);
-
-    /**
      * Write LIST entry to buffer
      *
      * @param batch

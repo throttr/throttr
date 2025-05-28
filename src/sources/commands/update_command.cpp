@@ -15,6 +15,8 @@
 
 #include <throttr/commands/update_command.hpp>
 
+#include <throttr/services/update_service.hpp>
+
 #include <throttr/state.hpp>
 #include <throttr/utils.hpp>
 
@@ -54,11 +56,11 @@ namespace throttr
           case quota:
             if (object.entry_.type_ == entry_types::counter) // LCOV_EXCL_LINE Note: Partially tested.
             {
-              _modified = state->apply_quota_change(object.entry_, request);
+              _modified = update_service::apply_quota_change(state, object.entry_, request);
             }
             break;
           case ttl:
-            _modified = state->apply_ttl_change(object.entry_, request, _now, object.key_);
+            _modified = update_service::apply_ttl_change(state, object.entry_, request, _now, object.key_);
             break;
         }
       });
