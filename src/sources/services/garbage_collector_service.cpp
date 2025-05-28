@@ -16,6 +16,7 @@
 #include <throttr/services/garbage_collector_service.hpp>
 
 #include <throttr/state.hpp>
+#include <throttr/utils.hpp>
 
 namespace throttr
 {
