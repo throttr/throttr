@@ -17,8 +17,6 @@
 #define THROTTR_SERVICES_UPDATE_SERVICE_HPP
 
 #include <memory>
-#include <string_view>
-#include <vector>
 
 #include <throttr/protocol_wrapper.hpp>
 
