@@ -31,6 +31,7 @@
 #include <throttr/services/find_service.hpp>
 #include <throttr/services/garbage_collector_service.hpp>
 #include <throttr/services/metrics_collector_service.hpp>
+#include <throttr/services/response_builder_service.hpp>
 #include <throttr/storage.hpp>
 #include <vector>
 
@@ -130,6 +131,11 @@ namespace throttr
     std::shared_ptr<find_service> finder_ = std::make_shared<find_service>();
 
     /**
+     * Response builder service
+     */
+    std::shared_ptr<response_builder_service> response_builder_ = std::make_shared<response_builder_service>();
+
+    /**
      * Garbage collector service
      */
     std::shared_ptr<garbage_collector_service> garbage_collector_ = std::make_shared<garbage_collector_service>();
@@ -147,151 +153,6 @@ namespace throttr
      * @param ioc
      */
     explicit state(boost::asio::io_context &ioc);
-
-    /**
-     * Write LIST entry to buffer
-     *
-     * @param batch
-     * @param entry
-     * @param write_buffer
-     * @param measure
-     * @return
-     */
-    static std::size_t write_list_entry_to_buffer(
-      std::vector<boost::asio::const_buffer> *batch,
-      const entry_wrapper *entry,
-      std::vector<std::uint8_t> &write_buffer,
-      bool measure);
-
-    /**
-     * Write STATS entry to buffer
-     *
-     * @param batch
-     * @param entry
-     * @param write_buffer
-     * @param measure
-     * @return
-     */
-    static std::size_t write_stats_entry_to_buffer(
-      std::vector<boost::asio::const_buffer> *batch,
-      const entry_wrapper *entry,
-      std::vector<std::uint8_t> &write_buffer,
-      bool measure);
-
-    /**
-     * Write CONNECTIONS entry to buffer
-     *
-     * @param batch
-     * @param conn
-     * @param write_buffer
-     * @param measure
-     * @return
-     */
-    static std::size_t write_connections_entry_to_buffer(
-      std::vector<boost::asio::const_buffer> *batch,
-      const connection *conn,
-      std::vector<std::uint8_t> &write_buffer,
-      bool measure);
-
-    /**
-     * Handle fragmented connections response
-     *
-     * @param batch
-     * @param write_buffer
-     */
-    void handle_fragmented_connections_response(
-      std::vector<boost::asio::const_buffer> &batch,
-      std::vector<std::uint8_t> &write_buffer);
-
-    /**
-     * Handle fragmented entries response
-     *
-     * @tparam EntrySerializer
-     * @param batch
-     * @param write_buffer
-     * @param max_fragment_size
-     * @param serialize_entry
-     */
-    template<typename EntrySerializer>
-    void handle_fragmented_entries_response(
-      std::vector<boost::asio::const_buffer> &batch,
-      std::vector<std::uint8_t> &write_buffer,
-      const std::size_t max_fragment_size,
-      EntrySerializer &&serialize_entry)
-    {
-      const auto &_index = storage_.get<tag_by_key>();
-      std::size_t _fragments_count = 1;
-      std::size_t _fragment_size = 0;
-
-      batch.emplace_back(boost::asio::buffer(&success_response_, 1));
-
-      std::vector<const entry_wrapper *> _fragment_items;
-      std::vector<std::vector<const entry_wrapper *>> _fragments;
-
-      for (auto &_item : _index) // LCOV_EXCL_LINE Note: Partially tested.
-      {
-        // LCOV_EXCL_START
-        if (_item.expired_)
-          continue;
-          // LCOV_EXCL_STOP
-
-#ifdef ENABLED_FEATURE_METRICS
-        _item.metrics_->reads_.fetch_add(1, std::memory_order_relaxed);
-#endif
-
-        const std::size_t _item_size = serialize_entry(nullptr, &_item, true);
-        if (_fragment_size + _item_size > max_fragment_size) // LCOV_EXCL_LINE Note: Partially tested.
-        {
-          _fragments.push_back(_fragment_items);
-          _fragment_size = 0;
-          _fragments_count++;
-          _fragment_items.clear();
-        }
-
-        _fragment_items.emplace_back(&_item);
-        _fragment_size += _item_size;
-      }
-
-      if (!_fragment_items.empty()) // LCOV_EXCL_LINE Note: Partially tested.
-      {
-        _fragments.push_back(std::move(_fragment_items));
-      }
-
-      {
-        const auto _offset = write_buffer.size();
-        const uint64_t _fragment_count = _fragments.size();
-        const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&_fragment_count); // NOSONAR
-        write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(_fragment_count));
-        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_fragment_count)));
-      }
-
-      std::size_t _i = 0;
-      for (const auto &_fragment : _fragments) // LCOV_EXCL_LINE Note: Partially tested.
-      {
-        const uint64_t _fragment_index = _i + 1;
-        const uint64_t _key_count = _fragment.size();
-
-        for (uint64_t value : {_fragment_index, _key_count}) // LCOV_EXCL_LINE Note: Partially tested.
-        {
-          const auto _offset = write_buffer.size();
-          const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&value); // NOSONAR
-          write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(value));
-          batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(value)));
-        }
-
-        for (const auto *_entry : _fragment) // LCOV_EXCL_LINE Note: Partially tested.
-        {
-          serialize_entry(&batch, _entry, false);
-        }
-
-        for (const auto &_entry : _fragment) // LCOV_EXCL_LINE Note: Partially tested.
-        {
-          batch.emplace_back(boost::asio::buffer(_entry->key_.data(), _entry->key_.size()));
-        }
-
-        _i++;
-      }
-    }
 
     /**
      * Join
