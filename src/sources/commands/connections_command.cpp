@@ -15,6 +15,7 @@
 
 #include <throttr/commands/connections_command.hpp>
 
+#include <throttr/services/response_builder_service.hpp>
 #include <throttr/state.hpp>
 
 namespace throttr
@@ -32,6 +33,6 @@ namespace throttr
     batch.emplace_back(boost::asio::buffer(&failed_response_, 1));
     return;
 #endif
-    state->handle_fragmented_connections_response(batch, write_buffer);
+    state->response_builder_->handle_fragmented_connections_response(state, batch, write_buffer);
   }
 } // namespace throttr

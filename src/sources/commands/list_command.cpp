@@ -15,6 +15,7 @@
 
 #include <throttr/commands/list_command.hpp>
 
+#include <throttr/services/response_builder_service.hpp>
 #include <throttr/state.hpp>
 
 namespace throttr
@@ -29,13 +30,14 @@ namespace throttr
 
     boost::ignore_unused(type, view);
 
-    state->handle_fragmented_entries_response(
+    state->response_builder_->handle_fragmented_entries_response(
+      state,
       batch,
       write_buffer,
       2048,
       [_state = state->shared_from_this(),
        _write_buffer_ref = // LCOV_EXCL_LINE Note: For some reason this line isn't tested ...
        std::ref(write_buffer)](std::vector<boost::asio::const_buffer> *b, const entry_wrapper *e, const bool measure)
-      { return _state->write_list_entry_to_buffer(b, e, _write_buffer_ref, measure); });
+      { return _state->response_builder_->write_list_entry_to_buffer(_state, b, e, _write_buffer_ref, measure); });
   }
 } // namespace throttr
