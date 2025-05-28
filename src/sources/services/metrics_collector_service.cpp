@@ -37,7 +37,7 @@ namespace throttr
       {
         if (!ec) // LCOV_EXCL_LINE Note: Partially tested.
         {
-          _self->run(_state);
+          run(_state);
           _self->schedule_timer(_state); // reschedule
         }
       }));
