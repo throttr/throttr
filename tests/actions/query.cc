@@ -54,7 +54,7 @@ TEST_F(QueryTestFixture, OnFailedDueExpiredKey)
   auto _ignored = send_and_receive(_insert_buffer);
   boost::ignore_unused(_ignored);
 
-  std::this_thread::sleep_for(std::chrono::seconds(1));
+  std::this_thread::sleep_for(std::chrono::milliseconds(1500));
   const auto _query_buffer = request_query_builder("consumer_query3/resource_query3");
 
   auto _response = send_and_receive(_query_buffer);
