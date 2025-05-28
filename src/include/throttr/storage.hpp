@@ -45,6 +45,11 @@ namespace throttr
       boost::multi_index::const_mem_fun<entry_wrapper, request_key, &entry_wrapper::key>,
       request_key_hasher,
       std::equal_to<request_key>>>>;
+
+  /**
+   * Iterator
+   */
+  using storage_iterator = storage_type::index<tag_by_key>::type::iterator;
 } // namespace throttr
 
 #endif // THROTTR_STORAGE_HPP

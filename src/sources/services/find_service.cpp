@@ -13,13 +13,17 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+#include <throttr/services/find_service.hpp>
+
+#include <boost/core/ignore_unused.hpp>
 #include <throttr/state.hpp>
+#include <throttr/utils.hpp>
 
 namespace throttr
 {
-  std::optional<state::storage_iterator> state::find_or_fail(const request_key &key)
+  std::optional<storage_iterator> find_service::find_or_fail(const std::shared_ptr<state> &state, const request_key &key)
   {
-    const auto &_index = storage_.get<tag_by_key>();
+    const auto &_index = state->storage_.get<tag_by_key>();
     auto _it = _index.find(key);
     if (_it == _index.end() || _it->expired_) // LCOV_EXCL_LINE
     {
@@ -33,14 +37,15 @@ namespace throttr
     return _it;
   }
 
-  std::optional<state::storage_iterator> state::find_or_fail_for_batch(
+  std::optional<storage_iterator> find_service::find_or_fail_for_batch(
+    const std::shared_ptr<state> &state,
     const request_key &key,
     std::vector<boost::asio::const_buffer> &batch)
   {
-    const auto _it = find_or_fail(key);
+    const auto _it = find_or_fail(state, key);
     if (!_it.has_value()) // LCOV_EXCL_LINE
     {
-      batch.emplace_back(boost::asio::buffer(&failed_response_, 1));
+      batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
     }
     return _it;
   }
