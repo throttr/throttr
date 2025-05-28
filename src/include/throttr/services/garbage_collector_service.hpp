@@ -13,41 +13,43 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef THROTTR_COMMANDS_CONNECTIONS_COMMAND_HPP
-#define THROTTR_COMMANDS_CONNECTIONS_COMMAND_HPP
+#ifndef THROTTR_SERVICES_SCHEDULER_SERVICE_HPP
+#define THROTTR_SERVICES_SCHEDULER_SERVICE_HPP
 
-#include <boost/asio/buffer.hpp>
 #include <memory>
-#include <span>
+#include <string_view>
 #include <vector>
 
-#include <throttr/commands/base_command.hpp>
-#include <throttr/protocol/request_types.hpp>
+#include <throttr/protocol_wrapper.hpp>
 
 namespace throttr
 {
   /**
-   * Connections command
+   * Forward state
    */
-  class connections_command final : public base_command
-  {
+  class state;
+
+  /**
+   * Create service
+   */
+  class garbage_collector_service : public std::enable_shared_from_this<garbage_collector_service> {
   public:
     /**
-     * Call
+     * Schedule timer
      *
      * @param state
-     * @param type
-     * @param view
-     * @param batch
-     * @param write_buffer
+     * @param proposed
+     * @return
      */
-    void call(
-      const std::shared_ptr<state> &state,
-      request_types type,
-      std::span<const std::byte> view,
-      std::vector<boost::asio::const_buffer> &batch,
-      std::vector<std::uint8_t> &write_buffer) override;
+    void schedule_timer(const std::shared_ptr<state> &state, std::chrono::steady_clock::time_point proposed);
+
+    /**
+     * Run
+     *
+     * @param state
+     */
+    void run(const std::shared_ptr<state> &state);
   };
 } // namespace throttr
 
-#endif // THROTTR_COMMANDS_CONNECTIONS_COMMAND_HPP
+#endif // THROTTR_SERVICES_SCHEDULER_SERVICE_HPP

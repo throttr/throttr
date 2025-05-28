@@ -53,7 +53,7 @@ namespace throttr
      */
     // LCOV_EXCL_START Note: Other classes extends from this.
     virtual void call(
-      const std::shared_ptr<state> & state,
+      const std::shared_ptr<state> &state,
       const request_types type,
       const std::span<const std::byte> view,
       std::vector<boost::asio::const_buffer> &batch,

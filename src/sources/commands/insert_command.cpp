@@ -15,20 +15,25 @@
 
 #include <throttr/commands/insert_command.hpp>
 
-#include <throttr/state.hpp>
 #include <throttr/services/create_service.hpp>
+#include <throttr/state.hpp>
 
-namespace throttr {
-    void insert_command::call(const std::shared_ptr<state> &state, const request_types type,
-        const std::span<const std::byte> view, std::vector<boost::asio::const_buffer> &batch,
-        std::vector<std::uint8_t> &write_buffer) {
-        boost::ignore_unused(type, batch, write_buffer);
+namespace throttr
+{
+  void insert_command::call(
+    const std::shared_ptr<state> &state,
+    const request_types type,
+    const std::span<const std::byte> view,
+    std::vector<boost::asio::const_buffer> &batch,
+    std::vector<std::uint8_t> &write_buffer)
+  {
+    boost::ignore_unused(type, batch, write_buffer);
 
-        const auto [header_, key_] = request_insert::from_buffer(view);
-        std::vector<std::byte> _value(sizeof(value_type));
-        std::memcpy(_value.data(), &header_->quota_, sizeof(value_type));
+    const auto [header_, key_] = request_insert::from_buffer(view);
+    std::vector<std::byte> _value(sizeof(value_type));
+    std::memcpy(_value.data(), &header_->quota_, sizeof(value_type));
 
-        const auto _inserted = create_service::use(state, key_, _value, header_->ttl_type_, header_->ttl_, entry_types::counter);
-        batch.emplace_back(boost::asio::buffer(_inserted ? &state::success_response_ : &state::failed_response_, 1));
-    }
-}
+    const auto _inserted = create_service::use(state, key_, _value, header_->ttl_type_, header_->ttl_, entry_types::counter);
+    batch.emplace_back(boost::asio::buffer(_inserted ? &state::success_response_ : &state::failed_response_, 1));
+  }
+} // namespace throttr

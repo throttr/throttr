@@ -250,7 +250,7 @@ TEST_F(StateManagementTestFixture, ScheduleExpiration_ReprogramsIfNextEntryExist
   _index.insert(entry_wrapper{to_bytes("c1r1"), std::move(_entry1)});
   _index.insert(entry_wrapper{to_bytes("c2r2"), std::move(_entry2)});
 
-  state_->schedule_expiration(_now);
+  state_->garbage_collector_->schedule_timer(state_, _now);
 
   ioc_.restart();
   ioc_.run_for(seconds(30));

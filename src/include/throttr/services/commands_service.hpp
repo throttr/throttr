@@ -26,7 +26,8 @@ namespace throttr
   /**
    * Create service
    */
-  class commands_service : public std::enable_shared_from_this<commands_service> {
+  class commands_service : public std::enable_shared_from_this<commands_service>
+  {
   public:
     /**
      * Commands

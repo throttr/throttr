@@ -16,17 +16,21 @@
 #include <throttr/commands/query_command.hpp>
 
 #include <throttr/state.hpp>
-#include <throttr/utils.hpp>
 #include <throttr/time.hpp>
+#include <throttr/utils.hpp>
 
-namespace throttr {
-    void query_command::call(const std::shared_ptr<state> &state, const request_types type,
-        const std::span<const std::byte> view, std::vector<boost::asio::const_buffer> &batch,
-        std::vector<std::uint8_t> &write_buffer)
-    {
-      const auto _request = request_query::from_buffer(view);
+namespace throttr
+{
+  void query_command::call(
+    const std::shared_ptr<state> &state,
+    const request_types type,
+    const std::span<const std::byte> view,
+    std::vector<boost::asio::const_buffer> &batch,
+    std::vector<std::uint8_t> &write_buffer)
+  {
+    const auto _request = request_query::from_buffer(view);
 
-      const bool _as_query = type == request_types::query;
+    const bool _as_query = type == request_types::query;
 
     const request_key _key{_request.key_};
     const auto _find = state->find_or_fail_for_batch(_key, batch);
@@ -113,5 +117,5 @@ namespace throttr {
         _ttl);
     }
 #endif
-    }
-}
+  }
+} // namespace throttr

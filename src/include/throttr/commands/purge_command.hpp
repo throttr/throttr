@@ -29,7 +29,8 @@ namespace throttr
   /**
    * Purge command
    */
-  class purge_command final : public base_command {
+  class purge_command final : public base_command
+  {
   public:
     /**
      * Call
@@ -41,7 +42,7 @@ namespace throttr
      * @param write_buffer
      */
     void call(
-      const std::shared_ptr<state> & state,
+      const std::shared_ptr<state> &state,
       request_types type,
       std::span<const std::byte> view,
       std::vector<boost::asio::const_buffer> &batch,

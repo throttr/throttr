@@ -17,19 +17,25 @@
 
 #include <throttr/state.hpp>
 
-namespace throttr {
-    void list_command::call(const std::shared_ptr<state> &state, const request_types type,
-        const std::span<const std::byte> view, std::vector<boost::asio::const_buffer> &batch,
-        std::vector<std::uint8_t> &write_buffer)  {
+namespace throttr
+{
+  void list_command::call(
+    const std::shared_ptr<state> &state,
+    const request_types type,
+    const std::span<const std::byte> view,
+    std::vector<boost::asio::const_buffer> &batch,
+    std::vector<std::uint8_t> &write_buffer)
+  {
 
-        boost::ignore_unused(type, view);
+    boost::ignore_unused(type, view);
 
-        state->handle_fragmented_entries_response(
-          batch,
-          write_buffer,
-          2048,
-          [_state = state->shared_from_this(), _write_buffer_ref = // LCOV_EXCL_LINE Note: For some reason this line isn't tested ...
-           std::ref(write_buffer)](std::vector<boost::asio::const_buffer> *b, const entry_wrapper *e, const bool measure)
-          { return _state->write_list_entry_to_buffer(b, e, _write_buffer_ref, measure); });
-    }
-}
+    state->handle_fragmented_entries_response(
+      batch,
+      write_buffer,
+      2048,
+      [_state = state->shared_from_this(),
+       _write_buffer_ref = // LCOV_EXCL_LINE Note: For some reason this line isn't tested ...
+       std::ref(write_buffer)](std::vector<boost::asio::const_buffer> *b, const entry_wrapper *e, const bool measure)
+      { return _state->write_list_entry_to_buffer(b, e, _write_buffer_ref, measure); });
+  }
+} // namespace throttr

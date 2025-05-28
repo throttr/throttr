@@ -13,7 +13,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-
 #ifndef THROTTR_COMMANDS_SET_COMMAND_HPP
 #define THROTTR_COMMANDS_SET_COMMAND_HPP
 
@@ -43,7 +42,7 @@ namespace throttr
      * @param write_buffer
      */
     void call(
-      const std::shared_ptr<state> & state,
+      const std::shared_ptr<state> &state,
       request_types type,
       std::span<const std::byte> view,
       std::vector<boost::asio::const_buffer> &batch,

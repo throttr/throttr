@@ -27,8 +27,9 @@
 #include <deque>
 #include <memory>
 #include <throttr/protocol_wrapper.hpp>
-#include <throttr/storage.hpp>
 #include <throttr/services/commands_service.hpp>
+#include <throttr/services/garbage_collector_service.hpp>
+#include <throttr/storage.hpp>
 #include <vector>
 
 namespace throttr
@@ -125,6 +126,11 @@ namespace throttr
      * Commands service
      */
     std::shared_ptr<commands_service> commands_ = std::make_shared<commands_service>();
+
+    /**
+     * Scheduler service
+     */
+    std::shared_ptr<garbage_collector_service> garbage_collector_ = std::make_shared<garbage_collector_service>();
 
     /**
      * Constructor
@@ -332,17 +338,6 @@ namespace throttr
      * @param connection
      */
     void leave(const connection *connection);
-
-    /**
-     * Expiration timer
-     */
-    void expiration_timer();
-
-    /**
-     * Schedule expiration
-     */
-    void schedule_expiration(std::chrono::steady_clock::time_point proposed);
-
 #ifdef ENABLED_FEATURE_METRICS
     /**
      * Process metrics

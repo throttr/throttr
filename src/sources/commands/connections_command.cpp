@@ -17,17 +17,21 @@
 
 #include <throttr/state.hpp>
 
-namespace throttr {
-    void connections_command::call(const std::shared_ptr<state> &state, const request_types type,
-        const std::span<const std::byte> view, std::vector<boost::asio::const_buffer> &batch,
-        std::vector<std::uint8_t> &write_buffer)
-    {
-        boost::ignore_unused(type, view);
+namespace throttr
+{
+  void connections_command::call(
+    const std::shared_ptr<state> &state,
+    const request_types type,
+    const std::span<const std::byte> view,
+    std::vector<boost::asio::const_buffer> &batch,
+    std::vector<std::uint8_t> &write_buffer)
+  {
+    boost::ignore_unused(type, view);
 
 #ifndef ENABLED_FEATURE_METRICS
-        batch.emplace_back(boost::asio::buffer(&failed_response_, 1));
-        return;
+    batch.emplace_back(boost::asio::buffer(&failed_response_, 1));
+    return;
 #endif
-        state->handle_fragmented_connections_response(batch, write_buffer);
-    }
-}
+    state->handle_fragmented_connections_response(batch, write_buffer);
+  }
+} // namespace throttr
