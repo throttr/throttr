@@ -15,9 +15,9 @@
 
 #include <throttr/commands/set_command.hpp>
 
+#include <boost/core/ignore_unused.hpp>
 #include <throttr/services/create_service.hpp>
 #include <throttr/state.hpp>
-#include <boost/core/ignore_unused.hpp>
 
 namespace throttr
 {

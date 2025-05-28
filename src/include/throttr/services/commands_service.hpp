@@ -29,7 +29,12 @@ namespace throttr
   class commands_service : public std::enable_shared_from_this<commands_service>
   {
   public:
-    using command_callback = void(*)(const std::shared_ptr<state>&, request_types, std::span<const std::byte>, std::vector<boost::asio::const_buffer>&, std::vector<std::uint8_t>&);
+    using command_callback = void (*)(
+      const std::shared_ptr<state> &,
+      request_types,
+      std::span<const std::byte>,
+      std::vector<boost::asio::const_buffer> &,
+      std::vector<std::uint8_t> &);
 
     /**
      * Commands

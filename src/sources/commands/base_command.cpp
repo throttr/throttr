@@ -15,12 +15,13 @@
 
 #include <throttr/commands/base_command.hpp>
 
+#include <boost/core/ignore_unused.hpp>
 #include <throttr/services/response_builder_service.hpp>
 #include <throttr/state.hpp>
-#include <boost/core/ignore_unused.hpp>
 
 namespace throttr
 {
+  // LCOV_EXCL_START
   void base_command::call(
     const std::shared_ptr<state> &state,
     const request_types type,
@@ -28,8 +29,9 @@ namespace throttr
     std::vector<boost::asio::const_buffer> &batch,
     std::vector<std::uint8_t> &write_buffer)
   {
-      boost::ignore_unused(state, type, view, batch, write_buffer);
+    boost::ignore_unused(state, type, view, batch, write_buffer);
 
-      batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
+    batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
   }
+  // LCOV_EXCL_STOP
 } // namespace throttr

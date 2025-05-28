@@ -15,9 +15,9 @@
 
 #include <throttr/commands/purge_command.hpp>
 
+#include <boost/core/ignore_unused.hpp>
 #include <throttr/state.hpp>
 #include <throttr/utils.hpp>
-#include <boost/core/ignore_unused.hpp>
 
 namespace throttr
 {

@@ -36,7 +36,6 @@ namespace throttr
   class base_command : public std::enable_shared_from_this<base_command>
   {
   public:
-
     /**
      * Call
      *
