@@ -29,6 +29,7 @@
 #include <throttr/protocol_wrapper.hpp>
 #include <throttr/services/commands_service.hpp>
 #include <throttr/services/garbage_collector_service.hpp>
+#include <throttr/services/metrics_collector_service.hpp>
 #include <throttr/storage.hpp>
 #include <vector>
 
@@ -128,9 +129,16 @@ namespace throttr
     std::shared_ptr<commands_service> commands_ = std::make_shared<commands_service>();
 
     /**
-     * Scheduler service
+     * Garbage collector service
      */
     std::shared_ptr<garbage_collector_service> garbage_collector_ = std::make_shared<garbage_collector_service>();
+
+#ifdef ENABLED_FEATURE_METRICS
+    /**
+     * Metrics collector service
+     */
+    std::shared_ptr<metrics_collector_service> metrics_collector_ = std::make_shared<metrics_collector_service>();
+#endif
 
     /**
      * Constructor
@@ -338,17 +346,6 @@ namespace throttr
      * @param connection
      */
     void leave(const connection *connection);
-#ifdef ENABLED_FEATURE_METRICS
-    /**
-     * Process metrics
-     */
-    void process_metrics();
-
-    /**
-     * Start metrics timer
-     */
-    void start_metrics_timer();
-#endif
   };
 } // namespace throttr
 

@@ -45,7 +45,9 @@ namespace throttr
     {
       state->exposed_port_ = acceptor_.local_endpoint().port();
       state->acceptor_ready_ = true;
-      state->start_metrics_timer();
+#ifdef ENABLED_FEATURE_METRICS
+      state->metrics_collector_->schedule_timer(state);
+#endif
       do_accept();
     }
 
