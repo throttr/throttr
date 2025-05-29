@@ -24,7 +24,7 @@
 namespace throttr
 {
   /**
-   * Create service
+   * Messages service
    */
   class messages_service : public std::enable_shared_from_this<messages_service>
   {
@@ -32,7 +32,7 @@ namespace throttr
     using size_callback = std::size_t (*)(const std::span<const std::byte> &);
 
     /**
-     * Commands
+     * Message types
      */
     std::array<size_callback, 32> message_types_{};
 

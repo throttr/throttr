@@ -30,6 +30,7 @@ namespace throttr
 {
   commands_service::commands_service()
   {
+    commands_.fill(&base_command::call);
     commands_[static_cast<std::size_t>(request_types::insert)] = &insert_command::call;
     commands_[static_cast<std::size_t>(request_types::set)] = &set_command::call;
     commands_[static_cast<std::size_t>(request_types::query)] = &query_command::call;
@@ -40,10 +41,5 @@ namespace throttr
     commands_[static_cast<std::size_t>(request_types::stat)] = &stat_command::call;
     commands_[static_cast<std::size_t>(request_types::stats)] = &stats_command::call;
     commands_[static_cast<std::size_t>(request_types::connections)] = &connections_command::call;
-    for (std::size_t i = 0; i < commands_.size(); ++i)
-    {
-      if (commands_[i] == nullptr)
-        commands_[i] = &base_command::call;
-    }
   }
 } // namespace throttr
