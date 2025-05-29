@@ -138,22 +138,12 @@ namespace throttr
     void do_write(const std::vector<boost::asio::const_buffer> &batch);
 
     /**
-     * Get message sized
-     *
-     * @param buffer
-     * @param header_size
-     * @param extra
-     * @return
-     */
-    static std::size_t get_message_sized(std::span<const std::byte> buffer, std::size_t header_size, std::size_t extra = 0);
-
-    /**
      * Get message size
      *
      * @param buffer
      * @return
      */
-    static std::size_t get_message_size(std::span<const std::byte> buffer);
+    std::size_t get_message_size(std::span<const std::byte> buffer) const;
 
     /**
      * Do read
