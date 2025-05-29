@@ -30,6 +30,7 @@
 #include <throttr/services/commands_service.hpp>
 #include <throttr/services/find_service.hpp>
 #include <throttr/services/garbage_collector_service.hpp>
+#include <throttr/services/messages_service.hpp>
 #include <throttr/services/metrics_collector_service.hpp>
 #include <throttr/services/response_builder_service.hpp>
 #include <throttr/storage.hpp>
@@ -124,6 +125,11 @@ namespace throttr
      * Commands service
      */
     std::shared_ptr<commands_service> commands_ = std::make_shared<commands_service>();
+
+    /**
+     * Messages service
+     */
+    std::shared_ptr<messages_service> messages_ = std::make_shared<messages_service>();
 
     /**
      * Find service

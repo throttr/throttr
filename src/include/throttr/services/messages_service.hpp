@@ -13,8 +13,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef THROTTR_SERVICES_COMMANDS_SERVICE_HPP
-#define THROTTR_SERVICES_COMMANDS_SERVICE_HPP
+#ifndef THROTTR_SERVICES_MESSAGES_SERVICE_HPP
+#define THROTTR_SERVICES_MESSAGES_SERVICE_HPP
 
 #include <memory>
 #include <unordered_map>
@@ -24,28 +24,23 @@
 namespace throttr
 {
   /**
-   * Commands service
+   * Create service
    */
-  class commands_service : public std::enable_shared_from_this<commands_service>
+  class messages_service : public std::enable_shared_from_this<messages_service>
   {
   public:
-    using command_callback = void (*)(
-      const std::shared_ptr<state> &,
-      request_types,
-      std::span<const std::byte>,
-      std::vector<boost::asio::const_buffer> &,
-      std::vector<std::uint8_t> &);
+    using size_callback = std::size_t (*)(const std::span<const std::byte> &);
 
     /**
      * Commands
      */
-    std::array<command_callback, 32> commands_{};
+    std::array<size_callback, 32> message_types_{};
 
     /**
      * Constructor
      */
-    commands_service();
+    messages_service();
   };
 } // namespace throttr
 
-#endif // THROTTR_SERVICES_COMMANDS_SERVICE_HPP
+#endif // THROTTR_SERVICES_MESSAGES_SERVICE_HPP
