@@ -105,7 +105,9 @@ namespace throttr
 
   static std::size_t invalid_size(const std::span<const std::byte> &)
   {
+    // LCOV_EXCL_START
     return 0;
+    // LCOV_EXCL_STOP
   }
 
   messages_service::messages_service()
