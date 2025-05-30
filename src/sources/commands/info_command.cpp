@@ -35,6 +35,8 @@ namespace throttr
   {
     boost::ignore_unused(type, view, conn);
     write_buffer.reserve(424);
+    std::scoped_lock _subscription_lock(state->subscriptions_->mutex_);
+    std::scoped_lock _connection_lock(state->connections_mutex_);
 
     batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
 

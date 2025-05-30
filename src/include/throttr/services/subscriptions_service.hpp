@@ -68,6 +68,11 @@ namespace throttr
     subscription_container subscriptions_;
 
     /**
+     * Mutex
+     */
+    std::mutex mutex_;
+
+    /**
      * Is subscribed
      *
      * @param id

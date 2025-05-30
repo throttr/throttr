@@ -32,6 +32,7 @@ namespace throttr
     const std::shared_ptr<connection> &conn)
   {
     boost::ignore_unused(type, write_buffer);
+    std::scoped_lock _lock(state->subscriptions_->mutex_);
 
     const auto _request = request_unsubscribe::from_buffer(view);
 
