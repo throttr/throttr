@@ -35,8 +35,10 @@ namespace throttr
     const auto _expires_at = get_expiration_point(_now, ttl_type, ttl);
 
     auto &_index = state->storage_.get<tag_by_key>();
-    const auto _key = std::vector<std::byte>(
-      reinterpret_cast<const std::byte *>(key.data()), reinterpret_cast<const std::byte *>(key.data() + key.size())); // NOSONAR
+    const std::vector _key(
+      reinterpret_cast<const std::byte *>(key.data()),             // NOSONAR
+      reinterpret_cast<const std::byte *>(key.data() + key.size()) // NOSONAR
+    );
     const auto _entry_ptr = entry_wrapper{_key, request_entry{type, value, ttl_type, _expires_at}};
 
 #ifdef ENABLED_FEATURE_METRICS

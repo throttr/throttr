@@ -46,7 +46,7 @@ namespace throttr
 
     std::vector<decltype(index.begin())> _to_erase;
 
-    for (const auto it = begin; it != end;) // LCOV_EXCL_LINE Note: Partially tested.
+    for (auto it = begin; it != end; ++it) // LCOV_EXCL_LINE Note: Partially tested.
     {
       if (it->channel() == _request.channel_) // LCOV_EXCL_LINE Note: Partially tested.
         _to_erase.push_back(it);

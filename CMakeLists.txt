@@ -97,6 +97,8 @@ if (BUILD_TESTS)
     file(GLOB_RECURSE TESTS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cc")
 
     add_executable(tests ${TESTS})
+    target_compile_options(tests PRIVATE -static -static-libgcc -static-libstdc++)
+    target_link_options(tests PRIVATE -static -static-libgcc -static-libstdc++)
 
     target_link_libraries(tests GTest::gtest_main throttr_core)
     target_compile_definitions(tests PRIVATE THROTTR_VALUE_SIZE_${RUNTIME_VALUE_SIZE})
