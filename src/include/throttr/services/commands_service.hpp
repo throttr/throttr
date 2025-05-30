@@ -19,6 +19,7 @@
 #include <memory>
 #include <unordered_map>
 
+#include <boost/uuid/uuid.hpp>
 #include <throttr/commands/base_command.hpp>
 
 namespace throttr
@@ -34,7 +35,8 @@ namespace throttr
       request_types,
       std::span<const std::byte>,
       std::vector<boost::asio::const_buffer> &,
-      std::vector<std::uint8_t> &);
+      std::vector<std::uint8_t> &,
+      boost::uuids::uuid);
 
     /**
      * Commands

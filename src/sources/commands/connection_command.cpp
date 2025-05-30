@@ -13,15 +13,15 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include <throttr/commands/purge_command.hpp>
+#include <throttr/commands/connection_command.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <throttr/services/response_builder_service.hpp>
 #include <throttr/state.hpp>
-#include <throttr/utils.hpp>
 
 namespace throttr
 {
-  void purge_command::call(
+  void connection_command::call(
     const std::shared_ptr<state> &state,
     const request_types type,
     const std::span<const std::byte> view,
@@ -29,46 +29,23 @@ namespace throttr
     std::vector<std::uint8_t> &write_buffer,
     boost::uuids::uuid id)
   {
+    boost::ignore_unused(type, id);
 
-    boost::ignore_unused(type, write_buffer, id);
+    const auto _request = request_connection::from_buffer(view);
+    const auto &_uuid = _request.header_->id_;
 
-    const auto _request = request_purge::from_buffer(view);
-    const request_key _key{_request.key_};
+    std::lock_guard _lock(state->connections_mutex_);
+    const auto &_map = state->connections_;
+    const auto _it = _map.find(_uuid);
 
-    auto &_index = state->storage_.get<tag_by_key>();
-    const auto _it = _index.find(_key);
-
-    bool _erased = true;
-
-    if (_it == _index.end() || _it->expired_) // LCOV_EXCL_LINE note: Partially covered.
-    {
-      _erased = false;
-    }
-
-#ifdef ENABLED_FEATURE_METRICS
-    if (_it != _index.end()) // LCOV_EXCL_LINE Note: Partially tested.
-    {
-      _it->metrics_->reads_.fetch_add(1, std::memory_order_relaxed);
-    }
-#endif
-
-    // LCOV_EXCL_START
-#ifndef NDEBUG
-    fmt::
-      println("{:%Y-%m-%d %H:%M:%S} REQUEST PURGE key={} RESPONSE ok={}", std::chrono::system_clock::now(), _key.key_, _erased);
-#endif
-    // LCOV_EXCL_STOP
-
-    if (_erased) // LCOV_EXCL_LINE Note: Partially tested.
-      _index.erase(_it);
-
-    if (_erased)
-    {
-      batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
-    }
-    else
+    if (_it == _map.end())
     {
       batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
+      return;
     }
+
+    const connection *_conn = _it->second;
+    batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
+    response_builder_service::write_connections_entry_to_buffer(state, &batch, _conn, write_buffer, false);
   }
 } // namespace throttr

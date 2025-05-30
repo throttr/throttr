@@ -26,10 +26,11 @@ namespace throttr
     const request_types type,
     const std::span<const std::byte> view,
     std::vector<boost::asio::const_buffer> &batch,
-    std::vector<std::uint8_t> &write_buffer)
+    std::vector<std::uint8_t> &write_buffer,
+    boost::uuids::uuid id)
   {
 
-    boost::ignore_unused(type);
+    boost::ignore_unused(type, id);
 
     const auto _request = request_stat::from_buffer(view);
 #ifndef ENABLED_FEATURE_METRICS
