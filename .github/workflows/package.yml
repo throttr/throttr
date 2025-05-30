@@ -64,3 +64,40 @@ jobs:
           path: ${{ runner.temp }}/digests/*
           if-no-files-found: error
           retention-days: 1
+
+  merge:
+    name: Merge manifests
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref_type == 'tag' || github.ref_name == 'master'
+
+    steps:
+      - name: Download all digests
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_USERNAME }}
+          password: ${{ secrets.GHCR_PAT }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Group and create manifests
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          for combo in $(ls | cut -d'-' -f2,3 | sort -u); do
+            echo "::group::Creating manifest for $combo"
+            digests=$(ls digests-${combo}-* | xargs cat | tr '\n' ' ')
+            docker buildx imagetools create \
+              $digests \
+              -t ghcr.io/throttr/throttr:${{ env.VERSION }}-${combo}
+            docker buildx imagetools inspect ghcr.io/throttr/throttr:${{ env.VERSION }}-${combo}
+            echo "::endgroup::"
+          done
