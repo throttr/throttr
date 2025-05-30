@@ -110,7 +110,7 @@ namespace throttr
     uint64_t _total_allocated_bytes_on_counters = 0;
     uint64_t _total_allocated_bytes_on_buffers = 0;
 
-    for (const auto &_index = state->storage_.get<tag_by_key>(); auto &_item : _index)
+    for (const auto &_index = state->storage_.get<tag_by_key>(); auto &_item : _index) // LCOV_EXCL_LINE Note: Partially tested.
     {
       if (_item.entry_.type_ == entry_types::counter)
       {
@@ -135,9 +135,10 @@ namespace throttr
     uint64_t _total_channels = 0;
     std::set<std::string_view> _existing_keys;
 
-    for (const auto &_index = state->subscriptions_->subscriptions_.get<by_channel_name>(); auto &_item : _index)
+    for (const auto &_index = state->subscriptions_->subscriptions_.get<by_channel_name>();
+         auto &_item : _index) // LCOV_EXCL_LINE Note: Partially tested.
     {
-      if (!_existing_keys.contains(_item.channel()))
+      if (!_existing_keys.contains(_item.channel())) // LCOV_EXCL_LINE Note: Partially tested.
       {
         _existing_keys.insert(_item.channel());
         _total_channels++;

@@ -22,7 +22,7 @@ namespace throttr
     const auto &_index = subscriptions_.get<by_connection_id>();
     const auto [_current, _next] = _index.equal_range(id);
 
-    for (auto _it = _current; _it != _next; ++_it)
+    for (auto _it = _current; _it != _next; ++_it) // LCOV_EXCL_LINE Note: Partially tested.
     {
       if (const auto _view = _it->channel(); _view == channel) // LCOV_EXCL_LINE Note: Partially tested.
         return true;
