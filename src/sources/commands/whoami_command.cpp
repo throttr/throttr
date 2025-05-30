@@ -16,6 +16,7 @@
 #include <throttr/commands/whoami_command.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <throttr/connection.hpp>
 #include <throttr/services/response_builder_service.hpp>
 #include <throttr/state.hpp>
 
@@ -27,14 +28,14 @@ namespace throttr
     const std::span<const std::byte> view,
     std::vector<boost::asio::const_buffer> &batch,
     std::vector<std::uint8_t> &write_buffer,
-    boost::uuids::uuid id)
+    const std::shared_ptr<connection> &conn)
   {
     boost::ignore_unused(state, type, view);
 
     batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
 
     const auto _offset = write_buffer.size();
-    for (const auto _byte : id)
+    for (const auto _byte : conn->id_)
       write_buffer.push_back(_byte);
     batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], 16));
   }

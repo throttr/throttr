@@ -20,10 +20,12 @@
 
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/uuid/uuid.hpp>
+#include <deque>
 #include <memory>
 #include <span>
 #include <throttr/connection_allocator.hpp>
 #include <throttr/connection_metrics.hpp>
+#include <throttr/message.hpp>
 
 namespace throttr
 {
@@ -113,6 +115,13 @@ namespace throttr
      */
     std::uint16_t port_ = 13579;
 
+    /**
+     * Send
+     *
+     * @param batch
+     */
+    void send(std::shared_ptr<message> batch);
+
   private:
     /**
      * Handler memory
@@ -131,11 +140,6 @@ namespace throttr
      * Try process next
      */
     void try_process_next();
-
-    /**
-     * Do write
-     */
-    void do_write(const std::vector<boost::asio::const_buffer> &batch);
 
     /**
      * Get message size
@@ -174,9 +178,21 @@ namespace throttr
     std::shared_ptr<state> state_;
 
     /**
-     * Write buffer
+     * Pending writes
      */
-    std::vector<uint8_t> write_buffer_;
+    std::deque<std::shared_ptr<message>> pending_writes_;
+
+    /**
+     * On send
+     *
+     * @param batch
+     */
+    void on_send(const std::shared_ptr<message> &batch);
+
+    /**
+     * Write next
+     */
+    void write_next();
   };
 } // namespace throttr
 

@@ -20,6 +20,7 @@
 #include <throttr/commands/connections_command.hpp>
 #include <throttr/commands/insert_command.hpp>
 #include <throttr/commands/list_command.hpp>
+#include <throttr/commands/publish_command.hpp>
 #include <throttr/commands/purge_command.hpp>
 #include <throttr/commands/query_command.hpp>
 #include <throttr/commands/set_command.hpp>
@@ -49,5 +50,6 @@ namespace throttr
     commands_[static_cast<std::size_t>(request_types::whoami)] = &whoami_command::call;
     commands_[static_cast<std::size_t>(request_types::subscribe)] = &subscribe_command::call;
     commands_[static_cast<std::size_t>(request_types::unsubscribe)] = &unsubscribe_command::call;
+    commands_[static_cast<std::size_t>(request_types::publish)] = &publish_command::call;
   }
 } // namespace throttr

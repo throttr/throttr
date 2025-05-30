@@ -13,53 +13,40 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef THROTTR_COMMANDS_UPDATE_COMMAND_HPP
-#define THROTTR_COMMANDS_UPDATE_COMMAND_HPP
+#pragma once
+
+#ifndef THROTTR_MESSAGE_HPP
+#define THROTTR_MESSAGE_HPP
 
 #include <boost/asio/buffer.hpp>
-#include <boost/uuid/uuid.hpp>
-#include <memory>
-#include <span>
 #include <vector>
-
-#include <throttr/protocol/request_types.hpp>
 
 namespace throttr
 {
   /**
-   * Forward state
+   * Message
    */
-  class connection;
-
-  /**
-   * Forward state
-   */
-  class state;
-
-  /**
-   * Update command
-   */
-  class update_command
+  class message : public std::enable_shared_from_this<message>
   {
   public:
     /**
-     * Call
-     *
-     * @param state
-     * @param type
-     * @param view
-     * @param batch
-     * @param write_buffer
-     * @param conn
+     * Write buffer
      */
-    static void call(
-      const std::shared_ptr<state> &state,
-      request_types type,
-      std::span<const std::byte> view,
-      std::vector<boost::asio::const_buffer> &batch,
-      std::vector<std::uint8_t> &write_buffer,
-      const std::shared_ptr<connection> &conn);
+    std::vector<std::uint8_t> write_buffer_;
+
+    /**
+     * Buffers
+     */
+    std::vector<boost::asio::const_buffer> buffers_;
+
+    /**
+     * Constructor
+     */
+    message()
+    {
+      write_buffer_.reserve(8096);
+    }
   };
 } // namespace throttr
 
-#endif // THROTTR_COMMANDS_UPDATE_COMMAND_HPP
+#endif // THROTTR_MESSAGE_HPP

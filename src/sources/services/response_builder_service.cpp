@@ -149,6 +149,7 @@ namespace throttr
           _metrics.service_.info_request_.load(std::memory_order_relaxed),
           _metrics.service_.stat_request_.load(std::memory_order_relaxed),
           _metrics.service_.stats_request_.load(std::memory_order_relaxed),
+          _metrics.service_.publish_requests_.load(std::memory_order_relaxed),
           _metrics.service_.subscribe_request_.load(std::memory_order_relaxed),
           _metrics.service_.unsubscribe_request_.load(std::memory_order_relaxed),
           _metrics.service_.connections_request_.load(std::memory_order_relaxed),

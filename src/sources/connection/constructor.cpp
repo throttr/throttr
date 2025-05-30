@@ -29,7 +29,6 @@ namespace throttr
       socket_.set_option(no_delay_option);
       ip_ = socket_.remote_endpoint().address().to_string();
       port_ = socket_.remote_endpoint().port();
-      write_buffer_.reserve(max_length_);
       connected_at_ =
         std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     }

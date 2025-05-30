@@ -154,6 +154,11 @@ namespace throttr
      * WHOAMI requests
      */
     std::atomic<uint64_t> whoami_request_ = 0;
+
+    /**
+     * PUBLISH requests
+     */
+    std::atomic<uint64_t> publish_requests_ = 0;
   };
 
   /**

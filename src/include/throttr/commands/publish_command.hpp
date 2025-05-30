@@ -13,8 +13,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef THROTTR_COMMANDS_UPDATE_COMMAND_HPP
-#define THROTTR_COMMANDS_UPDATE_COMMAND_HPP
+#ifndef THROTTR_COMMANDS_PUBLISH_COMMAND_HPP
+#define THROTTR_COMMANDS_PUBLISH_COMMAND_HPP
 
 #include <boost/asio/buffer.hpp>
 #include <boost/uuid/uuid.hpp>
@@ -37,9 +37,9 @@ namespace throttr
   class state;
 
   /**
-   * Update command
+   * Publish command
    */
-  class update_command
+  class publish_command
   {
   public:
     /**
@@ -62,4 +62,4 @@ namespace throttr
   };
 } // namespace throttr
 
-#endif // THROTTR_COMMANDS_UPDATE_COMMAND_HPP
+#endif // THROTTR_COMMANDS_PUBLISH_COMMAND_HPP
