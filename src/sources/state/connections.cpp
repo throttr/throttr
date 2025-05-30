@@ -28,6 +28,9 @@ namespace throttr
   void state::leave(const connection *connection)
   {
     std::lock_guard lock(connections_mutex_);
+    auto &subs = subscriptions_->subscriptions_.get<by_connection_id>();
+    auto [begin, end] = subs.equal_range(connection->id_);
+    subs.erase(begin, end);
     connections_.erase(connection->id_);
   }
 } // namespace throttr

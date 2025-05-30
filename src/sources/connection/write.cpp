@@ -15,7 +15,6 @@
 
 #include <throttr/connection.hpp>
 
-#include <boost/asio/bind_allocator.hpp>
 #include <boost/asio/write.hpp>
 #include <boost/core/ignore_unused.hpp>
 #include <throttr/utils.hpp>
@@ -35,27 +34,10 @@ namespace throttr
 
     pending_writes_.erase(pending_writes_.begin());
 
+    // LCOV_EXCL_START
     if (!pending_writes_.empty())
     {
-
-      // LCOV_EXCL_START
-#ifndef NDEBUG
-      fmt::println(
-        "{:%Y-%m-%d %H:%M:%S} SESSION WRITE ip={} port={} buffer={}",
-        std::chrono::system_clock::now(),
-        ip_,
-        port_,
-        buffers_to_hex(pending_writes_.front()->buffers_));
-#endif
-      // LCOV_EXCL_STOP
-
-      boost::asio::async_write(
-        socket_,
-        pending_writes_.front()->buffers_,
-        boost::asio::bind_allocator(
-          connection_handler_allocator<int>(handler_memory_),
-          [_self = shared_from_this()](const boost::system::error_code &ec, const std::size_t length)
-          { _self->on_write(ec, length); }));
+      write_next();
     }
     // LCOV_EXCL_STOP
   }

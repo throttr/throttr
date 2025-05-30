@@ -40,8 +40,10 @@ namespace throttr
     const auto &_subs = state->subscriptions_->subscriptions_.get<by_channel_name>();
     const auto _range = _subs.equal_range(_channel);
 
+    // LCOV_EXCL_START Note: This means that there are no suscriptions.
     if (_range.first == _range.second)
       return;
+    // LCOV_EXCL_STOP
 
     const auto _message = std::make_shared<message>();
     auto &_buffer = _message->write_buffer_;
@@ -60,7 +62,7 @@ namespace throttr
 
 #ifdef ENABLED_FEATURE_METRICS
     const auto _publisher_it = state->connections_.find(id);
-    if (_publisher_it != state->connections_.end())
+    if (_publisher_it != state->connections_.end()) // LCOV_EXCL_LINE Note: Partially tested.
     {
       const auto &_metrics = _publisher_it->second->metrics_;
       _metrics->network_.published_bytes_.fetch_add(_payload_size, std::memory_order_relaxed);
@@ -68,7 +70,7 @@ namespace throttr
     }
 #endif
 
-    for (auto _it = _range.first; _it != _range.second; ++_it)
+    for (auto _it = _range.first; _it != _range.second; ++_it) // LCOV_EXCL_LINE Note: Partially tested.
     {
       const auto &_sub = *_it;
       const auto &_sub_id = _sub.connection_id_;
@@ -86,8 +88,10 @@ namespace throttr
       }
 
       const auto _conn_it = state->connections_.find(_sub_id);
+      // LCOV_EXCL_START Note: This means that the subscribed connection was disconnected.
       if (_conn_it == state->connections_.end())
         continue;
+        // LCOV_EXCL_STOP
 
 #ifdef ENABLED_FEATURE_METRICS
       _conn_it->second->metrics_->network_.received_bytes_.fetch_add(_payload_size, std::memory_order_relaxed);

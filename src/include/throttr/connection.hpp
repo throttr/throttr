@@ -188,6 +188,11 @@ namespace throttr
      * @param batch
      */
     void on_send(const std::shared_ptr<message> &batch);
+
+    /**
+     * Write next
+     */
+    void write_next();
   };
 } // namespace throttr
 

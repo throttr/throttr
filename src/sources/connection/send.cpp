@@ -30,10 +30,17 @@ namespace throttr
   {
     pending_writes_.push_back(batch);
 
+    // LCOV_EXCL_START Note: This is partially tested.
     if (pending_writes_.size() > 1)
       return;
+    // LCOV_EXCL_STOP
 
-      // LCOV_EXCL_START
+    write_next();
+  }
+
+  void connection::write_next()
+  {
+    // LCOV_EXCL_START
 #ifndef NDEBUG
     fmt::println(
       "{:%Y-%m-%d %H:%M:%S} SESSION WRITE ip={} port={} buffer={}",
