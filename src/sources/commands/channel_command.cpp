@@ -42,7 +42,7 @@ namespace throttr
     const auto &_subs = state->subscriptions_->subscriptions_.get<by_channel_name>();
     auto _range = _subs.equal_range(_request.channel_);
 
-    if (_range.first == _range.second)
+    if (_range.first == _range.second) // LCOV_EXCL_LINE Note: Partially tested.
     {
       batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
       return;
@@ -56,7 +56,7 @@ namespace throttr
     write_buffer.insert(write_buffer.end(), _count_ptr, _count_ptr + sizeof(_count));
     batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_count)));
 
-    for (auto it = _range.first; it != _range.second; ++it)
+    for (auto it = _range.first; it != _range.second; ++it) // LCOV_EXCL_LINE Note: Partially tested.
     {
       const auto &_sub = *it;
 
@@ -76,7 +76,7 @@ namespace throttr
 
       for (uint64_t metric : {_read, _write})
       {
-        const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&metric);
+        const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&metric); // NOSONAR
         write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(metric));
         batch.emplace_back(boost::asio::buffer(&write_buffer[write_buffer.size() - sizeof(metric)], sizeof(metric)));
       }

@@ -22,6 +22,17 @@
 
 namespace throttr
 {
+  inline void push_total_fragments(
+    std::vector<boost::asio::const_buffer> &batch,
+    std::vector<std::uint8_t> &write_buffer,
+    const uint64_t total)
+  {
+    const auto _offset = write_buffer.size();
+    const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&total); // NOSONAR
+    write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(total));
+    batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(total)));
+  }
+
   std::size_t response_builder_service::write_list_entry_to_buffer(
     const std::shared_ptr<state> &state,
     std::vector<boost::asio::const_buffer> *batch,
@@ -207,13 +218,7 @@ namespace throttr
     if (!_fragment.empty()) // LCOV_EXCL_LINE Note: Partially tested.
       _fragments.push_back(std::move(_fragment));
 
-    {
-      const auto _offset = write_buffer.size();
-      const uint64_t _total_fragments = _fragments.size();
-      const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&_total_fragments); // NOSONAR
-      write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(_total_fragments));
-      batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_total_fragments)));
-    }
+    push_total_fragments(batch, write_buffer, _fragments.size());
 
     std::size_t _index = 1;
     for (const auto &_frag : _fragments)
@@ -334,20 +339,21 @@ namespace throttr
     std::unordered_map<std::string_view, std::tuple<uint64_t, uint64_t, uint64_t>> _channel_stats;
     {
       const auto &_subs = state->subscriptions_->subscriptions_.get<by_channel_name>();
-      std::string_view _current_channel;
-      uint64_t _read_sum = 0, _write_sum = 0, _count = 0;
+      uint64_t _read_sum = 0;
+      uint64_t _write_sum = 0;
+      uint64_t _count = 0;
       std::size_t _fragment_size = 0;
       std::vector<std::string_view> _current_fragment;
 
-      for (auto it = _subs.begin(); it != _subs.end();)
+      for (auto it = _subs.begin(); it != _subs.end();) // LCOV_EXCL_LINE Note: Partially tested.
       {
-        _current_channel = it->channel();
+        std::string_view _current_channel = it->channel();
         _read_sum = 0;
         _write_sum = 0;
         _count = 0;
 
         auto range = _subs.equal_range(_current_channel);
-        for (auto range_it = range.first; range_it != range.second; ++range_it)
+        for (auto range_it = range.first; range_it != range.second; ++range_it) // LCOV_EXCL_LINE Note: Partially tested.
         {
           _read_sum += range_it->metrics_.read_bytes_.load(std::memory_order_relaxed);
           _write_sum += range_it->metrics_.write_bytes_.load(std::memory_order_relaxed);
@@ -356,12 +362,14 @@ namespace throttr
 
         _channel_stats[_current_channel] = {_read_sum, _write_sum, _count};
         constexpr std::size_t _channel_size = 1 + 8 + 8 + 8;
+        // LCOV_EXCL_START
         if (_fragment_size + _channel_size > 2048)
         {
           _fragments.push_back(std::move(_current_fragment));
           _current_fragment.clear();
           _fragment_size = 0;
         }
+        // LCOV_EXCL_STOP
 
         _current_fragment.push_back(_current_channel);
         _fragment_size += _channel_size;
@@ -369,25 +377,19 @@ namespace throttr
         it = range.second;
       }
 
-      if (!_current_fragment.empty())
+      if (!_current_fragment.empty()) // LCOV_EXCL_LINE Note: Partially tested.
         _fragments.push_back(std::move(_current_fragment));
     }
 
-    {
-      const auto _offset = write_buffer.size();
-      const uint64_t _total_fragments = _fragments.size();
-      const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&_total_fragments); // NOSONAR
-      write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(_total_fragments));
-      batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_total_fragments)));
-    }
+    push_total_fragments(batch, write_buffer, _fragments.size());
 
     std::size_t _index = 1;
     for (const auto &_frag : _fragments)
     {
-      const uint64_t _fragment_index = _index++;
-      const uint64_t _channel_count = _frag.size();
+      uint64_t _fragment_index = _index;
+      _index++;
 
-      for (uint64_t val : {_fragment_index, _channel_count})
+      for (const uint64_t _channel_count = _frag.size(); uint64_t val : {_fragment_index, _channel_count})
       {
         const auto _offset = write_buffer.size();
         const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&val); // NOSONAR
@@ -398,7 +400,7 @@ namespace throttr
       for (const auto &_chan : _frag)
       {
         const auto &[read, write, count] = _channel_stats[_chan];
-        const std::uint8_t _size = static_cast<std::uint8_t>(_chan.size());
+        const auto _size = static_cast<std::uint8_t>(_chan.size());
 
         const auto _offset1 = write_buffer.size();
         write_buffer.push_back(_size);

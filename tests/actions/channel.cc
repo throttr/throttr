@@ -66,3 +66,31 @@ TEST_F(ChannelTestFixture, OnSuccess)
 
   ASSERT_EQ(_data.size(), 40);
 }
+
+TEST_F(ChannelTestFixture, OnFailed)
+{
+  boost::asio::io_context _io_context;
+
+  // 🔌 Conexión directa sin suscribirse a nada
+  tcp::resolver _resolver(_io_context);
+  auto _endpoints = _resolver.resolve("127.0.0.1", std::to_string(app_->state_->exposed_port_));
+  tcp::socket _socket(_io_context);
+  boost::asio::connect(_socket, _endpoints);
+
+  // Enviar CHANNEL request a un canal inexistente
+  std::string _chan = "nope-channel";
+  std::vector<std::byte> _request = {std::byte{0x17}, std::byte{static_cast<std::uint8_t>(_chan.size())}};
+  _request.insert(
+    _request.end(),
+    reinterpret_cast<const std::byte *>(_chan.data()),
+    reinterpret_cast<const std::byte *>(_chan.data() + _chan.size()));
+
+  boost::asio::write(_socket, boost::asio::buffer(_request));
+
+  // Leer 1 byte de respuesta
+  std::vector<std::byte> _response(1);
+  boost::asio::read(_socket, boost::asio::buffer(_response));
+
+  // Debe ser 0x00 → canal no existe
+  ASSERT_EQ(_response[0], std::byte{0x00});
+}
