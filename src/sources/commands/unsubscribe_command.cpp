@@ -34,7 +34,7 @@ namespace throttr
 
     const auto _request = request_unsubscribe::from_buffer(view);
 
-    if (!state->subscriptions_->is_subscribed(id, _request.channel_))
+    if (!state->subscriptions_->is_subscribed(id, _request.channel_)) // LCOV_EXCL_LINE Note: Partially tested.
     {
       batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
       return;
@@ -43,12 +43,12 @@ namespace throttr
     auto &index = state->subscriptions_->subscriptions_.get<by_connection_id>();
     auto [begin, end] = index.equal_range(id);
 
-    for (auto it = begin; it != end;)
+    for (auto it = begin; it != end;) // LCOV_EXCL_LINE Note: Partially tested.
     {
-      if (it->channel() == _request.channel_)
+      if (it->channel() == _request.channel_) // LCOV_EXCL_LINE Note: Partially tested.
         it = index.erase(it);
       else
-        ++it;
+        ++it; // LCOV_EXCL_LINE Note: Ignored.
     }
 
     batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));

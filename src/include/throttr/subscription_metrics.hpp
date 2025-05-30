@@ -45,8 +45,10 @@ namespace throttr
      *
      * @param other
      */
-    subscription_metrics(subscription_metrics &&other) noexcept : // NOSONAR
-        bytes_read_{other.bytes_read_.load()}, bytes_write_{other.bytes_write_.load()}
+    subscription_metrics(subscription_metrics &&other) noexcept :
+        // NOSONAR
+        bytes_read_{other.bytes_read_.load()},
+        bytes_write_{other.bytes_write_.load()}
     {
     }
 
@@ -75,10 +77,10 @@ namespace throttr
     subscription_metrics &operator=(const subscription_metrics &) = delete;
     // LCOV_EXCL_STOP
 #endif
-      /**
-       * Destructor
-       */
-      ~subscription_metrics() noexcept = default;
+    /**
+     * Destructor
+     */
+    ~subscription_metrics() noexcept = default;
   };
 } // namespace throttr
 

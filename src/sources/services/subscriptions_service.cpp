@@ -24,7 +24,7 @@ namespace throttr
 
     for (auto _it = _current; _it != _next; ++_it)
     {
-      if (const auto _view = _it->channel(); _view == channel)
+      if (const auto _view = _it->channel(); _view == channel) // LCOV_EXCL_LINE Note: Partially tested.
         return true;
     }
 

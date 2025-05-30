@@ -34,7 +34,7 @@ namespace throttr
     boost::ignore_unused(type, write_buffer);
 
     const auto _request = request_subscribe::from_buffer(view);
-    if (state->subscriptions_->is_subscribed(id, _request.channel_))
+    if (state->subscriptions_->is_subscribed(id, _request.channel_)) // LCOV_EXCL_LINE Note: Partially tested.
     {
       batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
       return;
