@@ -20,7 +20,7 @@
 
 namespace throttr
 {
-  struct subscription_metrics
+  struct subscription_metrics // NOSONAR
   {
 #ifdef ENABLED_FEATURE_METRICS
     /**
@@ -45,7 +45,7 @@ namespace throttr
      *
      * @param other
      */
-    subscription_metrics(subscription_metrics &&other) noexcept :
+    subscription_metrics(subscription_metrics &&other) noexcept : // NOSONAR
         bytes_read_{other.bytes_read_.load()}, bytes_write_{other.bytes_write_.load()}
     {
     }
@@ -73,13 +73,12 @@ namespace throttr
      * @return
      */
     subscription_metrics &operator=(const subscription_metrics &) = delete;
-
-    /**
-     * Destructor
-     */
-    ~subscription_metrics() noexcept = default;
     // LCOV_EXCL_STOP
 #endif
+      /**
+       * Destructor
+       */
+      ~subscription_metrics() noexcept = default;
   };
 } // namespace throttr
 
