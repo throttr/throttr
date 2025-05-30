@@ -44,12 +44,17 @@ namespace throttr
     auto &index = state->subscriptions_->subscriptions_.get<by_connection_id>();
     auto [begin, end] = index.equal_range(conn->id_);
 
-    for (auto it = begin; it != end;) // LCOV_EXCL_LINE Note: Partially tested.
+    std::vector<decltype(index.begin())> _to_erase;
+
+    for (const auto it = begin; it != end;) // LCOV_EXCL_LINE Note: Partially tested.
     {
       if (it->channel() == _request.channel_) // LCOV_EXCL_LINE Note: Partially tested.
-        it = index.erase(it);
-      else
-        ++it; // LCOV_EXCL_LINE Note: Ignored.
+        _to_erase.push_back(it);
+    }
+
+    for (const auto it : _to_erase)
+    {
+      index.erase(it);
     }
 
     batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
