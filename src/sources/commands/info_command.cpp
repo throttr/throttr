@@ -21,6 +21,7 @@
 #include <boost/core/ignore_unused.hpp>
 #include <throttr/services/response_builder_service.hpp>
 #include <throttr/state.hpp>
+#include <throttr/version.hpp>
 
 namespace throttr
 {
@@ -33,30 +34,33 @@ namespace throttr
     const std::shared_ptr<connection> &conn)
   {
     boost::ignore_unused(type, view, conn);
+    write_buffer.reserve(424);
 
-    write_buffer.reserve(512);
+    batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
 
-    const auto now = std::chrono::duration_cast<std::chrono::seconds>(
-      std::chrono::system_clock::now().time_since_epoch()).count();
+    const auto _now =
+      std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
-    const auto push_u64 = [&](uint64_t value) {
-      const auto offset = write_buffer.size();
-      write_buffer.resize(offset + sizeof(uint64_t));
-      std::memcpy(write_buffer.data() + offset, &value, sizeof(uint64_t));
+    const auto push_u64 = [&](const uint64_t value)
+    {
+      const auto _offset = write_buffer.size();
+      write_buffer.resize(_offset + sizeof(uint64_t));
+      std::memcpy(write_buffer.data() + _offset, &value, sizeof(uint64_t));
     };
 
     const auto &metrics = state->metrics_collector_->commands_;
 
-    push_u64(static_cast<uint64_t>(now));
+    push_u64(static_cast<uint64_t>(_now));
 
-    uint64_t total_requests = 0;
-    uint64_t total_requests_per_minute = 0;
-    for (const auto &m : metrics) {
-      total_requests += m.accumulator_.load(std::memory_order_relaxed);
-      total_requests_per_minute += m.per_minute_.load(std::memory_order_relaxed);
+    uint64_t _total_requests = 0;
+    uint64_t _total_requests_per_minute = 0;
+    for (const auto &m : metrics)
+    {
+      _total_requests += m.accumulator_.load(std::memory_order_relaxed);
+      _total_requests_per_minute += m.per_minute_.load(std::memory_order_relaxed);
     }
-    push_u64(total_requests);
-    push_u64(total_requests_per_minute);
+    push_u64(_total_requests);
+    push_u64(_total_requests_per_minute);
 
     for (auto metric_type : {
            request_types::insert,
@@ -77,64 +81,82 @@ namespace throttr
            request_types::whoami,
            request_types::connection,
            request_types::connections,
-    })
+         })
     {
       push_u64(metrics[static_cast<std::size_t>(metric_type)].accumulator_.load(std::memory_order_relaxed));
       push_u64(metrics[static_cast<std::size_t>(metric_type)].per_minute_.load(std::memory_order_relaxed));
     }
 
-    uint64_t total_read = 0;
-    uint64_t total_write = 0;
-    uint64_t total_read_per_minute = 0;
-    uint64_t total_write_per_minute = 0;
-    for (const auto &_conn : state->connections_) {
-      total_read += _conn.second->metrics_->network_.read_bytes_.accumulator_.load(std::memory_order_relaxed);
-      total_write += _conn.second->metrics_->network_.write_bytes_.accumulator_.load(std::memory_order_relaxed);
-      total_read_per_minute += _conn.second->metrics_->network_.read_bytes_.per_minute_.load(std::memory_order_relaxed);
-      total_write_per_minute += _conn.second->metrics_->network_.write_bytes_.per_minute_.load(std::memory_order_relaxed);
+    uint64_t _total_read = 0;
+    uint64_t _total_write = 0;
+    uint64_t _total_read_per_minute = 0;
+    uint64_t _total_write_per_minute = 0;
+    for (const auto &_connection : state->connections_)
+    {
+      _total_read += _connection.second->metrics_->network_.read_bytes_.accumulator_.load(std::memory_order_relaxed);
+      _total_write += _connection.second->metrics_->network_.write_bytes_.accumulator_.load(std::memory_order_relaxed);
+      _total_read_per_minute += _connection.second->metrics_->network_.read_bytes_.per_minute_.load(std::memory_order_relaxed);
+      _total_write_per_minute += _connection.second->metrics_->network_.write_bytes_.per_minute_.load(std::memory_order_relaxed);
     }
-    push_u64(total_read);
-    push_u64(total_read_per_minute);
-    push_u64(total_write);
-    push_u64(total_write_per_minute);
 
-    uint64_t total_keys = 0;
-    uint64_t total_counters = 0;
-    uint64_t total_buffers = 0;
-    uint64_t total_allocated_bytes_on_counters = 0;
-    uint64_t total_allocated_bytes_on_buffers = 0;
+    push_u64(_total_read);
+    push_u64(_total_read_per_minute);
+    push_u64(_total_write);
+    push_u64(_total_write_per_minute);
 
-    for (const auto &_index = state->storage_.get<tag_by_key>(); auto &_item : _index) {
-      if (_item.entry_.type_ == entry_types::counter) {
-        total_counters++;
-        total_allocated_bytes_on_counters += sizeof(value_type);
-      } else {
-        total_buffers++;
-        total_allocated_bytes_on_buffers += _item.entry_.value_.size();
+    uint64_t _total_keys = 0;
+    uint64_t _total_counters = 0;
+    uint64_t _total_buffers = 0;
+    uint64_t _total_allocated_bytes_on_counters = 0;
+    uint64_t _total_allocated_bytes_on_buffers = 0;
+
+    for (const auto &_index = state->storage_.get<tag_by_key>(); auto &_item : _index)
+    {
+      if (_item.entry_.type_ == entry_types::counter)
+      {
+        _total_counters++;
+        _total_allocated_bytes_on_counters += sizeof(value_type);
       }
-      total_keys++;
-    }
-
-    push_u64(total_keys);
-    push_u64(total_counters);
-    push_u64(total_buffers);
-    push_u64(total_allocated_bytes_on_counters);
-    push_u64(total_allocated_bytes_on_buffers);
-
-    uint64_t total_subscriptions = 0;
-    uint64_t total_channels = 0;
-    std::set<std::string_view> existing_keys;
-    for (const auto &_index = state->subscriptions_->subscriptions_.get<by_channel_name>(); auto &_item : _index) {
-      if (!existing_keys.contains(_item.channel())) {
-        existing_keys.insert(_item.channel());
-        total_channels++;
+      else
+      {
+        _total_buffers++;
+        _total_allocated_bytes_on_buffers += _item.entry_.value_.size();
       }
-      total_subscriptions++;
+      _total_keys++;
     }
 
+    push_u64(_total_keys);
+    push_u64(_total_counters);
+    push_u64(_total_buffers);
+    push_u64(_total_allocated_bytes_on_counters);
+    push_u64(_total_allocated_bytes_on_buffers);
+
+    uint64_t _total_subscriptions = 0;
+    uint64_t _total_channels = 0;
+    std::set<std::string_view> _existing_keys;
+
+    for (const auto &_index = state->subscriptions_->subscriptions_.get<by_channel_name>(); auto &_item : _index)
+    {
+      if (!_existing_keys.contains(_item.channel()))
+      {
+        _existing_keys.insert(_item.channel());
+        _total_channels++;
+      }
+      _total_subscriptions++;
+    }
+
+    push_u64(_total_subscriptions);
+    push_u64(_total_channels);
     push_u64(state->started_at_);
 
-    const uint64_t total_connections = state->connections_.size();
-    push_u64(total_connections);
+    const uint64_t _total_connections = state->connections_.size();
+    push_u64(_total_connections);
+
+    const std::size_t _offset = write_buffer.size();
+    write_buffer.resize(_offset + 16);
+    std::memset(write_buffer.data() + _offset, 0, 16);
+    std::memcpy(write_buffer.data() + _offset, get_version().data(), get_version().size());
+
+    batch.push_back(boost::asio::buffer(write_buffer));
   }
 } // namespace throttr

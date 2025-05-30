@@ -149,32 +149,30 @@ namespace throttr
           _metrics.network_.published_bytes_.accumulator_.load(std::memory_order_relaxed),
           _metrics.network_.received_bytes_.accumulator_.load(std::memory_order_relaxed),
           _metrics.memory_.allocated_bytes_.accumulator_.load(std::memory_order_relaxed),
-          _metrics.memory_.consumed_bytes_.accumulator_.load(std::memory_order_relaxed)
-         })
+          _metrics.memory_.consumed_bytes_.accumulator_.load(std::memory_order_relaxed)})
     {
       _push(&val, sizeof(val));
     }
 
-    constexpr std::array monitored_request_types = {
-      request_types::insert,
-      request_types::set,
-      request_types::query,
-      request_types::get,
-      request_types::update,
-      request_types::purge,
-      request_types::list,
-      request_types::info,
-      request_types::stat,
-      request_types::stats,
-      request_types::publish,
-      request_types::subscribe,
-      request_types::unsubscribe,
-      request_types::connections,
-      request_types::connection,
-      request_types::channels,
-      request_types::channel,
-      request_types::whoami
-    };
+    constexpr std::array monitored_request_types =
+      {request_types::insert,
+       request_types::set,
+       request_types::query,
+       request_types::get,
+       request_types::update,
+       request_types::purge,
+       request_types::list,
+       request_types::info,
+       request_types::stat,
+       request_types::stats,
+       request_types::publish,
+       request_types::subscribe,
+       request_types::unsubscribe,
+       request_types::connections,
+       request_types::connection,
+       request_types::channels,
+       request_types::channel,
+       request_types::whoami};
 
     for (request_types type : monitored_request_types)
     {
@@ -182,7 +180,6 @@ namespace throttr
       const uint64_t value = metric.accumulator_.load(std::memory_order_relaxed);
       _push(&value, sizeof(value));
     }
-
 
 #else
     // Rellenar con ceros si las métricas no están habilitadas
@@ -365,7 +362,7 @@ namespace throttr
         _write_sum = 0;
         _count = 0;
 
-        auto range = _subs.equal_range(_current_channel); // NOSONAR
+        auto range = _subs.equal_range(_current_channel);                       // NOSONAR
         for (auto range_it = range.first; range_it != range.second; ++range_it) // LCOV_EXCL_LINE Note: Partially tested.
         {
           _read_sum += range_it->metrics_.read_bytes_.accumulator_.load(std::memory_order_relaxed);

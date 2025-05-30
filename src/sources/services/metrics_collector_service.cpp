@@ -67,10 +67,11 @@ namespace throttr
       writes_accumulator_.fetch_add(writes, std::memory_order_relaxed);
     }
 
-      for (const auto & _conn : state->connections_) {
-          for (auto &_m : _conn.second->metrics_->commands_)
-              _m.compute();
-      }
+    for (const auto &_conn : state->connections_)
+    {
+      for (auto &_m : _conn.second->metrics_->commands_)
+        _m.compute();
+    }
 
     state->metrics_collector_->compute_all();
 
@@ -79,9 +80,10 @@ namespace throttr
 #endif // NDEBUG
   }
 
-  void metrics_collector_service::compute_all() {
-      for (auto &m : commands_)
-          m.compute();
+  void metrics_collector_service::compute_all()
+  {
+    for (auto &m : commands_)
+      m.compute();
   }
 #endif // ENABLED_FEATURE_METRICS
 } // namespace throttr

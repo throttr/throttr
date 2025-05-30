@@ -13,18 +13,23 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include <throttr/state.hpp>
+#include "../service_test_fixture.hpp"
 
-namespace throttr
-{
-  state::state(boost::asio::io_context &ioc) :
-      expiration_timer_(ioc),
 #ifdef ENABLED_FEATURE_METRICS
-      metrics_timer_(ioc),
+class InfoTestFixture : public ServiceTestFixture
+{
+};
+
+TEST_F(InfoTestFixture, OnSuccessSingleFragment)
+{
+  const auto _buffer = request_info_builder();
+  const auto _response = send_and_receive(_buffer, 425);
+
+  size_t _offset = 0;
+
+  const auto _status = std::to_integer<uint8_t>(_response[_offset++]);
+  ASSERT_EQ(_status, 0x01);
+
+  ASSERT_EQ(_response.size(), 425);
+}
 #endif
-      strand_(ioc.get_executor())
-  {
-    started_at_ =
-      std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-  }
-} // namespace throttr
