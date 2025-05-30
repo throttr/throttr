@@ -47,8 +47,8 @@ namespace throttr
       // LCOV_EXCL_STOP
 
       const auto _type = static_cast<request_types>(std::to_integer<uint8_t>(_view[0]));
-      state_->commands_
-        ->commands_[static_cast<std::size_t>(_type)](state_, _type, _view, _message->buffers_, _message->write_buffer_, id_);
+      state_->commands_->commands_[static_cast<std::size_t>(
+        _type)](state_, _type, _view, _message->buffers_, _message->write_buffer_, shared_from_this());
       // LCOV_EXCL_STOP
     }
 

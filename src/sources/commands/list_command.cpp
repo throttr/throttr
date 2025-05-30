@@ -27,10 +27,10 @@ namespace throttr
     const std::span<const std::byte> view,
     std::vector<boost::asio::const_buffer> &batch,
     std::vector<std::uint8_t> &write_buffer,
-    boost::uuids::uuid id)
+    const std::shared_ptr<connection> &conn)
   {
 
-    boost::ignore_unused(type, view, id);
+    boost::ignore_unused(type, view, conn);
 
     response_builder_service::handle_fragmented_entries_response(
       state,

@@ -29,6 +29,11 @@ namespace throttr
   /**
    * Forward state
    */
+  class connection;
+
+  /**
+   * Forward state
+   */
   class state;
 
   /**
@@ -45,7 +50,7 @@ namespace throttr
      * @param view
      * @param batch
      * @param write_buffer
-     * @param id
+     * @param conn
      */
     static void call(
       const std::shared_ptr<state> &state,
@@ -53,7 +58,7 @@ namespace throttr
       std::span<const std::byte> view,
       std::vector<boost::asio::const_buffer> &batch,
       std::vector<std::uint8_t> &write_buffer,
-      boost::uuids::uuid id);
+      const std::shared_ptr<connection> &conn);
   };
 } // namespace throttr
 

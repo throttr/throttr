@@ -27,9 +27,9 @@ namespace throttr
     const std::span<const std::byte> view,
     std::vector<boost::asio::const_buffer> &batch,
     std::vector<std::uint8_t> &write_buffer,
-    boost::uuids::uuid id)
+    const std::shared_ptr<connection> &conn)
   {
-    boost::ignore_unused(type, view, id);
+    boost::ignore_unused(type, view, conn);
 
 #ifndef ENABLED_FEATURE_METRICS
     batch.emplace_back(boost::asio::buffer(&failed_response_, 1));

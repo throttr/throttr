@@ -16,6 +16,7 @@
 #include <throttr/commands/unsubscribe_command.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <throttr/connection.hpp>
 #include <throttr/services/subscriptions_service.hpp>
 #include <throttr/state.hpp>
 #include <throttr/time.hpp>
@@ -28,20 +29,20 @@ namespace throttr
     const std::span<const std::byte> view,
     std::vector<boost::asio::const_buffer> &batch,
     std::vector<std::uint8_t> &write_buffer,
-    const boost::uuids::uuid id)
+    const std::shared_ptr<connection> &conn)
   {
     boost::ignore_unused(type, write_buffer);
 
     const auto _request = request_unsubscribe::from_buffer(view);
 
-    if (!state->subscriptions_->is_subscribed(id, _request.channel_)) // LCOV_EXCL_LINE Note: Partially tested.
+    if (!state->subscriptions_->is_subscribed(conn->id_, _request.channel_)) // LCOV_EXCL_LINE Note: Partially tested.
     {
       batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
       return;
     }
 
     auto &index = state->subscriptions_->subscriptions_.get<by_connection_id>();
-    auto [begin, end] = index.equal_range(id);
+    auto [begin, end] = index.equal_range(conn->id_);
 
     for (auto it = begin; it != end;) // LCOV_EXCL_LINE Note: Partially tested.
     {

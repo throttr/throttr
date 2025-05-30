@@ -28,7 +28,7 @@ namespace throttr
     const std::span<const std::byte> view,
     std::vector<boost::asio::const_buffer> &batch,
     std::vector<std::uint8_t> &write_buffer,
-    boost::uuids::uuid id)
+    const std::shared_ptr<connection> &conn)
   {
     boost::ignore_unused(type, batch, write_buffer);
 
@@ -51,7 +51,7 @@ namespace throttr
 
     _buffer.push_back(0x03);
 
-    const auto *_size_bytes = reinterpret_cast<const uint8_t *>(&_payload_size);
+    const auto *_size_bytes = reinterpret_cast<const uint8_t *>(&_payload_size); // NOSONAR
     for (std::size_t _i = 0; _i < sizeof(value_type); ++_i)
       _buffer.push_back(_size_bytes[_i]);
 
@@ -61,13 +61,8 @@ namespace throttr
     _message->buffers_.emplace_back(boost::asio::buffer(_buffer));
 
 #ifdef ENABLED_FEATURE_METRICS
-    const auto _publisher_it = state->connections_.find(id);
-    if (_publisher_it != state->connections_.end()) // LCOV_EXCL_LINE Note: Partially tested.
-    {
-      const auto &_metrics = _publisher_it->second->metrics_;
-      _metrics->network_.published_bytes_.fetch_add(_payload_size, std::memory_order_relaxed);
-      _metrics->service_.publish_requests_.fetch_add(1, std::memory_order_relaxed);
-    }
+    conn->metrics_->network_.published_bytes_.fetch_add(_payload_size, std::memory_order_relaxed);
+    conn->metrics_->service_.publish_requests_.fetch_add(_payload_size, std::memory_order_relaxed);
 #endif
 
     for (auto _it = _range.first; _it != _range.second; ++_it) // LCOV_EXCL_LINE Note: Partially tested.
@@ -79,7 +74,7 @@ namespace throttr
       const_cast<subscription &>(_sub).metrics_.read_bytes_.fetch_add(_payload_size, std::memory_order_relaxed);
 #endif
 
-      if (_sub_id == id)
+      if (_sub_id == conn->id_)
       {
 #ifdef ENABLED_FEATURE_METRICS
         const_cast<subscription &>(_sub).metrics_.write_bytes_.fetch_add(_payload_size, std::memory_order_relaxed);

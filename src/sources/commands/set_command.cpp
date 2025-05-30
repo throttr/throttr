@@ -27,9 +27,9 @@ namespace throttr
     const std::span<const std::byte> view,
     std::vector<boost::asio::const_buffer> &batch,
     std::vector<std::uint8_t> &write_buffer,
-    boost::uuids::uuid id)
+    const std::shared_ptr<connection> &conn)
   {
-    boost::ignore_unused(type, batch, write_buffer, id);
+    boost::ignore_unused(type, batch, write_buffer, conn);
 
     const auto [header_, key_, value_] = request_set::from_buffer(view);
     const std::vector _value(value_.begin(), value_.end());

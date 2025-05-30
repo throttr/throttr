@@ -29,6 +29,11 @@ namespace throttr
   /**
    * Forward state
    */
+  class connection;
+
+  /**
+   * Forward state
+   */
   class state;
 
   /**
@@ -45,7 +50,7 @@ namespace throttr
      * @param view
      * @param batch
      * @param write_buffer
-     * @param id
+     * @param conn
      */
     // LCOV_EXCL_START Note: Other classes extends from this.
     static void call(
@@ -54,7 +59,7 @@ namespace throttr
       std::span<const std::byte> view,
       std::vector<boost::asio::const_buffer> &batch,
       std::vector<std::uint8_t> &write_buffer,
-      boost::uuids::uuid id);
+      const std::shared_ptr<connection> &conn);
     // LCOV_EXCL_STOP
   };
 } // namespace throttr
