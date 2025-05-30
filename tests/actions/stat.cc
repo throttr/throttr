@@ -21,6 +21,11 @@ class StatTestFixture : public ServiceTestFixture
 
 TEST_F(StatTestFixture, OnSuccess)
 {
+  boost::asio::io_context _io_context;
+  tcp::resolver _resolver(_io_context);
+  const auto _endpoints = _resolver.resolve("127.0.0.1", std::to_string(app_->state_->exposed_port_));
+  tcp::socket _socket(_io_context);
+  boost::asio::connect(_socket, _endpoints);
   const std::string _key = "consumer/stat_test";
 
   const auto _insert = request_insert_builder(100, ttl_types::seconds, 120, _key);
