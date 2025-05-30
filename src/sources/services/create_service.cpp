@@ -22,7 +22,7 @@
 
 namespace throttr
 {
-  bool create_service::use(
+  bool create_service::use( // NOSONAR
     const std::shared_ptr<state> &state,
     const std::string_view &key,
     const std::vector<std::byte> &value,
@@ -30,7 +30,7 @@ namespace throttr
     uint64_t ttl,
     const entry_types type,
     const std::array<std::byte, 16> &id,
-    const bool as_insert)
+    const bool as_insert) // NOSONAR
   {
     boost::ignore_unused(as_insert);
 

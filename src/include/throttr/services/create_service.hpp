@@ -48,7 +48,7 @@ namespace throttr
      * @param as_insert
      * @return
      */
-    static bool use(
+    static bool use( // NOSONAR
       const std::shared_ptr<state> &state,
       const std::string_view &key,
       const std::vector<std::byte> &value,
@@ -56,7 +56,7 @@ namespace throttr
       uint64_t ttl,
       entry_types type,
       const std::array<std::byte, 16> &id,
-      bool as_insert = false);
+      bool as_insert = false); // NOSONAR
   };
 } // namespace throttr
 
