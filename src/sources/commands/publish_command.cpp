@@ -35,6 +35,7 @@ namespace throttr
     const auto _request = request_publish::from_buffer(view);
     const auto &_channel = _request.channel_;
     const auto &_payload = _request.value_;
+    const value_type _payload_size = _request.header_->value_size_;
 
     const auto &_subs = state->subscriptions_->subscriptions_.get<by_channel_name>();
     const auto _range = _subs.equal_range(_channel);
@@ -48,10 +49,9 @@ namespace throttr
 
     _buffer.push_back(0x03);
 
-    const value_type size = _request.header_->value_size_;
-    const auto *size_bytes = reinterpret_cast<const uint8_t *>(&size);
+    const auto *_size_bytes = reinterpret_cast<const uint8_t *>(&_payload_size);
     for (std::size_t _i = 0; _i < sizeof(value_type); ++_i)
-      _buffer.push_back(size_bytes[_i]);
+      _buffer.push_back(_size_bytes[_i]);
 
     for (const auto &_byte : _payload)
       _buffer.push_back(std::to_integer<uint8_t>(_byte));
@@ -61,10 +61,21 @@ namespace throttr
     for (auto _it = _range.first; _it != _range.second; ++_it)
     {
       const auto &_sub = *_it;
-      if (_sub.connection_id_ == id)
-        continue;
+      const auto &_sub_id = _sub.connection_id_;
 
-      const auto _conn_it = state->connections_.find(_sub.connection_id_);
+#ifdef ENABLED_FEATURE_METRICS
+      const_cast<subscription &>(_sub).metrics_.read_bytes_.fetch_add(_payload_size, std::memory_order_relaxed);
+#endif
+
+      if (_sub_id == id)
+      {
+#ifdef ENABLED_FEATURE_METRICS
+        const_cast<subscription &>(_sub).metrics_.write_bytes_.fetch_add(_payload_size, std::memory_order_relaxed);
+#endif
+        continue;
+      }
+
+      const auto _conn_it = state->connections_.find(_sub_id);
       if (_conn_it == state->connections_.end())
         continue;
 
