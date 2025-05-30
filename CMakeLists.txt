@@ -1,4 +1,6 @@
 cmake_minimum_required(VERSION 3.25)
+cmake_policy(SET CMP0144 NEW)
+cmake_policy(SET CMP0167 NEW)
 project(throttr)
 
 set(CMAKE_CXX_STANDARD 23)
@@ -113,3 +115,5 @@ target_compile_options(throttr PRIVATE -static -static-libgcc -static-libstdc++)
 target_link_options(throttr PRIVATE -static -static-libgcc -static-libstdc++)
 target_compile_definitions(throttr PUBLIC THROTTR_VALUE_SIZE_${RUNTIME_VALUE_SIZE})
 target_compile_definitions(throttr_core PUBLIC THROTTR_VALUE_SIZE_${RUNTIME_VALUE_SIZE})
+
+set(CMAKE_SUPPRESS_DEVELOPER_WARNINGS 1 CACHE INTERNAL "No dev warnings")
