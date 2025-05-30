@@ -46,19 +46,18 @@ namespace throttr
      *
      * @param other
      */
-    subscription_metrics(subscription_metrics &&other) noexcept
+    subscription_metrics(subscription_metrics &&other) noexcept :
+        read_bytes_(std::move(other.read_bytes_)), write_bytes_(std::move(other.write_bytes_))
     {
-      boost::ignore_unused(other);
     }
 
-    /**
-     * Assignment
-     * @param other
-     * @return
-     */
     subscription_metrics &operator=(subscription_metrics &&other) noexcept
     {
-      boost::ignore_unused(other);
+      if (this != &other)
+      {
+        read_bytes_ = std::move(other.read_bytes_);
+        write_bytes_ = std::move(other.write_bytes_);
+      }
       return *this;
     }
 

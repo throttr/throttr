@@ -45,8 +45,10 @@ namespace throttr
       reinterpret_cast<const std::byte *>(_request.channel_.data()),                           // NOSONAR
       reinterpret_cast<const std::byte *>(_request.channel_.data() + _request.channel_.size()) // NOSONAR
     );
-    state->subscriptions_->subscriptions_.insert(subscription{conn->id_, _channel_bytes});
+    auto _subscription_ptr = subscription{conn->id_, _channel_bytes};
 
-    batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
+    auto [_it, _inserted] = state->subscriptions_->subscriptions_.insert(std::move(_subscription_ptr));
+
+    batch.emplace_back(boost::asio::buffer(_inserted ? &state::success_response_ : &state::failed_response_, 1));
   }
 } // namespace throttr

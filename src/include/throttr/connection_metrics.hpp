@@ -84,7 +84,7 @@ namespace throttr
     /**
      * Commands metrics
      */
-    std::array<metric, 32> commands_{};
+    std::array<metric, 32> commands_;
   };
 #endif
 } // namespace throttr

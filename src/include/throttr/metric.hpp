@@ -40,16 +40,58 @@ namespace throttr
      */
     std::atomic<uint64_t> per_minute_ = 0;
 
+    /**
+     * Mark
+     *
+     * @param step
+     */
     void mark(const std::size_t step = 1)
     {
       count_.fetch_add(step, std::memory_order_relaxed);
       accumulator_.fetch_add(step, std::memory_order_relaxed);
     }
 
+    /**
+     * Compute
+     */
     void compute()
     {
       per_minute_.store(count_.exchange(0, std::memory_order_relaxed), std::memory_order_relaxed);
     }
+
+    /**
+     * Move constructor
+     *
+     * @param other
+     */
+    metric(metric &&other) noexcept
+    {
+      count_.store(other.count_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+      accumulator_.store(other.accumulator_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+      per_minute_.store(other.per_minute_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+    }
+
+    /**
+     * Move assignment
+     *
+     * @param other
+     * @return
+     */
+    metric &operator=(metric &&other) noexcept
+    {
+      if (this != &other)
+      {
+        count_.store(other.count_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+        accumulator_.store(other.accumulator_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+        per_minute_.store(other.per_minute_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+      }
+      return *this;
+    }
+
+    /**
+     * Constructor default
+     */
+    metric() = default;
   };
 #endif
 } // namespace throttr
