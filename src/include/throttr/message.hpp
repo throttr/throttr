@@ -13,26 +13,40 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include <throttr/connection.hpp>
+#pragma once
 
-#include "throttr/state.hpp"
+#ifndef THROTTR_MESSAGE_HPP
+#define THROTTR_MESSAGE_HPP
+
+#include <boost/asio/buffer.hpp>
+#include <vector>
 
 namespace throttr
 {
-  connection::connection(boost::asio::ip::tcp::socket socket, const std::shared_ptr<state> &state) :
-      id_(state->id_generator_()), socket_(std::move(socket)), state_(state)
+  /**
+   * Message
+   */
+  class message : public std::enable_shared_from_this<message>
   {
-    // LCOV_EXCL_START
-    if (socket_.is_open())
-    {
-      const boost::asio::ip::tcp::no_delay no_delay_option(true);
-      socket_.set_option(no_delay_option);
-      ip_ = socket_.remote_endpoint().address().to_string();
-      port_ = socket_.remote_endpoint().port();
-      connected_at_ =
-        std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    }
-    // LCOV_EXCL_STOP
-  }
+  public:
+    /**
+     * Write buffer
+     */
+    std::vector<std::uint8_t> write_buffer_;
 
+    /**
+     * Buffers
+     */
+    std::vector<boost::asio::const_buffer> buffers_;
+
+    /**
+     * Constructor
+     */
+    message()
+    {
+      write_buffer_.reserve(8096);
+    }
+  };
 } // namespace throttr
+
+#endif // THROTTR_MESSAGE_HPP

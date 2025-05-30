@@ -22,37 +22,6 @@
 
 namespace throttr
 {
-  void connection::do_write(const std::vector<boost::asio::const_buffer> &batch)
-  {
-    // LCOV_EXCL_START
-    if (batch.empty())
-    {
-      do_read();
-      return;
-    }
-    // LCOV_EXCL_STOP
-
-    auto _self = shared_from_this();
-
-    // LCOV_EXCL_START
-#ifndef NDEBUG
-    fmt::println(
-      "{:%Y-%m-%d %H:%M:%S} SESSION WRITE ip={} port={} buffer={}",
-      std::chrono::system_clock::now(),
-      ip_,
-      port_,
-      buffers_to_hex(batch));
-#endif
-    // LCOV_EXCL_STOP
-
-    boost::asio::async_write(
-      socket_,
-      batch,
-      boost::asio::bind_allocator(
-        connection_handler_allocator<int>(handler_memory_),
-        [_self](const boost::system::error_code &ec, const std::size_t length) { _self->on_write(ec, length); }));
-  }
-
   void connection::on_write(const boost::system::error_code &error, const std::size_t length)
   {
     boost::ignore_unused(length);
@@ -63,8 +32,31 @@ namespace throttr
       close();
       return;
     }
-    // LCOV_EXCL_STOP
 
-    do_read();
+    pending_writes_.erase(pending_writes_.begin());
+
+    if (!pending_writes_.empty())
+    {
+
+      // LCOV_EXCL_START
+#ifndef NDEBUG
+      fmt::println(
+        "{:%Y-%m-%d %H:%M:%S} SESSION WRITE ip={} port={} buffer={}",
+        std::chrono::system_clock::now(),
+        ip_,
+        port_,
+        buffers_to_hex(pending_writes_.front()->buffers_));
+#endif
+      // LCOV_EXCL_STOP
+
+      boost::asio::async_write(
+        socket_,
+        pending_writes_.front()->buffers_,
+        boost::asio::bind_allocator(
+          connection_handler_allocator<int>(handler_memory_),
+          [_self = shared_from_this()](const boost::system::error_code &ec, const std::size_t length)
+          { _self->on_write(ec, length); }));
+    }
+    // LCOV_EXCL_STOP
   }
 } // namespace throttr

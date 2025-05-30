@@ -133,6 +133,16 @@ namespace throttr
     return request_unsubscribe_header_size + h->channel_size_;
   }
 
+  static std::size_t get_publish_size(const std::span<const std::byte> &buffer)
+  {
+    // LCOV_EXCL_START
+    if (buffer.size() < request_publish_header_size)
+      return 0;
+    // LCOV_EXCL_STOP
+    auto *h = reinterpret_cast<const request_publish_header *>(buffer.data()); // NOSONAR
+    return request_publish_header_size + h->channel_size_ + h->value_size_;
+  }
+
   static std::size_t invalid_size(const std::span<const std::byte> &)
   {
     // LCOV_EXCL_START
@@ -157,5 +167,6 @@ namespace throttr
     message_types_[static_cast<std::size_t>(request_types::whoami)] = &get_whoami_size;
     message_types_[static_cast<std::size_t>(request_types::subscribe)] = &get_subscribe_size;
     message_types_[static_cast<std::size_t>(request_types::unsubscribe)] = &get_unsubscribe_size;
+    message_types_[static_cast<std::size_t>(request_types::publish)] = &get_publish_size;
   }
 } // namespace throttr

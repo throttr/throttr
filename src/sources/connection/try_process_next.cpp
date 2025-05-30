@@ -15,6 +15,7 @@
 
 #include <throttr/connection.hpp>
 
+#include <throttr/message.hpp>
 #include <throttr/state.hpp>
 #include <throttr/utils.hpp>
 
@@ -22,8 +23,7 @@ namespace throttr
 {
   void connection::try_process_next()
   {
-    write_buffer_.clear();
-    std::vector<boost::asio::const_buffer> _batch;
+    const auto _message = std::make_shared<message>();
 
     while (true)
     {
@@ -47,16 +47,19 @@ namespace throttr
       // LCOV_EXCL_STOP
 
       const auto _type = static_cast<request_types>(std::to_integer<uint8_t>(_view[0]));
-      state_->commands_->commands_[static_cast<std::size_t>(_type)](state_, _type, _view, _batch, write_buffer_, id_);
+      state_->commands_
+        ->commands_[static_cast<std::size_t>(_type)](state_, _type, _view, _message->buffers_, _message->write_buffer_, id_);
       // LCOV_EXCL_STOP
     }
 
     // LCOV_EXCL_START Note: Partially tested.
     // The not tested case is when in-while break condition is triggered but no
     // queue element exists.
-    do_write(_batch);
+    if (!_message->buffers_.empty())
+      send(_message);
     // LCOV_EXCL_STOP
 
     compact_buffer_if_needed();
+    do_read();
   }
 } // namespace throttr
