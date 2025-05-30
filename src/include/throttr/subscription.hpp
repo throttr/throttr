@@ -16,6 +16,7 @@
 #ifndef THROTTR_SUBSCRIPTION_HPP
 #define THROTTR_SUBSCRIPTION_HPP
 
+#include <atomic>
 #include <boost/uuid/uuid.hpp>
 
 namespace throttr
@@ -35,6 +36,23 @@ namespace throttr
      */
     std::vector<std::byte> channel_;
 
+#ifdef ENABLED_FEATURE_METRICS
+    /**
+     * Connected at
+     */
+    std::uint64_t connected_at_ = 0;
+
+    /**
+     * Bytes read
+     */
+    std::atomic<uint64_t> bytes_read_{0};
+
+    /**
+     * Bytes write
+     */
+    std::atomic<uint64_t> bytes_write_{0};
+#endif
+
     /**
      * Constructor
      *
@@ -44,6 +62,8 @@ namespace throttr
     subscription(const boost::uuids::uuid connection_id, const std::vector<std::byte> &channel) :
         connection_id_(connection_id), channel_(channel)
     {
+      connected_at_ =
+        std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     }
 
     /**
@@ -53,7 +73,7 @@ namespace throttr
      */
     [[nodiscard]] std::string_view channel() const noexcept
     {
-      return {reinterpret_cast<const char *>(channel_.data()), channel_.size()};
+      return {reinterpret_cast<const char *>(channel_.data()), channel_.size()}; // NOSONAR
     }
   };
 } // namespace throttr

@@ -41,8 +41,8 @@ namespace throttr
     }
 
     const std::vector<std::byte> channel_bytes{
-      reinterpret_cast<const std::byte *>(_request.channel_.data()),
-      reinterpret_cast<const std::byte *>(_request.channel_.data() + _request.channel_.size())};
+      reinterpret_cast<const std::byte *>(_request.channel_.data()),                             // NOSONAR
+      reinterpret_cast<const std::byte *>(_request.channel_.data() + _request.channel_.size())}; // NOSONAR
 
     state->subscriptions_->subscriptions_.insert(subscription{id, channel_bytes});
 
