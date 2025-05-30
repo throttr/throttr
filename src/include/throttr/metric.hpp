@@ -23,7 +23,7 @@
 namespace throttr
 {
 #ifdef ENABLED_FEATURE_METRICS
-  struct metric
+  struct metric // NOSONAR
   {
     /**
      * Temporal count
@@ -64,7 +64,7 @@ namespace throttr
      *
      * @param other
      */
-    metric(metric &&other) noexcept
+    metric(metric &&other) noexcept // NOSONAR
     {
       count_.store(other.count_.load(std::memory_order_relaxed), std::memory_order_relaxed);
       accumulator_.store(other.accumulator_.load(std::memory_order_relaxed), std::memory_order_relaxed);
@@ -77,7 +77,7 @@ namespace throttr
      * @param other
      * @return
      */
-    metric &operator=(metric &&other) noexcept
+    metric &operator=(metric &&other) noexcept // NOSONAR
     {
       if (this != &other)
       {
@@ -92,6 +92,11 @@ namespace throttr
      * Constructor default
      */
     metric() = default;
+
+    /**
+     * Destructor default
+     */
+    ~metric() noexcept = default;
   };
 #endif
 } // namespace throttr

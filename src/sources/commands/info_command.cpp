@@ -35,8 +35,7 @@ namespace throttr
   {
     boost::ignore_unused(type, view, conn);
     write_buffer.reserve(424);
-    std::scoped_lock _subscription_lock(state->subscriptions_->mutex_);
-    std::scoped_lock _connection_lock(state->connections_mutex_);
+    std::scoped_lock _lock(state->subscriptions_->mutex_, state->connections_mutex_);
 
     batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
 
@@ -137,9 +136,9 @@ namespace throttr
     uint64_t _total_channels = 0;
     std::set<std::string_view> _existing_keys;
 
-    for (const auto &_index =
-           state->subscriptions_->subscriptions_.get<by_channel_name>(); // LCOV_EXCL_LINE Note: Partially tested.
-         auto &_item : _index)                                           // LCOV_EXCL_LINE Note: Partially tested.
+    for (const auto &_index =                                          // LCOV_EXCL_LINE Note: Partially tested.
+         state->subscriptions_->subscriptions_.get<by_channel_name>(); // LCOV_EXCL_LINE Note: Partially tested.
+         auto &_item : _index)                                         // LCOV_EXCL_LINE Note: Partially tested.
     {
       if (!_existing_keys.contains(_item.channel())) // LCOV_EXCL_LINE Note: Partially tested.
       {
