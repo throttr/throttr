@@ -61,3 +61,23 @@ TEST_F(ConnectionTestFixture, OnSuccess)
 
   ASSERT_EQ(_offset, 228);
 }
+
+TEST_F(ConnectionTestFixture, OnFailed)
+{
+  boost::asio::io_context _io_context;
+  tcp::resolver _resolver(_io_context);
+  const auto _endpoints = _resolver.resolve("127.0.0.1", std::to_string(app_->state_->exposed_port_));
+
+  tcp::socket _socket(_io_context);
+  boost::asio::connect(_socket, _endpoints);
+
+  const auto _fake_uuid = boost::uuids::random_generator()();
+
+  const auto _conn_buffer = request_connection_builder(_fake_uuid);
+  boost::asio::write(_socket, boost::asio::buffer(_conn_buffer.data(), _conn_buffer.size()));
+
+  std::vector<std::byte> _response(1);
+  boost::asio::read(_socket, boost::asio::buffer(_response.data(), _response.size()));
+
+  ASSERT_EQ(_response[0], std::byte{0x00});
+}
