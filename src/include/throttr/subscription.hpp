@@ -16,8 +16,8 @@
 #ifndef THROTTR_SUBSCRIPTION_HPP
 #define THROTTR_SUBSCRIPTION_HPP
 
-#include <throttr/subscription_metrics.hpp>
 #include <boost/uuid/uuid.hpp>
+#include <throttr/subscription_metrics.hpp>
 
 namespace throttr
 {

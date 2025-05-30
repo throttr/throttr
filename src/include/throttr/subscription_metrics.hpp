@@ -74,6 +74,10 @@ namespace throttr
      */
     subscription_metrics &operator=(const subscription_metrics &) = delete;
 
+    /**
+     * Destructor
+     */
+    ~subscription_metrics() noexcept = default;
     // LCOV_EXCL_STOP
 #endif
   };
