@@ -58,6 +58,16 @@ namespace throttr
 
     _message->buffers_.emplace_back(boost::asio::buffer(_buffer));
 
+#ifdef ENABLED_FEATURE_METRICS
+    const auto _publisher_it = state->connections_.find(id);
+    if (_publisher_it != state->connections_.end())
+    {
+      const auto &_metrics = _publisher_it->second->metrics_;
+      _metrics->network_.published_bytes_.fetch_add(_payload_size, std::memory_order_relaxed);
+      _metrics->service_.publish_requests_.fetch_add(1, std::memory_order_relaxed);
+    }
+#endif
+
     for (auto _it = _range.first; _it != _range.second; ++_it)
     {
       const auto &_sub = *_it;
@@ -78,6 +88,10 @@ namespace throttr
       const auto _conn_it = state->connections_.find(_sub_id);
       if (_conn_it == state->connections_.end())
         continue;
+
+#ifdef ENABLED_FEATURE_METRICS
+      _conn_it->second->metrics_->network_.received_bytes_.fetch_add(_payload_size, std::memory_order_relaxed);
+#endif
 
       _conn_it->second->send(_message);
     }

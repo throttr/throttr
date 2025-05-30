@@ -27,15 +27,12 @@ TEST_F(PublishTestFixture, OnSuccess)
   tcp::resolver _resolver(_io_context);
   const auto _endpoints = _resolver.resolve("127.0.0.1", std::to_string(app_->state_->exposed_port_));
 
-  // Socket 1: el que se suscribe
   tcp::socket _subscriber(_io_context);
   boost::asio::connect(_subscriber, _endpoints);
 
-  // Socket 2: el que publica
   tcp::socket _publisher(_io_context);
   boost::asio::connect(_publisher, _endpoints);
 
-  // SUBSCRIBE desde socket 1
   const auto _subscribe_buffer = request_subscribe_builder("news");
   boost::asio::write(_subscriber, boost::asio::buffer(_subscribe_buffer.data(), _subscribe_buffer.size()));
 
@@ -44,11 +41,14 @@ TEST_F(PublishTestFixture, OnSuccess)
 
   ASSERT_EQ(_subscribe_response[0], std::byte{0x01});
 
-  // PUBLISH desde socket 2
+  boost::asio::write(_publisher, boost::asio::buffer(_subscribe_buffer.data(), _subscribe_buffer.size()));
+  boost::asio::read(_publisher, boost::asio::buffer(_subscribe_response.data(), _subscribe_response.size()));
+
+  ASSERT_EQ(_subscribe_response[0], std::byte{0x01});
+
   const auto _publish_buffer = request_publish_builder({std::byte{0x42}}, "news");
   boost::asio::write(_publisher, boost::asio::buffer(_publish_buffer.data(), _publish_buffer.size()));
 
-  // Leer tipo
   std::vector<std::byte> _header(1 + sizeof(value_type));
   boost::asio::read(_subscriber, boost::asio::buffer(_header.data(), _header.size()));
 

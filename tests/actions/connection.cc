@@ -45,7 +45,7 @@ TEST_F(ConnectionTestFixture, OnSuccess)
   const auto _conn_buffer = request_connection_builder(_uuid);
   boost::asio::write(_socket, boost::asio::buffer(_conn_buffer.data(), _conn_buffer.size()));
 
-  std::vector<std::byte> _conn_response(1 + 227);
+  std::vector<std::byte> _conn_response(1 + 235);
   boost::asio::read(_socket, boost::asio::buffer(_conn_response.data(), _conn_response.size()));
 
   size_t _offset = 0;
@@ -67,14 +67,14 @@ TEST_F(ConnectionTestFixture, OnSuccess)
   _offset += sizeof(_port);
   ASSERT_GT(_port, 0);
 
-  for (int i = 0; i < 24; ++i)
+  for (int i = 0; i < 25; ++i)
   {
     uint64_t _metric;
     std::memcpy(&_metric, _conn_response.data() + _offset, sizeof(_metric));
     _offset += sizeof(_metric);
   }
 
-  ASSERT_EQ(_offset, 228);
+  ASSERT_EQ(_offset, 236);
 }
 
 TEST_F(ConnectionTestFixture, OnFailed)

@@ -29,7 +29,7 @@ TEST_F(ConnectionsTestFixture, OnSuccessSingleFragment)
       8 + // fragment count
       8 + // fragment id
       8 + // connection count
-      227 // una conexión con ENABLED_FEATURE_METRICS
+      235 // una conexión con ENABLED_FEATURE_METRICS
   );
 
   size_t _offset = 1;
@@ -72,14 +72,14 @@ TEST_F(ConnectionsTestFixture, OnSuccessSingleFragment)
   ASSERT_GT(_port, 0);
 
   // 24 métricas (8 bytes cada una)
-  for (int i = 0; i < 24; ++i)
+  for (int i = 0; i < 25; ++i)
   {
     uint64_t _metric;
     std::memcpy(&_metric, _response.data() + _offset, sizeof(_metric));
     _offset += sizeof(_metric);
   }
 
-  ASSERT_EQ(_offset, 1 + 8 + 8 + 8 + 227);
+  ASSERT_EQ(_offset, 1 + 8 + 8 + 8 + 235);
   ASSERT_LE(_offset, _response.size());
 }
 #endif
