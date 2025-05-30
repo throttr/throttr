@@ -21,6 +21,7 @@
 #include <boost/core/ignore_unused.hpp>
 #include <throttr/services/response_builder_service.hpp>
 #include <throttr/state.hpp>
+#include <throttr/utils.hpp>
 #include <throttr/version.hpp>
 
 namespace throttr
@@ -161,5 +162,15 @@ namespace throttr
     std::memcpy(write_buffer.data() + _offset, get_version().data(), get_version().size());
 
     batch.push_back(boost::asio::buffer(write_buffer));
+
+    // LCOV_EXCL_START
+#ifndef NDEBUG
+    fmt::println(
+      "{:%Y-%m-%d %H:%M:%S} REQUEST INFO from={} "
+      "RESPONSE ok=true",
+      std::chrono::system_clock::now(),
+      id_to_hex(conn->id_));
+#endif
+    // LCOV_EXCL_STOP
   }
 } // namespace throttr

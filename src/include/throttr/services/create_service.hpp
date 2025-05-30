@@ -44,6 +44,7 @@ namespace throttr
      * @param ttl_type
      * @param ttl
      * @param type
+     * @param id
      * @param as_insert
      * @return
      */
@@ -54,6 +55,7 @@ namespace throttr
       ttl_types ttl_type,
       uint64_t ttl,
       entry_types type,
+      const std::array<std::byte, 16> &id,
       bool as_insert = false);
   };
 } // namespace throttr

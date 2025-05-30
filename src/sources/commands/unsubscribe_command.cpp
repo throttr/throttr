@@ -20,6 +20,7 @@
 #include <throttr/services/subscriptions_service.hpp>
 #include <throttr/state.hpp>
 #include <throttr/time.hpp>
+#include <throttr/utils.hpp>
 
 namespace throttr
 {
@@ -39,6 +40,21 @@ namespace throttr
     if (!state->subscriptions_->is_subscribed(conn->id_, _request.channel_)) // LCOV_EXCL_LINE Note: Partially tested.
     {
       batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
+
+      // LCOV_EXCL_START
+#ifndef NDEBUG
+      const std::vector _channel_bytes(
+        reinterpret_cast<const std::byte *>(_request.channel_.data()),                           // NOSONAR
+        reinterpret_cast<const std::byte *>(_request.channel_.data() + _request.channel_.size()) // NOSONAR
+      );
+      fmt::println(
+        "{:%Y-%m-%d %H:%M:%S} REQUEST UNSUBSCRIBE channel={} from={} "
+        "RESPONSE ok=false",
+        std::chrono::system_clock::now(),
+        span_to_hex(_channel_bytes),
+        id_to_hex(conn->id_));
+#endif
+      // LCOV_EXCL_STOP
       return;
     }
 
@@ -59,5 +75,20 @@ namespace throttr
     }
 
     batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
+
+    // LCOV_EXCL_START
+#ifndef NDEBUG
+    const std::vector _channel_bytes(
+      reinterpret_cast<const std::byte *>(_request.channel_.data()),                           // NOSONAR
+      reinterpret_cast<const std::byte *>(_request.channel_.data() + _request.channel_.size()) // NOSONAR
+    );
+    fmt::println(
+      "{:%Y-%m-%d %H:%M:%S} REQUEST UNSUBSCRIBE channel={} from={} "
+      "RESPONSE ok=true",
+      std::chrono::system_clock::now(),
+      span_to_hex(_channel_bytes),
+      id_to_hex(conn->id_));
+#endif
+    // LCOV_EXCL_STOP
   }
 } // namespace throttr

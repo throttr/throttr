@@ -17,6 +17,9 @@
 
 #include <boost/core/ignore_unused.hpp>
 #include <throttr/state.hpp>
+#include <throttr/utils.hpp>
+
+#include <throttr/connection.hpp>
 
 namespace throttr
 {
@@ -44,5 +47,15 @@ namespace throttr
       [_state = state->shared_from_this(),
        &write_buffer](std::vector<boost::asio::const_buffer> *b, const entry_wrapper *e, const bool measure)
       { return _state->response_builder_->write_stats_entry_to_buffer(_state, b, e, write_buffer, measure); });
+
+    // LCOV_EXCL_START
+#ifndef NDEBUG
+    fmt::println(
+      "{:%Y-%m-%d %H:%M:%S} REQUEST STATS id={} "
+      "RESPONSE ok=true",
+      std::chrono::system_clock::now(),
+      id_to_hex(conn->id_));
+#endif
+    // LCOV_EXCL_STOP
   }
 } // namespace throttr

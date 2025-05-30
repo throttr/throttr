@@ -36,20 +36,43 @@ namespace throttr
     std::scoped_lock _lock(state->subscriptions_->mutex_);
 
     const auto _request = request_subscribe::from_buffer(view);
-    if (state->subscriptions_->is_subscribed(conn->id_, _request.channel_)) // LCOV_EXCL_LINE Note: Partially tested.
-    {
-      batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
-      return;
-    }
-
     const std::vector _channel_bytes(
       reinterpret_cast<const std::byte *>(_request.channel_.data()),                           // NOSONAR
       reinterpret_cast<const std::byte *>(_request.channel_.data() + _request.channel_.size()) // NOSONAR
     );
+    if (state->subscriptions_->is_subscribed(conn->id_, _request.channel_)) // LCOV_EXCL_LINE Note: Partially tested.
+    {
+      // LCOV_EXCL_START
+#ifndef NDEBUG
+      fmt::println(
+        "{:%Y-%m-%d %H:%M:%S} REQUEST SUBSCRIBE channel={} from={} "
+        "RESPONSE ok=false",
+        std::chrono::system_clock::now(),
+        span_to_hex(_channel_bytes),
+        id_to_hex(conn->id_));
+#endif
+      // LCOV_EXCL_STOP
+
+      batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
+      return;
+    }
+
     auto _subscription_ptr = subscription{conn->id_, _channel_bytes};
 
     auto [_it, _inserted] = state->subscriptions_->subscriptions_.insert(std::move(_subscription_ptr));
 
     batch.emplace_back(boost::asio::buffer(_inserted ? &state::success_response_ : &state::failed_response_, 1));
+
+    // LCOV_EXCL_START
+#ifndef NDEBUG
+    fmt::println(
+      "{:%Y-%m-%d %H:%M:%S} REQUEST SUBSCRIBE channel={} from={} "
+      "RESPONSE ok={}",
+      std::chrono::system_clock::now(),
+      span_to_hex(_channel_bytes),
+      id_to_hex(conn->id_),
+      _inserted);
+#endif
+    // LCOV_EXCL_STOP
   }
 } // namespace throttr

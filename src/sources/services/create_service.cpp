@@ -29,6 +29,7 @@ namespace throttr
     const ttl_types ttl_type,
     uint64_t ttl,
     const entry_types type,
+    const std::array<std::byte, 16> &id,
     const bool as_insert)
   {
     boost::ignore_unused(as_insert);
@@ -79,11 +80,12 @@ namespace throttr
     // LCOV_EXCL_START
 #ifndef NDEBUG
     fmt::println(
-      "{:%Y-%m-%d %H:%M:%S} REQUEST {} key={} value={}ttl_type={} ttl={} "
+      "{:%Y-%m-%d %H:%M:%S} REQUEST {} key={} from={} value={}ttl_type={} ttl={} "
       "RESPONSE ok={}",
       std::chrono::system_clock::now(),
       as_insert ? "INSERT" : "SET",
       key,
+      id_to_hex(id),
       span_to_hex(std::span(_entry_ptr.entry_.value_.data(), _entry_ptr.entry_.value_.size())),
       to_string(ttl_type),
       ttl,

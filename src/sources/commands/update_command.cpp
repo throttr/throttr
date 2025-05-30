@@ -18,6 +18,7 @@
 #include <throttr/services/update_service.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <throttr/connection.hpp>
 #include <throttr/state.hpp>
 #include <throttr/utils.hpp>
 
@@ -77,12 +78,13 @@ namespace throttr
     // LCOV_EXCL_START
 #ifndef NDEBUG
     fmt::println(
-      "{:%Y-%m-%d %H:%M:%S} REQUEST UPDATE key={} attribute={} change={} "
+      "{:%Y-%m-%d %H:%M:%S} REQUEST UPDATE key={} attribute={} change={} from={} "
       "value={} RESPONSE ok={}",
       std::chrono::system_clock::now(),
       _key.key_,
       to_string(request.header_->attribute_),
       to_string(request.header_->change_),
+      id_to_hex(conn->id_),
       request.header_->value_,
       _modified);
 #endif
