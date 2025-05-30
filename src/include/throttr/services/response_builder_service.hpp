@@ -124,6 +124,18 @@ namespace throttr
       std::vector<std::uint8_t> &write_buffer,
       const std::size_t max_fragment_size,
       const std::function<std::size_t(std::vector<boost::asio::const_buffer> *, const entry_wrapper *, bool)> &serialize_entry);
+
+    /**
+     * Handle fragmented channels response
+     *
+     * @param state
+     * @param batch
+     * @param write_buffer
+     */
+    static void handle_fragmented_channels_response(
+      const std::shared_ptr<state> &state,
+      std::vector<boost::asio::const_buffer> &batch,
+      std::vector<std::uint8_t> &write_buffer);
   };
 } // namespace throttr
 
