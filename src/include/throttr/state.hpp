@@ -33,6 +33,7 @@
 #include <throttr/services/messages_service.hpp>
 #include <throttr/services/metrics_collector_service.hpp>
 #include <throttr/services/response_builder_service.hpp>
+#include <throttr/services/subscriptions_service.hpp>
 #include <throttr/storage.hpp>
 #include <vector>
 
@@ -125,6 +126,11 @@ namespace throttr
      * Commands service
      */
     std::shared_ptr<commands_service> commands_ = std::make_shared<commands_service>();
+
+    /**
+     * Subscriptions service
+     */
+    std::shared_ptr<subscriptions_service> subscriptions_ = std::make_shared<subscriptions_service>();
 
     /**
      * Messages service

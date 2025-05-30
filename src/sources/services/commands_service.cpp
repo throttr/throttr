@@ -25,6 +25,8 @@
 #include <throttr/commands/set_command.hpp>
 #include <throttr/commands/stat_command.hpp>
 #include <throttr/commands/stats_command.hpp>
+#include <throttr/commands/subscribe_command.hpp>
+#include <throttr/commands/unsubscribe_command.hpp>
 #include <throttr/commands/update_command.hpp>
 #include <throttr/commands/whoami_command.hpp>
 
@@ -45,5 +47,7 @@ namespace throttr
     commands_[static_cast<std::size_t>(request_types::connections)] = &connections_command::call;
     commands_[static_cast<std::size_t>(request_types::connection)] = &connection_command::call;
     commands_[static_cast<std::size_t>(request_types::whoami)] = &whoami_command::call;
+    commands_[static_cast<std::size_t>(request_types::subscribe)] = &subscribe_command::call;
+    commands_[static_cast<std::size_t>(request_types::unsubscribe)] = &unsubscribe_command::call;
   }
 } // namespace throttr

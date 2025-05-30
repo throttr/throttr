@@ -113,6 +113,26 @@ namespace throttr
     return buffer.size() >= request_whoami_header_size ? request_whoami_header_size : 0;
   }
 
+  static std::size_t get_subscribe_size(const std::span<const std::byte> &buffer)
+  {
+    // LCOV_EXCL_START
+    if (buffer.size() < request_subscribe_header_size)
+      return 0;
+    // LCOV_EXCL_STOP
+    auto *h = reinterpret_cast<const request_subscribe_header *>(buffer.data()); // NOSONAR
+    return request_subscribe_header_size + h->channel_size_;
+  }
+
+  static std::size_t get_unsubscribe_size(const std::span<const std::byte> &buffer)
+  {
+    // LCOV_EXCL_START
+    if (buffer.size() < request_unsubscribe_header_size)
+      return 0;
+    // LCOV_EXCL_STOP
+    auto *h = reinterpret_cast<const request_unsubscribe_header *>(buffer.data()); // NOSONAR
+    return request_unsubscribe_header_size + h->channel_size_;
+  }
+
   static std::size_t invalid_size(const std::span<const std::byte> &)
   {
     // LCOV_EXCL_START
@@ -135,5 +155,7 @@ namespace throttr
     message_types_[static_cast<std::size_t>(request_types::connections)] = &get_connections_size;
     message_types_[static_cast<std::size_t>(request_types::connection)] = &get_connection_size;
     message_types_[static_cast<std::size_t>(request_types::whoami)] = &get_whoami_size;
+    message_types_[static_cast<std::size_t>(request_types::subscribe)] = &get_subscribe_size;
+    message_types_[static_cast<std::size_t>(request_types::unsubscribe)] = &get_unsubscribe_size;
   }
 } // namespace throttr
