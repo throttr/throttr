@@ -21,6 +21,64 @@
 
 namespace throttr
 {
+  struct subscription_metrics
+  {
+#ifdef ENABLED_FEATURE_METRICS
+    /**
+     * Bytes read
+     */
+    std::atomic<uint64_t> bytes_read_ = 0;
+
+    /**
+     * Bytes write
+     */
+    std::atomic<uint64_t> bytes_write_ = 0;
+
+    // LCOV_EXCL_START
+
+    /**
+     * Constructor
+     */
+    subscription_metrics() = default;
+
+    /**
+     * Move
+     *
+     * @param other
+     */
+    subscription_metrics(subscription_metrics &&other) noexcept :
+        bytes_read_{other.bytes_read_.load()}, bytes_write_{other.bytes_write_.load()}
+    {
+    }
+
+    /**
+     * Assignment
+     * @param other
+     * @return
+     */
+    subscription_metrics &operator=(subscription_metrics &&other) noexcept
+    {
+      bytes_read_.store(other.bytes_read_.load());
+      bytes_write_.store(other.bytes_write_.load());
+      return *this;
+    }
+
+    /**
+     * Constructor
+     */
+    subscription_metrics(const subscription_metrics &) = delete;
+
+    /**
+     * Assignment
+     *
+     * @return
+     */
+    subscription_metrics &operator=(const subscription_metrics &) = delete;
+
+    // LCOV_EXCL_STOP
+#endif
+  };
+
   /**
    * Subscription
    */
@@ -42,16 +100,7 @@ namespace throttr
     std::uint64_t connected_at_ = 0;
 
 #ifdef ENABLED_FEATURE_METRICS
-
-    /**
-     * Bytes read
-     */
-    std::atomic<uint64_t> bytes_read_{0};
-
-    /**
-     * Bytes write
-     */
-    std::atomic<uint64_t> bytes_write_{0};
+    subscription_metrics metrics_;
 #endif
 
     /**
