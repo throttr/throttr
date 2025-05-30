@@ -38,6 +38,9 @@ TEST_F(SubscribeTestFixture, OnSuccess)
   boost::asio::read(_socket, boost::asio::buffer(_subscribe_response.data(), _subscribe_response.size()));
 
   ASSERT_EQ(_subscribe_response[0], std::byte{0x01});
+
+  boost::system::error_code _ec;
+  _socket.close(_ec);
 }
 
 TEST_F(SubscribeTestFixture, OnFailed)
@@ -66,4 +69,7 @@ TEST_F(SubscribeTestFixture, OnFailed)
   boost::asio::read(_socket, boost::asio::buffer(_subscribe_response_2.data(), _subscribe_response_2.size()));
 
   ASSERT_EQ(_subscribe_response_2[0], std::byte{0x00});
+
+  boost::system::error_code _ec;
+  _socket.close(_ec);
 }

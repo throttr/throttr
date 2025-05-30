@@ -68,5 +68,7 @@ TEST_F(InfoTestFixture, OnSuccess)
 
   ASSERT_EQ(_response[0], std::byte{0x01});
   ASSERT_EQ(_response.size(), 425);
+  boost::system::error_code _ec;
+  _socket.close(_ec);
 }
 #endif
