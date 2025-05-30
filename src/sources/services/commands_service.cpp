@@ -16,6 +16,8 @@
 #include <throttr/services/commands_service.hpp>
 
 #include <throttr/commands/base_command.hpp>
+#include <throttr/commands/channel_command.hpp>
+#include <throttr/commands/channels_command.hpp>
 #include <throttr/commands/connection_command.hpp>
 #include <throttr/commands/connections_command.hpp>
 #include <throttr/commands/insert_command.hpp>
@@ -51,5 +53,7 @@ namespace throttr
     commands_[static_cast<std::size_t>(request_types::subscribe)] = &subscribe_command::call;
     commands_[static_cast<std::size_t>(request_types::unsubscribe)] = &unsubscribe_command::call;
     commands_[static_cast<std::size_t>(request_types::publish)] = &publish_command::call;
+    commands_[static_cast<std::size_t>(request_types::channels)] = &channels_command::call;
+    commands_[static_cast<std::size_t>(request_types::channel)] = &channel_command::call;
   }
 } // namespace throttr

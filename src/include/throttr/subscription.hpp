@@ -37,9 +37,9 @@ namespace throttr
     std::vector<std::byte> channel_;
 
     /**
-     * Connected at
+     * Subscribed at
      */
-    std::uint64_t connected_at_ = 0;
+    std::uint64_t subscribed_at_ = 0;
 
 #ifdef ENABLED_FEATURE_METRICS
     subscription_metrics metrics_;
@@ -54,7 +54,7 @@ namespace throttr
     subscription(const boost::uuids::uuid connection_id, const std::vector<std::byte> &channel) :
         connection_id_(connection_id), channel_(channel)
     {
-      connected_at_ =
+      subscribed_at_ =
         std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     }
 

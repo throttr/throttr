@@ -143,6 +143,21 @@ namespace throttr
     return request_publish_header_size + h->channel_size_ + h->value_size_;
   }
 
+  static std::size_t get_channels_size(const std::span<const std::byte> &buffer)
+  {
+    return buffer.size() >= request_channels_header_size ? request_channels_header_size : 0;
+  }
+
+  static std::size_t get_channel_size(const std::span<const std::byte> &buffer)
+  {
+    // LCOV_EXCL_START
+    if (buffer.size() < request_channel_header_size)
+      return 0;
+    // LCOV_EXCL_STOP
+    auto *h = reinterpret_cast<const request_channel_header *>(buffer.data()); // NOSONAR
+    return request_channel_header_size + h->channel_size_;
+  }
+
   static std::size_t invalid_size(const std::span<const std::byte> &)
   {
     // LCOV_EXCL_START
@@ -168,5 +183,7 @@ namespace throttr
     message_types_[static_cast<std::size_t>(request_types::subscribe)] = &get_subscribe_size;
     message_types_[static_cast<std::size_t>(request_types::unsubscribe)] = &get_unsubscribe_size;
     message_types_[static_cast<std::size_t>(request_types::publish)] = &get_publish_size;
+    message_types_[static_cast<std::size_t>(request_types::channels)] = &get_channels_size;
+    message_types_[static_cast<std::size_t>(request_types::channel)] = &get_channel_size;
   }
 } // namespace throttr
