@@ -13,53 +13,53 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef THROTTR_SERVICES_METRICS_COLLECTOR_SERVICE_HPP
-#define THROTTR_SERVICES_METRICS_COLLECTOR_SERVICE_HPP
+#ifndef THROTTR_COMMANDS_INFO_COMMAND_HPP
+#define THROTTR_COMMANDS_INFO_COMMAND_HPP
 
-#include <array>
+#include <boost/asio/buffer.hpp>
+#include <boost/uuid/uuid.hpp>
 #include <memory>
-#include <throttr/metric.hpp>
+#include <span>
+#include <vector>
+
+#include <throttr/protocol/request_types.hpp>
 
 namespace throttr
 {
   /**
    * Forward state
    */
+  class connection;
+
+  /**
+   * Forward state
+   */
   class state;
 
-#ifdef ENABLED_FEATURE_METRICS
   /**
-   * Metrics collector service
+   * Info command
    */
-  class metrics_collector_service : public std::enable_shared_from_this<metrics_collector_service>
+  class info_command
   {
   public:
     /**
-     * Commands
-     */
-    std::array<metric, 32> commands_{};
-
-    /**
-     * Schedule timer
+     * Call
      *
      * @param state
-     * @return
+     * @param type
+     * @param view
+     * @param batch
+     * @param write_buffer
+     * @param conn
      */
-    void schedule_timer(const std::shared_ptr<state> &state);
-
-    /**
-     * Run
-     *
-     * @param state
-     */
-    static void run(const std::shared_ptr<state> &state);
-
-    /**
-     * Compute all
-     */
-    void compute_all();
+    static void call(
+      const std::shared_ptr<state> &state,
+      request_types type,
+      std::span<const std::byte> view,
+      std::vector<boost::asio::const_buffer> &batch,
+      std::vector<std::uint8_t> &write_buffer,
+      const std::shared_ptr<connection> &conn);
   };
-#endif
 } // namespace throttr
 
-#endif // THROTTR_SERVICES_METRICS_COLLECTOR_SERVICE_HPP
+#endif // THROTTR_COMMANDS_INFO_COMMAND_HPP

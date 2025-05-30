@@ -25,6 +25,10 @@ namespace throttr
   {
     boost::ignore_unused(length);
 
+#ifdef ENABLED_FEATURE_METRICS
+    metrics_->network_.write_bytes_.mark(length);
+#endif
+
     // LCOV_EXCL_START
     if (error)
     {

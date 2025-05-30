@@ -13,53 +13,45 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef THROTTR_SERVICES_METRICS_COLLECTOR_SERVICE_HPP
-#define THROTTR_SERVICES_METRICS_COLLECTOR_SERVICE_HPP
+#pragma once
 
-#include <array>
-#include <memory>
-#include <throttr/metric.hpp>
+#ifndef THROTTR_COMMAND_METRICS_HPP
+#define THROTTR_COMMAND_METRICS_HPP
+
+#include <atomic>
 
 namespace throttr
 {
-  /**
-   * Forward state
-   */
-  class state;
-
 #ifdef ENABLED_FEATURE_METRICS
-  /**
-   * Metrics collector service
-   */
-  class metrics_collector_service : public std::enable_shared_from_this<metrics_collector_service>
+  struct metric
   {
-  public:
     /**
-     * Commands
+     * Temporal count
      */
-    std::array<metric, 32> commands_{};
+    std::atomic<uint64_t> count_ = 0;
 
     /**
-     * Schedule timer
-     *
-     * @param state
-     * @return
+     * Historic accumulator
      */
-    void schedule_timer(const std::shared_ptr<state> &state);
+    std::atomic<uint64_t> accumulator_ = 0;
 
     /**
-     * Run
-     *
-     * @param state
+     * Per minute
      */
-    static void run(const std::shared_ptr<state> &state);
+    std::atomic<uint64_t> per_minute_ = 0;
 
-    /**
-     * Compute all
-     */
-    void compute_all();
+    void mark(const std::size_t step = 1)
+    {
+      count_.fetch_add(step, std::memory_order_relaxed);
+      accumulator_.fetch_add(step, std::memory_order_relaxed);
+    }
+
+    void compute()
+    {
+      per_minute_.store(count_.exchange(0, std::memory_order_relaxed), std::memory_order_relaxed);
+    }
   };
 #endif
 } // namespace throttr
 
-#endif // THROTTR_SERVICES_METRICS_COLLECTOR_SERVICE_HPP
+#endif // THROTTR_COMMAND_METRICS_HPP

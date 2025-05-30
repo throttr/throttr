@@ -144,33 +144,46 @@ namespace throttr
 
     for (uint64_t val :
          {conn->connected_at_,
-          _metrics.network_.read_bytes_.load(std::memory_order_relaxed),
-          _metrics.network_.write_bytes_.load(std::memory_order_relaxed),
-          _metrics.network_.published_bytes_.load(std::memory_order_relaxed),
-          _metrics.network_.received_bytes_.load(std::memory_order_relaxed),
-          _metrics.memory_.allocated_bytes_.load(std::memory_order_relaxed),
-          _metrics.memory_.consumed_bytes_.load(std::memory_order_relaxed),
-          _metrics.service_.insert_request_.load(std::memory_order_relaxed),
-          _metrics.service_.set_request_.load(std::memory_order_relaxed),
-          _metrics.service_.query_request_.load(std::memory_order_relaxed),
-          _metrics.service_.get_request_.load(std::memory_order_relaxed),
-          _metrics.service_.update_request_.load(std::memory_order_relaxed),
-          _metrics.service_.purge_request_.load(std::memory_order_relaxed),
-          _metrics.service_.list_request_.load(std::memory_order_relaxed),
-          _metrics.service_.info_request_.load(std::memory_order_relaxed),
-          _metrics.service_.stat_request_.load(std::memory_order_relaxed),
-          _metrics.service_.stats_request_.load(std::memory_order_relaxed),
-          _metrics.service_.publish_requests_.load(std::memory_order_relaxed),
-          _metrics.service_.subscribe_request_.load(std::memory_order_relaxed),
-          _metrics.service_.unsubscribe_request_.load(std::memory_order_relaxed),
-          _metrics.service_.connections_request_.load(std::memory_order_relaxed),
-          _metrics.service_.connection_request_.load(std::memory_order_relaxed),
-          _metrics.service_.channels_request_.load(std::memory_order_relaxed),
-          _metrics.service_.channel_request_.load(std::memory_order_relaxed),
-          _metrics.service_.whoami_request_.load(std::memory_order_relaxed)})
+          _metrics.network_.read_bytes_.accumulator_.load(std::memory_order_relaxed),
+          _metrics.network_.write_bytes_.accumulator_.load(std::memory_order_relaxed),
+          _metrics.network_.published_bytes_.accumulator_.load(std::memory_order_relaxed),
+          _metrics.network_.received_bytes_.accumulator_.load(std::memory_order_relaxed),
+          _metrics.memory_.allocated_bytes_.accumulator_.load(std::memory_order_relaxed),
+          _metrics.memory_.consumed_bytes_.accumulator_.load(std::memory_order_relaxed)
+         })
     {
       _push(&val, sizeof(val));
     }
+
+    constexpr std::array monitored_request_types = {
+      request_types::insert,
+      request_types::set,
+      request_types::query,
+      request_types::get,
+      request_types::update,
+      request_types::purge,
+      request_types::list,
+      request_types::info,
+      request_types::stat,
+      request_types::stats,
+      request_types::publish,
+      request_types::subscribe,
+      request_types::unsubscribe,
+      request_types::connections,
+      request_types::connection,
+      request_types::channels,
+      request_types::channel,
+      request_types::whoami
+    };
+
+    for (request_types type : monitored_request_types)
+    {
+      const auto &metric = conn->metrics_->commands_[static_cast<std::size_t>(type)];
+      const uint64_t value = metric.accumulator_.load(std::memory_order_relaxed);
+      _push(&value, sizeof(value));
+    }
+
+
 #else
     // Rellenar con ceros si las métricas no están habilitadas
     std::array<std::uint8_t, 227 - 16 - 1 - 16 - 2> zeros = {};
@@ -355,8 +368,8 @@ namespace throttr
         auto range = _subs.equal_range(_current_channel); // NOSONAR
         for (auto range_it = range.first; range_it != range.second; ++range_it) // LCOV_EXCL_LINE Note: Partially tested.
         {
-          _read_sum += range_it->metrics_.read_bytes_.load(std::memory_order_relaxed);
-          _write_sum += range_it->metrics_.write_bytes_.load(std::memory_order_relaxed);
+          _read_sum += range_it->metrics_.read_bytes_.accumulator_.load(std::memory_order_relaxed);
+          _write_sum += range_it->metrics_.write_bytes_.accumulator_.load(std::memory_order_relaxed);
           ++_count;
         }
 

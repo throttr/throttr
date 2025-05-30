@@ -61,8 +61,7 @@ namespace throttr
     _message->buffers_.emplace_back(boost::asio::buffer(_buffer));
 
 #ifdef ENABLED_FEATURE_METRICS
-    conn->metrics_->network_.published_bytes_.fetch_add(_payload_size, std::memory_order_relaxed);
-    conn->metrics_->service_.publish_requests_.fetch_add(_payload_size, std::memory_order_relaxed);
+    conn->metrics_->network_.published_bytes_.mark(_payload_size);
 #endif
 
     for (auto _it = _range.first; _it != _range.second; ++_it) // LCOV_EXCL_LINE Note: Partially tested.
@@ -71,13 +70,13 @@ namespace throttr
       const auto &_sub_id = _sub.connection_id_;
 
 #ifdef ENABLED_FEATURE_METRICS
-      const_cast<subscription &>(_sub).metrics_.read_bytes_.fetch_add(_payload_size, std::memory_order_relaxed);
+      const_cast<subscription &>(_sub).metrics_.read_bytes_.mark(_payload_size);
 #endif
 
       if (_sub_id == conn->id_)
       {
 #ifdef ENABLED_FEATURE_METRICS
-        const_cast<subscription &>(_sub).metrics_.write_bytes_.fetch_add(_payload_size, std::memory_order_relaxed);
+        const_cast<subscription &>(_sub).metrics_.write_bytes_.mark(_payload_size);
 #endif
         continue;
       }
@@ -89,7 +88,7 @@ namespace throttr
         // LCOV_EXCL_STOP
 
 #ifdef ENABLED_FEATURE_METRICS
-      _conn_it->second->metrics_->network_.received_bytes_.fetch_add(_payload_size, std::memory_order_relaxed);
+      _conn_it->second->metrics_->network_.received_bytes_.mark(_payload_size);
 #endif
 
       _conn_it->second->send(_message);

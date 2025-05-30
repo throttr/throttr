@@ -16,7 +16,8 @@
 #ifndef THROTTR_SUBSCRIPTION_METRICS_HPP
 #define THROTTR_SUBSCRIPTION_METRICS_HPP
 
-#include <atomic>
+#include <boost/core/ignore_unused.hpp>
+#include <throttr/metric.hpp>
 
 namespace throttr
 {
@@ -26,12 +27,12 @@ namespace throttr
     /**
      * Read bytes
      */
-    std::atomic<uint64_t> read_bytes_ = 0;
+    metric read_bytes_;
 
     /**
      * Write bytes
      */
-    std::atomic<uint64_t> write_bytes_ = 0;
+    metric write_bytes_;
 
     // LCOV_EXCL_START
 
@@ -45,11 +46,9 @@ namespace throttr
      *
      * @param other
      */
-    subscription_metrics(subscription_metrics &&other) noexcept :
-        // NOSONAR
-        read_bytes_{other.read_bytes_.load()},
-        write_bytes_{other.write_bytes_.load()}
+    subscription_metrics(subscription_metrics &&other) noexcept
     {
+      boost::ignore_unused(other);
     }
 
     /**
@@ -59,8 +58,7 @@ namespace throttr
      */
     subscription_metrics &operator=(subscription_metrics &&other) noexcept
     {
-      read_bytes_.store(other.read_bytes_.load());
-      write_bytes_.store(other.write_bytes_.load());
+      boost::ignore_unused(other);
       return *this;
     }
 

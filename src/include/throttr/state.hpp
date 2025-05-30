@@ -50,6 +50,12 @@ namespace throttr
   class state : public std::enable_shared_from_this<state>
   {
   public:
+      /**
+       * Started at
+       */
+      std::uint64_t started_at_ = 0;
+
+
     /**
      * Acceptor ready
      */
