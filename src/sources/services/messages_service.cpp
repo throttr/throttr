@@ -103,6 +103,16 @@ namespace throttr
     return buffer.size() >= request_connections_header_size ? request_connections_header_size : 0;
   }
 
+  static std::size_t get_connection_size(const std::span<const std::byte> &buffer)
+  {
+    return buffer.size() >= request_connection_header_size ? request_connection_header_size : 0;
+  }
+
+  static std::size_t get_whoami_size(const std::span<const std::byte> &buffer)
+  {
+    return buffer.size() >= request_whoami_header_size ? request_whoami_header_size : 0;
+  }
+
   static std::size_t invalid_size(const std::span<const std::byte> &)
   {
     // LCOV_EXCL_START
@@ -123,5 +133,7 @@ namespace throttr
     message_types_[static_cast<std::size_t>(request_types::stat)] = &get_stat_size;
     message_types_[static_cast<std::size_t>(request_types::stats)] = &get_stats_size;
     message_types_[static_cast<std::size_t>(request_types::connections)] = &get_connections_size;
+    message_types_[static_cast<std::size_t>(request_types::connection)] = &get_connection_size;
+    message_types_[static_cast<std::size_t>(request_types::whoami)] = &get_whoami_size;
   }
 } // namespace throttr

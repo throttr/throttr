@@ -15,6 +15,7 @@
 
 #include <throttr/commands/query_command.hpp>
 
+#include <boost/core/ignore_unused.hpp>
 #include <throttr/state.hpp>
 #include <throttr/time.hpp>
 #include <throttr/utils.hpp>
@@ -26,8 +27,11 @@ namespace throttr
     const request_types type,
     const std::span<const std::byte> view,
     std::vector<boost::asio::const_buffer> &batch,
-    std::vector<std::uint8_t> &write_buffer)
+    std::vector<std::uint8_t> &write_buffer,
+    boost::uuids::uuid id)
   {
+    boost::ignore_unused(id);
+
     const auto _request = request_query::from_buffer(view);
 
     const bool _as_query = type == request_types::query;

@@ -17,6 +17,7 @@
 #define THROTTR_COMMANDS_INSERT_COMMAND_HPP
 
 #include <boost/asio/buffer.hpp>
+#include <boost/uuid/uuid.hpp>
 #include <memory>
 #include <span>
 #include <vector>
@@ -44,13 +45,15 @@ namespace throttr
      * @param view
      * @param batch
      * @param write_buffer
+     * @param id
      */
     static void call(
       const std::shared_ptr<state> &state,
       request_types type,
       std::span<const std::byte> view,
       std::vector<boost::asio::const_buffer> &batch,
-      std::vector<std::uint8_t> &write_buffer);
+      std::vector<std::uint8_t> &write_buffer,
+      boost::uuids::uuid id);
   };
 } // namespace throttr
 
