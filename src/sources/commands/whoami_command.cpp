@@ -34,8 +34,8 @@ namespace throttr
     batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
 
     const auto _offset = write_buffer.size();
-    for (std::size_t i = 0; i < 16; ++i)
-      write_buffer.push_back(id.data[i]);
+    for (const auto _byte : id)
+      write_buffer.push_back(_byte);
     batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], 16));
   }
 } // namespace throttr
