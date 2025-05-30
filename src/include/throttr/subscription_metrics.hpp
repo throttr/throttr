@@ -24,14 +24,14 @@ namespace throttr
   {
 #ifdef ENABLED_FEATURE_METRICS
     /**
-     * Bytes read
+     * Read bytes
      */
-    std::atomic<uint64_t> bytes_read_ = 0;
+    std::atomic<uint64_t> read_bytes_ = 0;
 
     /**
-     * Bytes write
+     * Write bytes
      */
-    std::atomic<uint64_t> bytes_write_ = 0;
+    std::atomic<uint64_t> write_bytes_ = 0;
 
     // LCOV_EXCL_START
 
@@ -47,8 +47,8 @@ namespace throttr
      */
     subscription_metrics(subscription_metrics &&other) noexcept :
         // NOSONAR
-        bytes_read_{other.bytes_read_.load()},
-        bytes_write_{other.bytes_write_.load()}
+        read_bytes_{other.read_bytes_.load()},
+        write_bytes_{other.write_bytes_.load()}
     {
     }
 
@@ -59,8 +59,8 @@ namespace throttr
      */
     subscription_metrics &operator=(subscription_metrics &&other) noexcept
     {
-      bytes_read_.store(other.bytes_read_.load());
-      bytes_write_.store(other.bytes_write_.load());
+      read_bytes_.store(other.read_bytes_.load());
+      write_bytes_.store(other.write_bytes_.load());
       return *this;
     }
 
