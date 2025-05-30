@@ -352,7 +352,7 @@ namespace throttr
         _write_sum = 0;
         _count = 0;
 
-        auto range = _subs.equal_range(_current_channel);
+        auto range = _subs.equal_range(_current_channel); // NOSONAR
         for (auto range_it = range.first; range_it != range.second; ++range_it) // LCOV_EXCL_LINE Note: Partially tested.
         {
           _read_sum += range_it->metrics_.read_bytes_.load(std::memory_order_relaxed);
