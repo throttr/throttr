@@ -42,7 +42,10 @@ TEST_F(ConnectionTestFixture, OnSuccess)
   std::memcpy(_uuid.data, _whoami_response.data() + 1, 16);
 
   // CONNECTION
-  const auto _conn_buffer = request_connection_builder(_uuid);
+  std::array<std::byte, 16> _usable_uuid;
+  for (std::size_t i = 0; i < 16; ++i)
+    _usable_uuid[i] = static_cast<std::byte>(_uuid.data[i]);
+  const auto _conn_buffer = request_connection_builder(_usable_uuid);
   boost::asio::write(_socket, boost::asio::buffer(_conn_buffer.data(), _conn_buffer.size()));
 
   std::vector<std::byte> _conn_response(1 + 235);
@@ -87,8 +90,11 @@ TEST_F(ConnectionTestFixture, OnFailed)
   boost::asio::connect(_socket, _endpoints);
 
   const auto _fake_uuid = boost::uuids::random_generator()();
+  std::array<std::byte, 16> _uuid;
+  for (std::size_t i = 0; i < 16; ++i)
+    _uuid[i] = static_cast<std::byte>(_fake_uuid.data[i]);
 
-  const auto _conn_buffer = request_connection_builder(_fake_uuid);
+  const auto _conn_buffer = request_connection_builder(_uuid);
   boost::asio::write(_socket, boost::asio::buffer(_conn_buffer.data(), _conn_buffer.size()));
 
   std::vector<std::byte> _response(1);

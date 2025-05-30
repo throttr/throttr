@@ -51,7 +51,7 @@ namespace throttr
     boost::multi_index::indexed_by<
       boost::multi_index::ordered_non_unique<
         boost::multi_index::tag<by_connection_id>,
-        boost::multi_index::member<subscription, boost::uuids::uuid, &subscription::connection_id_>>,
+        boost::multi_index::member<subscription, std::array<std::byte, 16>, &subscription::connection_id_>>,
       boost::multi_index::ordered_non_unique<
         boost::multi_index::tag<by_channel_name>,
         boost::multi_index::const_mem_fun<subscription, std::string_view, &subscription::channel>>>>;
@@ -74,7 +74,7 @@ namespace throttr
      * @param channel
      * @return
      */
-    bool is_subscribed(boost::uuids::uuid id, std::string_view channel) const;
+    bool is_subscribed(const std::array<std::byte, 16> &id, std::string_view channel) const;
   };
 } // namespace throttr
 

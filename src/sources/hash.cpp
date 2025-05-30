@@ -13,21 +13,15 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include <throttr/services/subscriptions_service.hpp>
+#include <throttr/hash.hpp>
 
 namespace throttr
 {
-  bool subscriptions_service::is_subscribed(const std::array<std::byte, 16> &id, const std::string_view channel) const
+  std::size_t hash::operator()(const std::array<std::byte, 16> &arr) const noexcept
   {
-    const auto &_index = subscriptions_.get<by_connection_id>();
-    const auto [_current, _next] = _index.equal_range(id);
-
-    for (auto _it = _current; _it != _next; ++_it)
-    {
-      if (const auto _view = _it->channel(); _view == channel) // LCOV_EXCL_LINE Note: Partially tested.
-        return true;
-    }
-
-    return false;
+    std::size_t _hash = 0;
+    for (const auto _byte : arr)
+      _hash ^= std::hash<uint8_t>{}(std::to_integer<uint8_t>(_byte)) + 0x9e3779b9 + (_hash << 6) + (_hash >> 2);
+    return _hash;
   }
 } // namespace throttr

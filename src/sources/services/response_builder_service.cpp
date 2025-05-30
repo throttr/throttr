@@ -123,7 +123,7 @@ namespace throttr
     };
 
     // UUID (16 bytes)
-    _push(conn->id_.data, 16);
+    _push(conn->id_.data(), 16);
 
     // IP version (1 byte)
     const std::uint8_t _ip_version = conn->ip_.contains(':') ? 0x06 : 0x04;

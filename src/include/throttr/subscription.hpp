@@ -29,7 +29,7 @@ namespace throttr
     /**
      * Connection ID
      */
-    boost::uuids::uuid connection_id_;
+    std::array<std::byte, 16> connection_id_;
 
     /**
      * Channel
@@ -51,7 +51,7 @@ namespace throttr
      * @param connection_id
      * @param channel
      */
-    subscription(const boost::uuids::uuid connection_id, const std::vector<std::byte> &channel) :
+    subscription(const std::array<std::byte, 16> &connection_id, const std::vector<std::byte> &channel) :
         connection_id_(connection_id), channel_(channel)
     {
       subscribed_at_ =

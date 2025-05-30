@@ -26,6 +26,7 @@
 #include <cstring>
 #include <deque>
 #include <memory>
+#include <throttr/hash.hpp>
 #include <throttr/protocol_wrapper.hpp>
 #include <throttr/services/commands_service.hpp>
 #include <throttr/services/find_service.hpp>
@@ -83,7 +84,7 @@ namespace throttr
     /**
      * Connections container
      */
-    std::unordered_map<boost::uuids::uuid, connection *, boost::hash<boost::uuids::uuid>> connections_;
+    std::unordered_map<std::array<std::byte, 16>, connection *, hash> connections_;
 
     /**
      * Connections mutex
