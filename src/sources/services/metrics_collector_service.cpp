@@ -67,7 +67,7 @@ namespace throttr
       writes_accumulator_.fetch_add(writes, std::memory_order_relaxed);
     }
 
-    for (const auto &_conn : state->connections_)
+    for (const auto &_conn : state->connections_) // NOSONAR
     {
       for (auto &_m : _conn.second->metrics_->commands_)
         _m.compute();

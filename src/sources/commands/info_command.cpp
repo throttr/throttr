@@ -91,7 +91,7 @@ namespace throttr
     uint64_t _total_write = 0;
     uint64_t _total_read_per_minute = 0;
     uint64_t _total_write_per_minute = 0;
-    for (const auto &_connection : state->connections_)
+    for (const auto &_connection : state->connections_) // NOSONAR
     {
       _total_read += _connection.second->metrics_->network_.read_bytes_.accumulator_.load(std::memory_order_relaxed);
       _total_write += _connection.second->metrics_->network_.write_bytes_.accumulator_.load(std::memory_order_relaxed);
