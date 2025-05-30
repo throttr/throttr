@@ -36,11 +36,12 @@ namespace throttr
      */
     std::vector<std::byte> channel_;
 
-#ifdef ENABLED_FEATURE_METRICS
     /**
      * Connected at
      */
     std::uint64_t connected_at_ = 0;
+
+#ifdef ENABLED_FEATURE_METRICS
 
     /**
      * Bytes read
