@@ -34,18 +34,17 @@ set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g --coverage -fprofile-arcs -ftest-coverage")
 if (ENABLE_STATIC_LINKING)
     set(CMAKE_CXX_FLAGS_RELEASE "-O3 -static -static-libgcc -DNDEBUG")
     set(CMAKE_C_FLAGS_RELEASE "-O3 -static -static-libgcc -DNDEBUG")
+    find_path(SENTRY_INCLUDE_DIR sentry.h PATHS /usr/local/include)
+    find_library(SENTRY_LIBRARY sentry PATHS /usr/local/lib /usr/local/lib64)
+
+    if (NOT SENTRY_INCLUDE_DIR OR NOT SENTRY_LIBRARY)
+        message(FATAL_ERROR "Sentry not found. Install sentry-native.")
+    endif()
 else ()
     set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
     set(CMAKE_C_FLAGS_RELEASE "-O3 -DNDEBUG")
+    find_package(sentry REQUIRED)
 endif ()
-
-find_path(SENTRY_INCLUDE_DIR sentry.h PATHS /usr/local/include)
-find_library(SENTRY_LIBRARY sentry PATHS /usr/local/lib /usr/local/lib64)
-
-if (NOT SENTRY_INCLUDE_DIR OR NOT SENTRY_LIBRARY)
-    message(FATAL_ERROR "Sentry not found. Install sentry-native.")
-endif()
-
 
 if (ENABLE_STATIC_LINKING)
     set(ZLIB_USE_STATIC_LIBS ON)
@@ -97,7 +96,7 @@ else ()
             ${Boost_LIBRARIES}
             throttr::protocol
             fmt::fmt
-            ${SENTRY_LIBRARY}
+            sentry::sentry
             CURL::libcurl
             OpenSSL::SSL
             OpenSSL::Crypto
