@@ -32,23 +32,23 @@ set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g --coverage -fprofile-arcs -ftest-coverage")
 set(CMAKE_CXX_FLAGS_RELEASE "-O0 -static -static-libgcc -DNDEBUG")
 set(CMAKE_C_FLAGS_RELEASE "-O0 -static -static-libgcc -DNDEBUG")
 
+find_path(SENTRY_INCLUDE_DIR sentry.h PATHS /usr/local/include)
+find_library(SENTRY_LIBRARY sentry PATHS /usr/local/lib /usr/local/lib64)
+
+if (NOT SENTRY_INCLUDE_DIR OR NOT SENTRY_LIBRARY)
+    message(FATAL_ERROR "Sentry not found. Install sentry-native.")
+endif()
+
 set(ZLIB_USE_STATIC_LIBS ON)
 
 find_package(
         Boost 1.87.0
-        COMPONENTS
-        json
-        thread
-        program_options
-        random
-        coroutine
-        charconv
-        system
         REQUIRED
+        COMPONENTS
+        program_options
 )
 
-
-include_directories(src/include)
+include_directories(src/include ${SENTRY_INCLUDE_DIR})
 
 file(GLOB_RECURSE SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
@@ -58,6 +58,7 @@ target_link_libraries(throttr_core
         ${Boost_LIBRARIES}
         throttr::protocol
         fmt::fmt
+        ${SENTRY_LIBRARY}
 )
 
 include(FetchContent)
