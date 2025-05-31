@@ -40,16 +40,15 @@ endif()
 set(ZLIB_USE_STATIC_LIBS ON)
 set(CURL_STATICLIB TRUE)
 set(CURL_USE_STATIC_LIBS TRUE)
+set(CURL_INCLUDE_DIR "/usr/include")
+set(CURL_LIBRARY "/usr/lib/libcurl.a")
 
-find_path(CURL_INCLUDE_DIR curl/curl.h PATHS /usr/include /usr/local/include)
-find_library(CURL_LIBRARY NAMES curl libcurl.a PATHS /usr/lib /usr/local/lib)
-
-if (NOT CURL_INCLUDE_DIR OR NOT CURL_LIBRARY)
-    message(FATAL_ERROR "libcurl static not found")
+if(NOT EXISTS ${CURL_LIBRARY})
+    message(FATAL_ERROR "libcurl.a not found at ${CURL_LIBRARY}")
 endif()
 
-add_library(CURL::libcurl STATIC IMPORTED GLOBAL)
-set_target_properties(CURL::libcurl PROPERTIES
+add_library(CURL_STATIC_LIB STATIC IMPORTED)
+set_target_properties(CURL_STATIC_LIB PROPERTIES
         IMPORTED_LOCATION "${CURL_LIBRARY}"
         INTERFACE_INCLUDE_DIRECTORIES "${CURL_INCLUDE_DIR}"
 )
@@ -78,7 +77,7 @@ target_link_libraries(throttr_core
         throttr::protocol
         fmt::fmt
         ${SENTRY_LIBRARY}
-        CURL::libcurl
+        CURL_STATIC_LIB
         OpenSSL::SSL
         OpenSSL::Crypto
 )
