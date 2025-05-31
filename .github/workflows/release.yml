@@ -26,7 +26,7 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.type }} -DBUILD_TESTS=OFF -DRUNTIME_VALUE_SIZE=${{ matrix.size }}
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.type }} -DBUILD_TESTS=OFF -DRUNTIME_VALUE_SIZE=${{ matrix.size }} -DENABLE_STATIC_LINKING=ON
           make -j4
           cd ..
           mkdir -p dist
