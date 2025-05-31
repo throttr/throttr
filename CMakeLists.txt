@@ -40,14 +40,15 @@ endif()
 set(ZLIB_USE_STATIC_LIBS ON)
 set(CURL_STATICLIB TRUE)
 set(CURL_USE_STATIC_LIBS TRUE)
-find_library(CURL_LIBRARY NAMES curl PATHS /usr/lib /usr/local/lib PATH_SUFFIXES "")
-find_path(CURL_INCLUDE_DIR curl/curl.h PATHS /usr/include /usr/local/include)
 
-if (NOT CURL_LIBRARY OR NOT CURL_INCLUDE_DIR)
-    message(FATAL_ERROR "libcurl static not found.")
+find_path(CURL_INCLUDE_DIR curl/curl.h PATHS /usr/include /usr/local/include)
+find_library(CURL_LIBRARY NAMES curl libcurl.a PATHS /usr/lib /usr/local/lib)
+
+if (NOT CURL_INCLUDE_DIR OR NOT CURL_LIBRARY)
+    message(FATAL_ERROR "libcurl static not found")
 endif()
 
-add_library(CURL::libcurl STATIC IMPORTED)
+add_library(CURL::libcurl STATIC IMPORTED GLOBAL)
 set_target_properties(CURL::libcurl PROPERTIES
         IMPORTED_LOCATION "${CURL_LIBRARY}"
         INTERFACE_INCLUDE_DIRECTORIES "${CURL_INCLUDE_DIR}"
