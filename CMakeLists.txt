@@ -1,6 +1,4 @@
 cmake_minimum_required(VERSION 3.25)
-cmake_policy(SET CMP0144 NEW)
-cmake_policy(SET CMP0167 NEW)
 project(throttr)
 
 set(CMAKE_CXX_STANDARD 23)
@@ -41,6 +39,15 @@ endif()
 
 set(ZLIB_USE_STATIC_LIBS ON)
 
+set(CURL_STATICLIB TRUE)
+find_package(CURL REQUIRED)
+
+set(OPENSSL_USE_STATIC_LIBS TRUE)
+find_package(OpenSSL REQUIRED)
+
+find_package(ZLIB REQUIRED)
+
+
 find_package(
         Boost 1.87.0
         REQUIRED
@@ -59,6 +66,9 @@ target_link_libraries(throttr_core
         throttr::protocol
         fmt::fmt
         ${SENTRY_LIBRARY}
+        CURL::libcurl
+        OpenSSL::SSL
+        OpenSSL::Crypto
 )
 
 include(FetchContent)
