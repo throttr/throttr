@@ -50,6 +50,8 @@ jobs:
             TYPE=${{ matrix.type }}
             SIZE=${{ matrix.size }}
           outputs: type=image,push-by-digest=true,name-canonical=true
+          secrets: |
+            SENTRY_DSN=${{ secrets.SENTRY_DSN }}
 
       - name: Export digest
         run: |

@@ -6,6 +6,10 @@ FROM ghcr.io/throttr/builder-alpine:1.87.0-${TYPE} AS builder
 ARG TYPE
 ARG SIZE
 
+RUN --mount=type=secret,id=SENTRY_DSN \
+    export SENTRY_DSN=$(cat /run/secrets/SENTRY_DSN) && \
+    echo "$SENTRY_DSN" > /etc/sentry_dsn
+
 COPY src/ src/
 COPY tests/ tests/
 COPY CMakeLists.txt .
