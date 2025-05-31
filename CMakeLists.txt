@@ -33,8 +33,8 @@ message(STATUS "Using RUNTIME_VALUE_SIZE = ${RUNTIME_VALUE_SIZE}")
 set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g --coverage -fprofile-arcs -ftest-coverage")
 if (ENABLE_STATIC_LINKING)
-    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -static -static-libgcc -DNDEBUG")
-    set(CMAKE_C_FLAGS_RELEASE "-O3 -static -static-libgcc -DNDEBUG")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O3 -g -static -static-libgcc -DNDEBUG")
+    set(CMAKE_C_FLAGS_RELEASE "-O3 -g -static -static-libgcc -DNDEBUG")
 
     # This overwrites CURL as Sentry could found ".so" version.
     set(CURL_INCLUDE_DIR "/usr/include")

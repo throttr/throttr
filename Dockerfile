@@ -15,12 +15,15 @@ COPY tests/ tests/
 COPY CMakeLists.txt .
 COPY main.cpp .
 
-RUN mkdir -p build && \
+RUN --mount=type=secret,id=SENTRY_TOKEN \
+    export SENTRY_TOKEN=$(cat /run/secrets/SENTRY_TOKEN) && \
+    mkdir -p build && \
     cd build && \
     if [ "$TYPE" = "debug" ]; then BUILD_TYPE="Debug"; else BUILD_TYPE="Release"; fi && \
     cmake .. -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DBUILD_TESTS=ON -DRUNTIME_VALUE_SIZE="$SIZE" -DENABLE_STATIC_LINKING=ON && \
-    make -j4 && \
-    strip --strip-all throttr  && \
+    curl -sL https://sentry.io/get-cli/ | bash && \
+    make -j32 && \
+    SENTRY_AUTH_TOKEN=$SENTRY_TOKEN sentry-cli upload-dif --org throttr --project native . && \
     mv throttr /usr/bin/throttr && \
     ctest --output-on-failure -V --parallel 4 && \
     adduser --system --no-create-home --shell /bin/false throttr
