@@ -63,6 +63,22 @@ namespace throttr
   }
 
   /**
+   * ID to hex
+   *
+   * @param buffer
+   * @return std::string
+   */
+  static std::string id_to_hex(const std::array<std::byte, 16> buffer)
+  {
+    std::string out;
+    for (const auto b : buffer)
+    {
+      fmt::format_to(std::back_inserter(out), "{:02X} ", std::to_integer<uint8_t>(b));
+    }
+    return out;
+  }
+
+  /**
    * To string
    *
    * @param type

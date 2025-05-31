@@ -13,24 +13,15 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include <throttr/state.hpp>
-
-#include <throttr/connection.hpp>
+#include <throttr/hash.hpp>
 
 namespace throttr
 {
-  void state::join(connection *connection)
+  std::size_t hash::operator()(const std::array<std::byte, 16> &arr) const noexcept
   {
-    std::lock_guard lock(connections_mutex_);
-    connections_.try_emplace(connection->id_, connection);
-  }
-
-  void state::leave(const connection *connection)
-  {
-    std::scoped_lock _lock(connections_mutex_, subscriptions_->mutex_);
-    auto &subs = subscriptions_->subscriptions_.get<by_connection_id>();
-    auto [begin, end] = subs.equal_range(connection->id_);
-    subs.erase(begin, end);
-    connections_.erase(connection->id_);
+    std::size_t _hash = 0;
+    for (const auto _byte : arr)
+      _hash ^= std::hash<uint8_t>{}(std::to_integer<uint8_t>(_byte)) + 0x9e3779b9 + (_hash << 6) + (_hash >> 2);
+    return _hash;
   }
 } // namespace throttr

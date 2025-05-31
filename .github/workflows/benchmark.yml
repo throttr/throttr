@@ -19,6 +19,6 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DRUNTIME_VALUE_SIZE=${{ matrix.size }}
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DRUNTIME_VALUE_SIZE=${{ matrix.size }} -DENABLE_STATIC_LINKING=ON
           make -j4
           ctest  --output-on-failure --verbose

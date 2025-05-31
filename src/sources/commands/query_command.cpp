@@ -16,6 +16,7 @@
 #include <throttr/commands/query_command.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <throttr/connection.hpp>
 #include <throttr/state.hpp>
 #include <throttr/time.hpp>
 #include <throttr/utils.hpp>
@@ -44,10 +45,11 @@ namespace throttr
       // LCOV_EXCL_START
 #ifndef NDEBUG
       fmt::println(
-        "{:%Y-%m-%d %H:%M:%S} REQUEST {} key={} RESPONSE ok=false",
+        "{:%Y-%m-%d %H:%M:%S} REQUEST {} key={} id={} RESPONSE ok=false",
         std::chrono::system_clock::now(),
         _as_query ? "QUERY" : "GET",
-        _key.key_);
+        _key.key_,
+        id_to_hex(conn->id_));
 #endif
       // LCOV_EXCL_STOP
       return;
@@ -101,10 +103,11 @@ namespace throttr
     {
       auto *_quota = reinterpret_cast<const value_type *>(_it->entry_.value_.data()); // NOSONAR
       fmt::println(
-        "{:%Y-%m-%d %H:%M:%S} REQUEST QUERY key={} RESPONSE ok=true quota={} "
+        "{:%Y-%m-%d %H:%M:%S} REQUEST QUERY key={} from={} RESPONSE ok=true quota={} "
         "ttl_type={} ttl={}",
         std::chrono::system_clock::now(),
         _key.key_,
+        id_to_hex(conn->id_),
         *_quota,
         to_string(_it->entry_.ttl_type_),
         _ttl);
@@ -112,10 +115,11 @@ namespace throttr
     else
     {
       fmt::println(
-        "{:%Y-%m-%d %H:%M:%S} REQUEST GET key={} RESPONSE ok=true value={} "
+        "{:%Y-%m-%d %H:%M:%S} REQUEST GET key={} from={} RESPONSE ok=true value={} "
         "ttl_type={} ttl={}",
         std::chrono::system_clock::now(),
         _key.key_,
+        id_to_hex(conn->id_),
         span_to_hex(std::span(_it->entry_.value_.data(), _it->entry_.value_.size())),
         to_string(_it->entry_.ttl_type_),
         _ttl);

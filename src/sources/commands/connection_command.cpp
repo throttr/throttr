@@ -16,8 +16,10 @@
 #include <throttr/commands/connection_command.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <throttr/connection.hpp>
 #include <throttr/services/response_builder_service.hpp>
 #include <throttr/state.hpp>
+#include <throttr/utils.hpp>
 
 namespace throttr
 {
@@ -41,11 +43,32 @@ namespace throttr
     if (_it == _map.end())
     {
       batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
+      // LCOV_EXCL_START
+#ifndef NDEBUG
+      fmt::println(
+        "{:%Y-%m-%d %H:%M:%S} REQUEST CONNECTION id={} from={} "
+        "RESPONSE ok=false",
+        std::chrono::system_clock::now(),
+        id_to_hex(_request.header_->id_),
+        id_to_hex(conn->id_));
+#endif
+      // LCOV_EXCL_STOP
       return;
     }
 
     const connection *_conn = _it->second;
     batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
     response_builder_service::write_connections_entry_to_buffer(state, &batch, _conn, write_buffer, false);
+
+    // LCOV_EXCL_START
+#ifndef NDEBUG
+    fmt::println(
+      "{:%Y-%m-%d %H:%M:%S} REQUEST CONNECTION id={} from={} "
+      "RESPONSE ok=true",
+      std::chrono::system_clock::now(),
+      id_to_hex(_request.header_->id_),
+      id_to_hex(conn->id_));
+#endif
+    // LCOV_EXCL_STOP
   }
 } // namespace throttr

@@ -19,6 +19,7 @@
 #include <throttr/connection.hpp>
 #include <throttr/services/response_builder_service.hpp>
 #include <throttr/state.hpp>
+#include <throttr/utils.hpp>
 
 namespace throttr
 {
@@ -35,8 +36,21 @@ namespace throttr
     batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
 
     const auto _offset = write_buffer.size();
-    for (const auto _byte : conn->id_)
-      write_buffer.push_back(_byte);
+    write_buffer.insert(
+      write_buffer.end(),                                                         // LCOV_EXCL_LINE Note: This is actually tested.
+      reinterpret_cast<const std::uint8_t *>(conn->id_.data()),                   // NOSONAR
+      reinterpret_cast<const std::uint8_t *>(conn->id_.data() + conn->id_.size()) // NOSONAR
+    );
     batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], 16));
+
+    // LCOV_EXCL_START
+#ifndef NDEBUG
+    fmt::println(
+      "{:%Y-%m-%d %H:%M:%S} REQUEST WHOAMI from={} "
+      "RESPONSE ok=true",
+      std::chrono::system_clock::now(),
+      id_to_hex(conn->id_));
+#endif
+    // LCOV_EXCL_STOP
   }
 } // namespace throttr

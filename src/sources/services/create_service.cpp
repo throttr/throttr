@@ -22,21 +22,26 @@
 
 namespace throttr
 {
-  bool create_service::use(
+  bool create_service::use( // NOSONAR
     const std::shared_ptr<state> &state,
     const std::string_view &key,
     const std::vector<std::byte> &value,
     const ttl_types ttl_type,
     uint64_t ttl,
     const entry_types type,
-    const bool as_insert)
+    const std::array<std::byte, 16> &id,
+    const bool as_insert) // NOSONAR
   {
+    boost::ignore_unused(as_insert);
+
     const auto _now = std::chrono::steady_clock::now();
     const auto _expires_at = get_expiration_point(_now, ttl_type, ttl);
 
     auto &_index = state->storage_.get<tag_by_key>();
-    const auto _key = std::vector<std::byte>(
-      reinterpret_cast<const std::byte *>(key.data()), reinterpret_cast<const std::byte *>(key.data() + key.size())); // NOSONAR
+    const std::vector _key(
+      reinterpret_cast<const std::byte *>(key.data()),             // NOSONAR
+      reinterpret_cast<const std::byte *>(key.data() + key.size()) // NOSONAR
+    );
     const auto _entry_ptr = entry_wrapper{_key, request_entry{type, value, ttl_type, _expires_at}};
 
 #ifdef ENABLED_FEATURE_METRICS
@@ -75,11 +80,12 @@ namespace throttr
     // LCOV_EXCL_START
 #ifndef NDEBUG
     fmt::println(
-      "{:%Y-%m-%d %H:%M:%S} REQUEST {} key={} value={}ttl_type={} ttl={} "
+      "{:%Y-%m-%d %H:%M:%S} REQUEST {} key={} from={} value={}ttl_type={} ttl={} "
       "RESPONSE ok={}",
       std::chrono::system_clock::now(),
       as_insert ? "INSERT" : "SET",
       key,
+      id_to_hex(id),
       span_to_hex(std::span(_entry_ptr.entry_.value_.data(), _entry_ptr.entry_.value_.size())),
       to_string(ttl_type),
       ttl,

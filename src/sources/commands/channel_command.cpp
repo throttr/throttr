@@ -16,8 +16,10 @@
 #include <throttr/commands/channel_command.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <throttr/connection.hpp>
 #include <throttr/services/response_builder_service.hpp>
 #include <throttr/state.hpp>
+#include <throttr/utils.hpp>
 
 namespace throttr
 {
@@ -44,6 +46,16 @@ namespace throttr
 
     if (_range.first == _range.second) // LCOV_EXCL_LINE Note: Partially tested.
     {
+      // LCOV_EXCL_START
+#ifndef NDEBUG
+      fmt::println(
+        "{:%Y-%m-%d %H:%M:%S} REQUEST CHANNEL channel={} from={}"
+        "RESPONSE ok=false",
+        std::chrono::system_clock::now(),
+        _request.channel_,
+        id_to_hex(conn->id_));
+#endif
+      // LCOV_EXCL_STOP
       batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
       return;
     }
@@ -63,7 +75,7 @@ namespace throttr
       {
         const auto _off = write_buffer.size();
         write_buffer.resize(_off + 16);
-        std::memcpy(write_buffer.data() + _off, _sub.connection_id_.data, 16); // NOSONAR
+        std::memcpy(write_buffer.data() + _off, _sub.connection_id_.data(), 16); // NOSONAR
         batch.emplace_back(boost::asio::buffer(write_buffer.data() + _off, 16));
       }
 
@@ -71,8 +83,8 @@ namespace throttr
       write_buffer.insert(write_buffer.end(), _ts_ptr, _ts_ptr + 8);
       batch.emplace_back(boost::asio::buffer(&write_buffer[write_buffer.size() - 8], 8));
 
-      const uint64_t _read = _sub.metrics_.read_bytes_.load(std::memory_order_relaxed);
-      const uint64_t _write = _sub.metrics_.write_bytes_.load(std::memory_order_relaxed);
+      const uint64_t _read = _sub.metrics_.read_bytes_.accumulator_.load(std::memory_order_relaxed);
+      const uint64_t _write = _sub.metrics_.write_bytes_.accumulator_.load(std::memory_order_relaxed);
 
       for (uint64_t metric : {_read, _write})
       {
@@ -81,5 +93,16 @@ namespace throttr
         batch.emplace_back(boost::asio::buffer(&write_buffer[write_buffer.size() - sizeof(metric)], sizeof(metric)));
       }
     }
+
+    // LCOV_EXCL_START
+#ifndef NDEBUG
+    fmt::println(
+      "{:%Y-%m-%d %H:%M:%S} REQUEST CHANNEL channel={} from={} "
+      "RESPONSE ok=true",
+      std::chrono::system_clock::now(),
+      _request.channel_,
+      id_to_hex(conn->id_));
+#endif
+    // LCOV_EXCL_STOP
   }
 } // namespace throttr

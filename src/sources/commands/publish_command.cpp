@@ -19,6 +19,7 @@
 #include <throttr/connection.hpp>
 #include <throttr/services/response_builder_service.hpp>
 #include <throttr/state.hpp>
+#include <throttr/utils.hpp>
 
 namespace throttr
 {
@@ -61,8 +62,7 @@ namespace throttr
     _message->buffers_.emplace_back(boost::asio::buffer(_buffer));
 
 #ifdef ENABLED_FEATURE_METRICS
-    conn->metrics_->network_.published_bytes_.fetch_add(_payload_size, std::memory_order_relaxed);
-    conn->metrics_->service_.publish_requests_.fetch_add(_payload_size, std::memory_order_relaxed);
+    conn->metrics_->network_.published_bytes_.mark(_payload_size);
 #endif
 
     for (auto _it = _range.first; _it != _range.second; ++_it) // LCOV_EXCL_LINE Note: Partially tested.
@@ -71,13 +71,13 @@ namespace throttr
       const auto &_sub_id = _sub.connection_id_;
 
 #ifdef ENABLED_FEATURE_METRICS
-      const_cast<subscription &>(_sub).metrics_.read_bytes_.fetch_add(_payload_size, std::memory_order_relaxed);
+      const_cast<subscription &>(_sub).metrics_.read_bytes_.mark(_payload_size);
 #endif
 
-      if (_sub_id == conn->id_)
+      if (_sub_id == conn->id_) // LCOV_EXCL_LINE Note: Partially tested.
       {
 #ifdef ENABLED_FEATURE_METRICS
-        const_cast<subscription &>(_sub).metrics_.write_bytes_.fetch_add(_payload_size, std::memory_order_relaxed);
+        const_cast<subscription &>(_sub).metrics_.write_bytes_.mark(_payload_size);
 #endif
         continue;
       }
@@ -89,10 +89,22 @@ namespace throttr
         // LCOV_EXCL_STOP
 
 #ifdef ENABLED_FEATURE_METRICS
-      _conn_it->second->metrics_->network_.received_bytes_.fetch_add(_payload_size, std::memory_order_relaxed);
+      _conn_it->second->metrics_->network_.received_bytes_.mark(_payload_size);
 #endif
 
       _conn_it->second->send(_message);
     }
+
+    // LCOV_EXCL_START
+#ifndef NDEBUG
+    fmt::println(
+      "{:%Y-%m-%d %H:%M:%S} REQUEST PUBLISH channel={} from={} data={} "
+      "RESPONSE ok=true",
+      std::chrono::system_clock::now(),
+      _channel,
+      id_to_hex(conn->id_),
+      span_to_hex(_payload));
+#endif
+    // LCOV_EXCL_STOP
   }
 } // namespace throttr
