@@ -58,21 +58,21 @@ namespace throttr
       return;
     }
 
-    // auto &index = state->subscriptions_->subscriptions_.get<by_connection_id>();
-    // auto [begin, end] = index.equal_range(conn->id_);
-    //
-    // std::vector<decltype(index.begin())> _to_erase;
-    //
-    // for (auto it = begin; it != end; ++it) // LCOV_EXCL_LINE Note: Partially tested.
-    // {
-    //   if (it->channel() == _request.channel_) // LCOV_EXCL_LINE Note: Partially tested.
-    //     _to_erase.push_back(it);
-    // }
-    //
-    // for (const auto it : _to_erase)
-    // {
-    //   index.erase(it);
-    // }
+    auto &index = state->subscriptions_->subscriptions_.get<by_connection_id>();
+    auto [begin, end] = index.equal_range(conn->id_);
+
+    std::vector<decltype(index.begin())> _to_erase;
+
+    for (auto it = begin; it != end; ++it) // LCOV_EXCL_LINE Note: Partially tested.
+    {
+      if (it->channel() == _request.channel_) // LCOV_EXCL_LINE Note: Partially tested.
+        _to_erase.push_back(it);
+    }
+
+    for (const auto it : _to_erase)
+    {
+      index.erase(it);
+    }
 
     batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
 

@@ -61,14 +61,14 @@ TEST_F(SubscribeTestFixture, OnFailed)
 
   ASSERT_EQ(_subscribe_response_1[0], std::byte{0x01});
 
-  // // SUBSCRIBE 2 (same)
-  // const auto _subscribe_buffer_2 = request_subscribe_builder("metrics");
-  // boost::asio::write(_socket, boost::asio::buffer(_subscribe_buffer_2.data(), _subscribe_buffer_2.size()));
-  //
-  // std::vector<std::byte> _subscribe_response_2(1);
-  // boost::asio::read(_socket, boost::asio::buffer(_subscribe_response_2.data(), _subscribe_response_2.size()));
-  //
-  // ASSERT_EQ(_subscribe_response_2[0], std::byte{0x00});
+  // SUBSCRIBE 2 (same)
+  const auto _subscribe_buffer_2 = request_subscribe_builder("metrics");
+  boost::asio::write(_socket, boost::asio::buffer(_subscribe_buffer_2.data(), _subscribe_buffer_2.size()));
+
+  std::vector<std::byte> _subscribe_response_2(1);
+  boost::asio::read(_socket, boost::asio::buffer(_subscribe_response_2.data(), _subscribe_response_2.size()));
+
+  ASSERT_EQ(_subscribe_response_2[0], std::byte{0x00});
 
   boost::system::error_code _ec;
   _socket.close(_ec);
