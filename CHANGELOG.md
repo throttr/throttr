@@ -2,6 +2,8 @@
 
 - Server now support protocol v7.0.0.
 - Server now doesn't have any visible UB.
+- Now we have multiple pipelines building natively on different architectures.
+- Now we have LIST, INFO, STAT, STATS, SUBSCRIBE, UNSUBSCRIBE, PUBLISH, CONNECTIONS, CONNECTION, CHANNELS, CHANNEL, WHOAMI requests.
 
 ### v4.0.17
 
