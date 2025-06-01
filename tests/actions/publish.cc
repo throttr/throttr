@@ -62,4 +62,8 @@ TEST_F(PublishTestFixture, OnSuccess)
 
   ASSERT_EQ(_size, 1);
   ASSERT_EQ(_payload[0], std::byte{0x42});
+
+  boost::system::error_code _ec;
+  _subscriber.close(_ec);
+  _publisher.close(_ec);
 }

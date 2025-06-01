@@ -58,5 +58,17 @@ TEST_F(InfoTestFixture, OnSuccess)
   std::vector<std::byte> _res_set(1);
   boost::asio::read(_socket, boost::asio::buffer(_res_set));
   ASSERT_EQ(_res_set[0], std::byte{0x01});
+
+  // INFO
+  const auto _info = request_info_builder();
+  boost::asio::write(_socket, boost::asio::buffer(_info.data(), _info.size()));
+
+  std::vector<std::byte> _response(425);
+  boost::asio::read(_socket, boost::asio::buffer(_response.data(), _response.size()));
+
+  ASSERT_EQ(_response[0], std::byte{0x01});
+  ASSERT_EQ(_response.size(), 425);
+  boost::system::error_code _ec;
+  _socket.close(_ec);
 }
 #endif

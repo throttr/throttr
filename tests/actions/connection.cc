@@ -78,6 +78,9 @@ TEST_F(ConnectionTestFixture, OnSuccess)
   }
 
   ASSERT_EQ(_offset, 236);
+
+  boost::system::error_code _ec;
+  _socket.close(_ec);
 }
 
 TEST_F(ConnectionTestFixture, OnFailed)
@@ -101,4 +104,7 @@ TEST_F(ConnectionTestFixture, OnFailed)
   boost::asio::read(_socket, boost::asio::buffer(_response.data(), _response.size()));
 
   ASSERT_EQ(_response[0], std::byte{0x00});
+
+  boost::system::error_code _ec;
+  _socket.close(_ec);
 }

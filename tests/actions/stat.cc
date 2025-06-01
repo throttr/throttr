@@ -69,4 +69,6 @@ TEST_F(StatTestFixture, OnSuccess)
   ASSERT_GE(_wpm, 2);
   ASSERT_EQ(_reads_total, _rpm);
   ASSERT_EQ(_writes_total, _wpm);
+  boost::system::error_code _ec;
+  _socket.close(_ec);
 }
