@@ -51,7 +51,7 @@ namespace throttr
       "{:%Y-%m-%d %H:%M:%S} REQUEST SUBSCRIBE channel={} from={} "
       "RESPONSE ok={}",
       std::chrono::system_clock::now(),
-      span_to_hex(_channel_bytes),
+      string_to_hex(std::string{_request.channel_}),
       id_to_hex(conn->id_),
       _inserted);
 #endif
