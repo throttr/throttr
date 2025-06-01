@@ -62,7 +62,7 @@ else ()
     )
 endif ()
 
-include_directories(src/include ${SENTRY_INCLUDE_DIR})
+include_directories(src/include)
 
 file(GLOB_RECURSE SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 

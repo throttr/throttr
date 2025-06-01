@@ -26,7 +26,6 @@
 #include <cstring>
 #include <deque>
 #include <memory>
-#include <throttr/hash.hpp>
 #include <throttr/protocol_wrapper.hpp>
 #include <throttr/services/commands_service.hpp>
 #include <throttr/services/find_service.hpp>

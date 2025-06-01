@@ -1,3 +1,8 @@
+### v5.0.0
+
+- Server now support protocol v7.0.0.
+- Server now doesn't have any visible UB.
+
 ### v4.0.17
 
 - Shared pointer has been removed from container.
