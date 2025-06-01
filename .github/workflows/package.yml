@@ -47,8 +47,21 @@ jobs:
           username: ${{ secrets.GHCR_USERNAME }}
           password: ${{ secrets.GHCR_PAT }}
 
-      - name: Build and push image
+      - name: Build
         id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          tags: ${{ env.REGISTRY_IMAGE }}:${{ env.VERSION }}-${{ matrix.type }}-${{ matrix.size }}
+          build-args: |
+            TYPE=${{ matrix.type }}
+            SIZE=${{ matrix.size }}
+          outputs: type=image,push-by-digest=true,name-canonical=true,push=false
+
+      - name: Build and push image
+        if: github.ref_type == 'tag'
+        id: build_push
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -60,12 +73,14 @@ jobs:
           outputs: type=image,push-by-digest=true,name-canonical=true,push=true
 
       - name: Export digest
+        if: github.ref_type == 'tag'
         run: |
           mkdir -p ${{ runner.temp }}/digests
-          digest="${{ steps.build.outputs.digest }}"
+          digest="${{ steps.build_push.outputs.digest }}"
           touch "${{ runner.temp }}/digests/${digest#sha256:}"
 
       - name: Upload digest
+        if: github.ref_type == 'tag'
         uses: actions/upload-artifact@v4
         with:
           name: digests-${{ env.VERSION }}-${{ matrix.type }}-${{ matrix.size }}
