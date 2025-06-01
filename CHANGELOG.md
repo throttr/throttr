@@ -1,3 +1,7 @@
+### v5.0.1
+
+- Server now uses protocol v7.0.1 which removes pragma packs.
+
 ### v5.0.0
 
 - Server now support protocol v7.0.0.
