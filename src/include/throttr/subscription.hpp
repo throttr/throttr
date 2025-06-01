@@ -52,7 +52,7 @@ namespace throttr
      * @param channel
      */
     subscription(const std::array<std::byte, 16> connection_id, std::vector<std::byte> channel) :
-        connection_id_(connection_id), channel_(std::move(channel))
+        connection_id_(connection_id), channel_(channel)
     {
       subscribed_at_ =
         std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
