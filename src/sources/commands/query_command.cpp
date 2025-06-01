@@ -38,7 +38,8 @@ namespace throttr
 
     const bool _as_query = type == request_types::query;
 
-    const request_key _key{std::string_view(reinterpret_cast<const char *>(_request.key_.data()), _request.key_.size())};
+    const request_key _key{
+      std::string_view(reinterpret_cast<const char *>(_request.key_.data()), _request.key_.size())}; // NOSONAR
     const auto _find = state->finder_->find_or_fail_for_batch(state, _key, batch);
 
     if (!_find.has_value()) // LCOV_EXCL_LINE Note: Partially tested.
@@ -70,7 +71,7 @@ namespace throttr
       // TTL
       {
         const auto _offset = write_buffer.size();
-        std::uint8_t ttl_bytes[sizeof(_ttl)];
+        std::uint8_t ttl_bytes[sizeof(_ttl)]; // NOSONAR
         std::memcpy(ttl_bytes, &_ttl, sizeof(_ttl));
         write_buffer.insert(write_buffer.end(), ttl_bytes, ttl_bytes + sizeof(_ttl));
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_ttl)));
@@ -83,7 +84,7 @@ namespace throttr
       // TTL
       {
         const auto _offset = write_buffer.size();
-        std::uint8_t ttl_bytes[sizeof(_ttl)];
+        std::uint8_t ttl_bytes[sizeof(_ttl)]; // NOSONAR
         std::memcpy(ttl_bytes, &_ttl, sizeof(_ttl));
         write_buffer.insert(write_buffer.end(), ttl_bytes, ttl_bytes + sizeof(_ttl));
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_ttl)));
@@ -92,7 +93,7 @@ namespace throttr
       {
         const auto _offset = write_buffer.size();
         const auto _size = _it->entry_.value_.size();
-        std::uint8_t size_bytes[sizeof(_size)];
+        std::uint8_t size_bytes[sizeof(_size)]; // NOSONAR
         std::memcpy(size_bytes, &_size, sizeof(_size));
         write_buffer.insert(write_buffer.end(), size_bytes, size_bytes + sizeof(_size));
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_size)));

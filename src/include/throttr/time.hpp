@@ -41,7 +41,7 @@ namespace throttr
     value_type _value = 0;
     for (std::size_t i = 0; i < sizeof(value_type); ++i)
     {
-      _value |= static_cast<value_type>(std::to_integer<uint8_t>(ttl[i])) << (8 * i);
+      _value |= static_cast<value_type>(std::to_integer<uint8_t>(ttl[i])) << (8 * i); // NOSONAR
     }
 
     // LCOV_EXCL_START

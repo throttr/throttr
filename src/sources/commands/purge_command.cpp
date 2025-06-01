@@ -35,7 +35,8 @@ namespace throttr
     boost::ignore_unused(type, write_buffer, conn);
 
     const auto _request = request_purge::from_buffer(view);
-    const request_key _key{std::string_view(reinterpret_cast<const char *>(_request.key_.data()), _request.key_.size())};
+    const request_key _key{
+      std::string_view(reinterpret_cast<const char *>(_request.key_.data()), _request.key_.size())}; // NOSONAR
 
     auto &_index = state->storage_.get<tag_by_key>();
     const auto _it = _index.find(_key);

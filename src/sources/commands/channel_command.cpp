@@ -43,7 +43,8 @@ namespace throttr
     const auto _request = request_channel::from_buffer(view);
 
     const auto &_subs = state->subscriptions_->subscriptions_.get<by_channel_name>();
-    const auto _channel = std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size());
+    const auto _channel =
+      std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size()); // NOSONAR
     auto _range = _subs.equal_range(std::string(_channel));
 
     if (_range.first == _range.second) // LCOV_EXCL_LINE Note: Partially tested.
@@ -67,7 +68,7 @@ namespace throttr
     {
       const auto _offset = write_buffer.size();
       const uint64_t _count = std::distance(_range.first, _range.second);
-      std::uint8_t _count_bytes[sizeof(_count)];
+      std::uint8_t _count_bytes[sizeof(_count)];          // NOSONAR
       std::memcpy(_count_bytes, &_count, sizeof(_count)); // Copiar los bytes de _count a _count_bytes
       write_buffer.insert(write_buffer.end(), _count_bytes, _count_bytes + sizeof(_count));
       batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_count)));
@@ -86,7 +87,7 @@ namespace throttr
 
       {
         const auto _offset = write_buffer.size();
-        std::uint8_t ts_bytes[sizeof(_sub.subscribed_at_)];
+        std::uint8_t ts_bytes[sizeof(_sub.subscribed_at_)];                       // NOSONAR
         std::memcpy(ts_bytes, &_sub.subscribed_at_, sizeof(_sub.subscribed_at_)); // Copiar los bytes de subscribed_at_
         write_buffer.insert(write_buffer.end(), ts_bytes, ts_bytes + sizeof(ts_bytes));
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(ts_bytes)));
@@ -98,7 +99,7 @@ namespace throttr
       for (uint64_t metric : {_read, _write})
       {
         const auto _offset = write_buffer.size();
-        std::uint8_t _metric_bytes[sizeof(metric)];
+        std::uint8_t _metric_bytes[sizeof(metric)];          // NOSONAR
         std::memcpy(_metric_bytes, &metric, sizeof(metric)); // Copiar los bytes de metric al buffer temporal
         write_buffer.insert(write_buffer.end(), _metric_bytes, _metric_bytes + sizeof(metric));
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(metric)));

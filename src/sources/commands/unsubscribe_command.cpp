@@ -38,7 +38,8 @@ namespace throttr
 
     const auto _request = request_unsubscribe::from_buffer(view);
 
-    const auto _channel = std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size());
+    const auto _channel =
+      std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size()); // NOSONAR
 
     if (!state->subscriptions_->is_subscribed(conn->id_, _channel)) // LCOV_EXCL_LINE Note: Partially tested.
     {

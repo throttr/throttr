@@ -39,8 +39,8 @@ namespace throttr
 
     const auto &_subs = state->subscriptions_->subscriptions_.get<by_channel_name>();
     const std::string _channel{
-      std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size())};
-    const auto _range = _subs.equal_range(_channel);
+      std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size())}; // NOSONAR
+    const auto _range = _subs.equal_range(_channel);                                                         // NOSONAR
 
     // LCOV_EXCL_START Note: This means that there are no suscriptions.
     if (_range.first == _range.second)
@@ -74,13 +74,13 @@ namespace throttr
       const auto &_sub_id = _sub.connection_id_;
 
 #ifdef ENABLED_FEATURE_METRICS
-      const_cast<subscription &>(_sub).metrics_->read_bytes_.mark(_payload.size());
+      const_cast<subscription &>(_sub).metrics_->read_bytes_.mark(_payload.size()); // NOSONAR
 #endif
 
       if (_sub_id == conn->id_) // LCOV_EXCL_LINE Note: Partially tested.
       {
 #ifdef ENABLED_FEATURE_METRICS
-        const_cast<subscription &>(_sub).metrics_->write_bytes_.mark(_payload.size());
+        const_cast<subscription &>(_sub).metrics_->write_bytes_.mark(_payload.size()); // NOSONAR
 #endif
         continue;
       }

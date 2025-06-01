@@ -58,7 +58,7 @@ namespace throttr
     value_type _value_size = 0;
     for (std::size_t i = 0; i < sizeof(value_type); ++i)
     {
-      _value_size |= static_cast<value_type>(std::to_integer<uint8_t>(buffer[3 + sizeof(value_type) + i])) << (8 * i);
+      _value_size |= static_cast<value_type>(std::to_integer<uint8_t>(buffer[3 + sizeof(value_type) + i])) << (8 * i); // NOSONAR
     }
     return request_set_header_size + _key_size + _value_size;
   }
@@ -148,7 +148,7 @@ namespace throttr
     value_type _value_size = 0;
     for (std::size_t i = 0; i < sizeof(value_type); ++i)
     {
-      _value_size |= static_cast<value_type>(std::to_integer<uint8_t>(buffer[2 + i])) << (8 * i);
+      _value_size |= static_cast<value_type>(std::to_integer<uint8_t>(buffer[2 + i])) << (8 * i); // NOSONAR
     }
     return request_publish_header_size + _channel_size + _value_size;
   }

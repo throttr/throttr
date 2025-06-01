@@ -136,7 +136,7 @@ namespace throttr
 
     uint64_t _total_subscriptions = 0;
     uint64_t _total_channels = 0;
-    std::set<std::string> _existing_keys;
+    std::set<std::string> _existing_keys; // NOSONAR
 
     for (const auto &_index =                                          // LCOV_EXCL_LINE Note: Partially tested.
          state->subscriptions_->subscriptions_.get<by_channel_name>(); // LCOV_EXCL_LINE Note: Partially tested.

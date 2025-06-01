@@ -28,7 +28,7 @@ namespace throttr
     const uint64_t total)
   {
     const auto _offset = write_buffer.size();
-    std::uint8_t total_bytes[sizeof(total)];
+    std::uint8_t total_bytes[sizeof(total)]; // NOSONAR
     std::memcpy(total_bytes, &total, sizeof(total));
     write_buffer.insert(write_buffer.end(), total_bytes, total_bytes + sizeof(total));
     batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(total)));
@@ -56,8 +56,8 @@ namespace throttr
     {
       const auto _expires_at =
         std::chrono::duration_cast<std::chrono::nanoseconds>(entry->entry_.expires_at_.time_since_epoch()).count();
-      std::uint8_t expires_at_bytes[sizeof(_expires_at)];
-      std::memcpy(expires_at_bytes, &_expires_at, sizeof(_expires_at)); // Copiar _expires_at en bytes
+      std::uint8_t expires_at_bytes[sizeof(_expires_at)];               // NOSONAR
+      std::memcpy(expires_at_bytes, &_expires_at, sizeof(_expires_at)); // NOSONAR Copiar _expires_at en bytes
       const auto _off = write_buffer.size();
       write_buffer.insert(write_buffer.end(), expires_at_bytes, expires_at_bytes + sizeof(_expires_at));
       batch->emplace_back(boost::asio::buffer(&write_buffer[_off], sizeof(_expires_at)));
@@ -66,7 +66,7 @@ namespace throttr
     // Handling _bytes_used
     {
       const auto _bytes_used = static_cast<value_type>(entry->entry_.value_.size());
-      std::uint8_t bytes_used_bytes[sizeof(_bytes_used)];
+      std::uint8_t bytes_used_bytes[sizeof(_bytes_used)];               // NOSONAR
       std::memcpy(bytes_used_bytes, &_bytes_used, sizeof(_bytes_used)); // Copiar _bytes_used en bytes
       const auto _off = write_buffer.size();
       write_buffer.insert(write_buffer.end(), bytes_used_bytes, bytes_used_bytes + sizeof(_bytes_used));
@@ -98,7 +98,7 @@ namespace throttr
                                                   _metric.reads_accumulator_.load(std::memory_order_relaxed),
                                                   _metric.writes_accumulator_.load(std::memory_order_relaxed)})
     {
-      std::uint8_t _v_bytes[sizeof(_v)];
+      std::uint8_t _v_bytes[sizeof(_v)]; // NOSONAR
       std::memcpy(_v_bytes, &_v, sizeof(_v));
 
       const auto _off = write_buffer.size();

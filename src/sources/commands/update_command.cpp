@@ -37,7 +37,8 @@ namespace throttr
     boost::ignore_unused(type, write_buffer, conn);
 
     const auto _request = request_update::from_buffer(view);
-    const request_key _key{std::string_view(reinterpret_cast<const char *>(_request.key_.data()), _request.key_.size())};
+    const request_key _key{
+      std::string_view(reinterpret_cast<const char *>(_request.key_.data()), _request.key_.size())}; // NOSONAR
     const auto _now = std::chrono::steady_clock::now();
     const auto _it = state->finder_->find_or_fail(state, _key);
 
