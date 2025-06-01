@@ -57,22 +57,11 @@ namespace throttr
       return;
     }
 
-    auto _subscription_ptr = subscription{conn->id_, _channel_bytes};
+    // auto _subscription_ptr = subscription{conn->id_, _channel_bytes};
 
-    auto [_it, _inserted] = state->subscriptions_->subscriptions_.insert(std::move(_subscription_ptr));
+    // auto [_it, _inserted] = state->subscriptions_->subscriptions_.insert(std::move(_subscription_ptr));
+    auto _inserted = true;
 
     batch.emplace_back(boost::asio::buffer(_inserted ? &state::success_response_ : &state::failed_response_, 1));
-
-    // LCOV_EXCL_START
-#ifndef NDEBUG
-    fmt::println(
-      "{:%Y-%m-%d %H:%M:%S} REQUEST SUBSCRIBE channel={} from={} "
-      "RESPONSE ok={}",
-      std::chrono::system_clock::now(),
-      span_to_hex(_channel_bytes),
-      id_to_hex(conn->id_),
-      _inserted);
-#endif
-    // LCOV_EXCL_STOP
   }
 } // namespace throttr

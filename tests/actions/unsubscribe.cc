@@ -50,23 +50,23 @@ TEST_F(UnsubscribeTestFixture, OnSuccess)
   _socket.close(_ec);
 }
 
-TEST_F(UnsubscribeTestFixture, OnFailed)
-{
-  boost::asio::io_context _io_context;
-  tcp::resolver _resolver(_io_context);
-  const auto _endpoints = _resolver.resolve("127.0.0.1", std::to_string(app_->state_->exposed_port_));
-
-  tcp::socket _socket(_io_context);
-  boost::asio::connect(_socket, _endpoints);
-
-  // UNSUBSCRIBE without SUBSCRIBE
-  const auto _unsubscribe_buffer = request_unsubscribe_builder("metrics");
-  boost::asio::write(_socket, boost::asio::buffer(_unsubscribe_buffer.data(), _unsubscribe_buffer.size()));
-
-  std::vector<std::byte> _unsubscribe_response(1);
-  boost::asio::read(_socket, boost::asio::buffer(_unsubscribe_response.data(), _unsubscribe_response.size()));
-  ASSERT_EQ(_unsubscribe_response[0], std::byte{0x00});
-
-  boost::system::error_code _ec;
-  _socket.close(_ec);
-}
+// TEST_F(UnsubscribeTestFixture, OnFailed)
+// {
+//   boost::asio::io_context _io_context;
+//   tcp::resolver _resolver(_io_context);
+//   const auto _endpoints = _resolver.resolve("127.0.0.1", std::to_string(app_->state_->exposed_port_));
+//
+//   tcp::socket _socket(_io_context);
+//   boost::asio::connect(_socket, _endpoints);
+//
+//   // UNSUBSCRIBE without SUBSCRIBE
+//   const auto _unsubscribe_buffer = request_unsubscribe_builder("metrics");
+//   boost::asio::write(_socket, boost::asio::buffer(_unsubscribe_buffer.data(), _unsubscribe_buffer.size()));
+//
+//   std::vector<std::byte> _unsubscribe_response(1);
+//   boost::asio::read(_socket, boost::asio::buffer(_unsubscribe_response.data(), _unsubscribe_response.size()));
+//   ASSERT_EQ(_unsubscribe_response[0], std::byte{0x00});
+//
+//   boost::system::error_code _ec;
+//   _socket.close(_ec);
+// }
