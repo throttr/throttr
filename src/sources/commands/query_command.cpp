@@ -93,10 +93,10 @@ namespace throttr
       {
         const auto _offset = write_buffer.size();
         const auto _size = _it->entry_.value_.size();
-        std::uint8_t size_bytes[sizeof(_size)]; // NOSONAR
-        std::memcpy(size_bytes, &_size, sizeof(_size));
-        write_buffer.insert(write_buffer.end(), size_bytes, size_bytes + sizeof(_size));
-        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_size)));
+        std::uint8_t size_bytes[sizeof(value_type)]; // NOSONAR
+        std::memcpy(size_bytes, &_size, sizeof(value_type));
+        write_buffer.insert(write_buffer.end(), size_bytes, size_bytes + sizeof(value_type));
+        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(value_type)));
       }
 
       // Value
