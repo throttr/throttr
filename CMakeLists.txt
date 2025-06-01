@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 option(BUILD_TESTS "Build tests cases" ON)
 option(ENABLE_FEATURE_METRICS "Enable metrics feature" ON)
-option(ENABLE_STATIC_LINKING "Enable static linking feature" ON)
+option(ENABLE_STATIC_LINKING "Enable static linking feature" OFF)
 
 if (ENABLE_STATIC_LINKING)
     set(Boost_USE_STATIC_LIBS ON)
