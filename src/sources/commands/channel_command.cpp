@@ -42,7 +42,8 @@ namespace throttr
     const auto _request = request_channel::from_buffer(view);
 
     const auto &_subs = state->subscriptions_->subscriptions_.get<by_channel_name>();
-    auto _range = _subs.equal_range(_request.channel_);
+    const std::string _channel{_request.channel_};
+    auto _range = _subs.equal_range(_channel);
 
     if (_range.first == _range.second) // LCOV_EXCL_LINE Note: Partially tested.
     {

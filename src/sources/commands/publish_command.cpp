@@ -34,11 +34,11 @@ namespace throttr
     boost::ignore_unused(type, batch, write_buffer);
 
     const auto _request = request_publish::from_buffer(view);
-    const auto &_channel = _request.channel_;
     const auto &_payload = _request.value_;
     const value_type _payload_size = _request.header_->value_size_;
 
     const auto &_subs = state->subscriptions_->subscriptions_.get<by_channel_name>();
+    const std::string _channel{_request.channel_};
     const auto _range = _subs.equal_range(_channel);
 
     // LCOV_EXCL_START Note: This means that there are no suscriptions.

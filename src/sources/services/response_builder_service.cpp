@@ -344,20 +344,20 @@ namespace throttr
 
     batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
 
-    std::vector<std::string_view> _channels_list;
-    std::vector<std::vector<std::string_view>> _fragments;
-    std::unordered_map<std::string_view, std::tuple<uint64_t, uint64_t, uint64_t>> _channel_stats;
+    std::vector<std::string> _channels_list;
+    std::vector<std::vector<std::string>> _fragments;
+    std::unordered_map<std::string, std::tuple<uint64_t, uint64_t, uint64_t>> _channel_stats;
     {
       const auto &_subs = state->subscriptions_->subscriptions_.get<by_channel_name>();
       uint64_t _read_sum = 0;
       uint64_t _write_sum = 0;
       uint64_t _count = 0;
       std::size_t _fragment_size = 0;
-      std::vector<std::string_view> _current_fragment;
+      std::vector<std::string> _current_fragment;
 
       for (auto it = _subs.begin(); it != _subs.end();) // LCOV_EXCL_LINE Note: Partially tested.
       {
-        std::string_view _current_channel = it->channel();
+        std::string _current_channel{it->channel_};
         _read_sum = 0;
         _write_sum = 0;
         _count = 0;
@@ -375,7 +375,7 @@ namespace throttr
         // LCOV_EXCL_START
         if (_fragment_size + _channel_size > 2048)
         {
-          _fragments.push_back(std::move(_current_fragment));
+          _fragments.push_back(_current_fragment);
           _current_fragment.clear();
           _fragment_size = 0;
         }

@@ -36,13 +36,10 @@ namespace throttr
     std::scoped_lock _lock(state->subscriptions_->mutex_);
 
     const auto _request = request_subscribe::from_buffer(view);
-    const std::vector _channel_bytes(
-      reinterpret_cast<const std::byte *>(_request.channel_.data()),                           // NOSONAR
-      reinterpret_cast<const std::byte *>(_request.channel_.data() + _request.channel_.size()) // NOSONAR
-    );
+    const std::string _channel(_request.channel_);
 
     const auto _connection_id = conn->id_;
-    auto _subscription_ptr = subscription{_connection_id, _channel_bytes};
+    auto _subscription_ptr = subscription{_connection_id, _channel};
 
     auto [_it, _inserted] = state->subscriptions_->subscriptions_.insert(std::move(_subscription_ptr));
 

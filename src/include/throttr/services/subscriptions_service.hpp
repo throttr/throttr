@@ -54,7 +54,7 @@ namespace throttr
         boost::multi_index::member<subscription, std::array<std::byte, 16>, &subscription::connection_id_>>,
       boost::multi_index::ordered_non_unique<
         boost::multi_index::tag<by_channel_name>,
-        boost::multi_index::const_mem_fun<subscription, std::string_view, &subscription::channel>>>>;
+        boost::multi_index::member<subscription, std::string, &subscription::channel_>>>>;
 
   /**
    * Subscriptions service

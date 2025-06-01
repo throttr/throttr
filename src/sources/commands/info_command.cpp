@@ -135,15 +135,15 @@ namespace throttr
 
     uint64_t _total_subscriptions = 0;
     uint64_t _total_channels = 0;
-    std::set<std::string_view> _existing_keys;
+    std::set<std::string> _existing_keys;
 
     for (const auto &_index =                                          // LCOV_EXCL_LINE Note: Partially tested.
          state->subscriptions_->subscriptions_.get<by_channel_name>(); // LCOV_EXCL_LINE Note: Partially tested.
          auto &_item : _index)                                         // LCOV_EXCL_LINE Note: Partially tested.
     {
-      if (!_existing_keys.contains(_item.channel())) // LCOV_EXCL_LINE Note: Partially tested.
+      if (!_existing_keys.contains(_item.channel_)) // LCOV_EXCL_LINE Note: Partially tested.
       {
-        _existing_keys.insert(_item.channel());
+        _existing_keys.insert(_item.channel_);
         _total_channels++;
       }
       _total_subscriptions++;
