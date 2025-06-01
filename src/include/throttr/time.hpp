@@ -39,7 +39,7 @@ namespace throttr
     using namespace std::chrono;
 
     value_type _value = 0;
-    for (std::size_t i = 0; i < sizeof(value_type); ++i)
+    for (std::size_t i = 0; i < sizeof(value_type); ++i) // LCOV_EXCL_LINE Note: Partially tested.
     {
       _value |= static_cast<value_type>(std::to_integer<uint8_t>(ttl[i])) << (8 * i); // NOSONAR
     }

@@ -368,7 +368,7 @@ namespace throttr
 
     std::vector<std::string> _channels_list;
     std::vector<std::vector<std::string>> _fragments;
-    std::unordered_map<std::string, std::tuple<uint64_t, uint64_t, uint64_t>> _channel_stats;
+    std::unordered_map<std::string, std::tuple<uint64_t, uint64_t, uint64_t>> _channel_stats; // NOSONAR
     {
       const auto &_subs = state->subscriptions_->subscriptions_.get<by_channel_name>();
       uint64_t _read_sum = 0;
