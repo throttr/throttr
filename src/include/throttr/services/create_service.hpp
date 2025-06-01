@@ -51,10 +51,10 @@ namespace throttr
      */
     static bool use( // NOSONAR
       const std::shared_ptr<state> &state,
-      const std::string_view &key,
-      const std::vector<std::byte> &value,
+      std::span<const std::byte> key,
+      std::span<const std::byte> value,
       ttl_types ttl_type,
-      uint64_t ttl,
+      std::span<const std::byte> ttl,
       entry_types type,
       const boost::uuids::uuid &id,
       bool as_insert = false); // NOSONAR

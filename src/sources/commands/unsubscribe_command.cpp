@@ -38,7 +38,9 @@ namespace throttr
 
     const auto _request = request_unsubscribe::from_buffer(view);
 
-    if (!state->subscriptions_->is_subscribed(conn->id_, _request.channel_)) // LCOV_EXCL_LINE Note: Partially tested.
+    const auto _channel = std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size());
+
+    if (!state->subscriptions_->is_subscribed(conn->id_, _channel)) // LCOV_EXCL_LINE Note: Partially tested.
     {
       batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
 
@@ -66,7 +68,7 @@ namespace throttr
 
     for (auto it = begin; it != end; ++it) // LCOV_EXCL_LINE Note: Partially tested.
     {
-      if (it->channel_ == _request.channel_) // LCOV_EXCL_LINE Note: Partially tested.
+      if (it->channel_ == _channel) // LCOV_EXCL_LINE Note: Partially tested.
         _to_erase.push_back(it);
     }
 

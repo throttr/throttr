@@ -50,7 +50,7 @@ void
 test_ttl_change(
   std::shared_ptr<state> &_state,
   request_entry &_entry,
-  const std::string &_key,
+  const std::vector<std::byte> &_key,
   const ttl_types _ttl_type,
   const change_types _change_type,
   const T _expected)
@@ -64,7 +64,7 @@ test_ttl_change(
   _header.change_ = _change_type;
   _header.value_ = static_cast<value_type>(_expected.count());
 
-  const request_update _request{&_header, _key};
+  const request_update _request{_header.attribute_, _header.change_, _header.value_, _key};
 
   _entry.ttl_type_ = _ttl_type;
   const auto _now = steady_clock::now();
@@ -99,7 +99,7 @@ TEST(StateManagementTest, TTLChange)
   auto _state = std::make_shared<state>(_ioc);
   request_entry _entry;
   _entry.expires_at_ = steady_clock::now();
-  const std::string _key = "user";
+  const std::vector _key = {std::byte{0x01}, std::byte{0x02}, std::byte{0x03}, std::byte{0x04}};
 
   {
     std::vector cases{
@@ -135,7 +135,10 @@ TEST(StateManagementTest, TTLChange)
 TEST(StateManagementTest, CalculateExpirationPointNanoseconds)
 {
   const auto _now = std::chrono::steady_clock::now();
-  const auto _expires = get_expiration_point(_now, ttl_types::nanoseconds, 32);
+  value_type _expiration_value = 32;
+  std::vector<std::byte> _expiration_bytes(sizeof(value_type));
+  std::memcpy(_expiration_bytes.data(), &_expiration_value, sizeof(value_type));
+  const auto _expires = get_expiration_point(_now, ttl_types::nanoseconds, _expiration_bytes);
 
   const auto _diff = std::chrono::duration_cast<std::chrono::nanoseconds>(_expires - _now).count();
   ASSERT_NEAR(_diff, 32, 16);
@@ -144,7 +147,11 @@ TEST(StateManagementTest, CalculateExpirationPointNanoseconds)
 TEST(StateManagementTest, CalculateExpirationPointSeconds)
 {
   const auto _now = std::chrono::steady_clock::now();
-  const auto _expires = get_expiration_point(_now, ttl_types::seconds, 3);
+  value_type _expiration_value = 3;
+  std::vector<std::byte> _expiration_bytes(sizeof(value_type));
+  std::memcpy(_expiration_bytes.data(), &_expiration_value, sizeof(value_type));
+
+  const auto _expires = get_expiration_point(_now, ttl_types::seconds, _expiration_bytes);
 
   const auto _diff = std::chrono::duration_cast<std::chrono::seconds>(_expires - _now).count();
   ASSERT_NEAR(_diff, 3, 1);
@@ -199,36 +206,31 @@ TEST(StateManagementTest, QuotaChange)
 
   // patch
   *reinterpret_cast<value_type *>(_entry.value_.data()) = 0;
-  request_update_header _patch_header{request_types::update, attribute_types::quota, change_types::patch, 42, 0};
-  request_update _patch_req{&_patch_header, ""};
+  request_update _patch_req{attribute_types::quota, change_types::patch, 42, std::vector{std::byte{0x00}}};
   EXPECT_TRUE(update_service::apply_quota_change(_state, _entry, _patch_req));
   EXPECT_EQ(*reinterpret_cast<value_type *>(_entry.value_.data()), 42);
 
   // increase
   *reinterpret_cast<value_type *>(_entry.value_.data()) = 10;
-  request_update_header _inc_header{request_types::update, attribute_types::quota, change_types::increase, 5, 0};
-  request_update _inc_req{&_inc_header, ""};
+  request_update _inc_req{attribute_types::quota, change_types::increase, 5, std::vector{std::byte{0x00}}};
   EXPECT_TRUE(update_service::apply_quota_change(_state, _entry, _inc_req));
   EXPECT_EQ(*reinterpret_cast<value_type *>(_entry.value_.data()), 15);
 
   // decrease (quota > value)
   *reinterpret_cast<value_type *>(_entry.value_.data()) = 20;
-  request_update_header _dec_gt_header{request_types::update, attribute_types::quota, change_types::decrease, 10, 0};
-  request_update _dec_gt_req{&_dec_gt_header, ""};
+  request_update _dec_gt_req{attribute_types::quota, change_types::decrease, 10, std::vector{std::byte{0x00}}};
   EXPECT_TRUE(update_service::apply_quota_change(_state, _entry, _dec_gt_req));
   EXPECT_EQ(*reinterpret_cast<value_type *>(_entry.value_.data()), 10);
 
   // decrease (quota == value)
   *reinterpret_cast<value_type *>(_entry.value_.data()) = 10;
-  request_update_header _dec_eq_header{request_types::update, attribute_types::quota, change_types::decrease, 10, 0};
-  request_update _dec_eq_req{&_dec_eq_header, ""};
+  request_update _dec_eq_req{attribute_types::quota, change_types::decrease, 10, std::vector{std::byte{0x00}}};
   EXPECT_TRUE(update_service::apply_quota_change(_state, _entry, _dec_eq_req));
   EXPECT_EQ(*reinterpret_cast<value_type *>(_entry.value_.data()), 0);
 
   // decrease (quota < value)
   *reinterpret_cast<value_type *>(_entry.value_.data()) = 5;
-  request_update_header _dec_lt_header{request_types::update, attribute_types::quota, change_types::decrease, 10, 0};
-  request_update _dec_lt_req{&_dec_lt_header, ""};
+  request_update _dec_lt_req{attribute_types::quota, change_types::decrease, 10, std::vector{std::byte{0x00}}};
   EXPECT_FALSE(update_service::apply_quota_change(_state, _entry, _dec_lt_req));
 }
 

@@ -36,10 +36,10 @@ namespace throttr
 
     const auto _request = request_publish::from_buffer(view);
     const auto &_payload = _request.value_;
-    const value_type _payload_size = _request.header_->value_size_;
 
     const auto &_subs = state->subscriptions_->subscriptions_.get<by_channel_name>();
-    const std::string _channel{_request.channel_};
+    const std::string _channel{
+      std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size())};
     const auto _range = _subs.equal_range(_channel);
 
     // LCOV_EXCL_START Note: This means that there are no suscriptions.
@@ -53,9 +53,11 @@ namespace throttr
 
     _buffer.push_back(0x03);
 
-    const auto *_size_bytes = reinterpret_cast<const uint8_t *>(&_payload_size); // NOSONAR
+    const auto _size = _payload.size();
     for (std::size_t _i = 0; _i < sizeof(value_type); ++_i)
-      _buffer.push_back(_size_bytes[_i]);
+    {
+      _buffer.push_back(static_cast<unsigned char>(_size >> (8 * _i) & 0xFF));
+    }
 
     for (const auto &_byte : _payload)
       _buffer.push_back(std::to_integer<uint8_t>(_byte));
@@ -63,7 +65,7 @@ namespace throttr
     _message->buffers_.emplace_back(boost::asio::buffer(_buffer));
 
 #ifdef ENABLED_FEATURE_METRICS
-    conn->metrics_->network_.published_bytes_.mark(_payload_size);
+    conn->metrics_->network_.published_bytes_.mark(_payload.size());
 #endif
 
     for (auto _it = _range.first; _it != _range.second; ++_it) // LCOV_EXCL_LINE Note: Partially tested.
@@ -72,13 +74,13 @@ namespace throttr
       const auto &_sub_id = _sub.connection_id_;
 
 #ifdef ENABLED_FEATURE_METRICS
-      const_cast<subscription &>(_sub).metrics_->read_bytes_.mark(_payload_size);
+      const_cast<subscription &>(_sub).metrics_->read_bytes_.mark(_payload.size());
 #endif
 
       if (_sub_id == conn->id_) // LCOV_EXCL_LINE Note: Partially tested.
       {
 #ifdef ENABLED_FEATURE_METRICS
-        const_cast<subscription &>(_sub).metrics_->write_bytes_.mark(_payload_size);
+        const_cast<subscription &>(_sub).metrics_->write_bytes_.mark(_payload.size());
 #endif
         continue;
       }
@@ -90,7 +92,7 @@ namespace throttr
         // LCOV_EXCL_STOP
 
 #ifdef ENABLED_FEATURE_METRICS
-      _conn_it->second->metrics_->network_.received_bytes_.mark(_payload_size);
+      _conn_it->second->metrics_->network_.received_bytes_.mark(_payload.size());
 #endif
 
       _conn_it->second->send(_message);

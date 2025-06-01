@@ -29,18 +29,18 @@ namespace throttr
     using enum change_types;
     auto &_atomic = *reinterpret_cast<std::atomic<value_type> *>(entry.value_.data()); // NOSONAR
 
-    switch (request.header_->change_)
+    switch (request.change_)
     {
       case patch:
-        _atomic.store(request.header_->value_);
+        _atomic.store(request.value_);
         break;
       case increase:
-        _atomic.fetch_add(request.header_->value_, std::memory_order_relaxed);
+        _atomic.fetch_add(request.value_, std::memory_order_relaxed);
         break;
       case decrease:
-        if (_atomic.load(std::memory_order_relaxed) >= request.header_->value_) // LCOV_EXCL_LINE note: Partially covered.
+        if (_atomic.load(std::memory_order_relaxed) >= request.value_) // LCOV_EXCL_LINE note: Partially covered.
         {
-          _atomic.fetch_sub(request.header_->value_, std::memory_order_relaxed);
+          _atomic.fetch_sub(request.value_, std::memory_order_relaxed);
         }
         else
         {
@@ -64,18 +64,18 @@ namespace throttr
     switch (entry.ttl_type_)
     {
       case seconds:
-        _duration = std::chrono::seconds(request.header_->value_);
+        _duration = std::chrono::seconds(request.value_);
         break;
       case milliseconds:
-        _duration = std::chrono::milliseconds(request.header_->value_);
+        _duration = std::chrono::milliseconds(request.value_);
         break;
       case nanoseconds:
       default:
-        _duration = std::chrono::nanoseconds(request.header_->value_);
+        _duration = std::chrono::nanoseconds(request.value_);
         break;
     }
 
-    switch (request.header_->change_)
+    switch (request.change_)
     {
       case change_types::patch:
         entry.expires_at_ = now + _duration;

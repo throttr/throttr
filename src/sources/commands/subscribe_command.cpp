@@ -37,7 +37,8 @@ namespace throttr
     std::scoped_lock _lock(state->subscriptions_->mutex_);
 
     const auto _request = request_subscribe::from_buffer(view);
-    const std::string _channel{_request.channel_};
+    const std::string _channel{
+      std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size())};
 
     auto [_it, _inserted] = state->subscriptions_->subscriptions_.insert(subscription{conn->id_, _channel});
 
@@ -45,11 +46,13 @@ namespace throttr
 
     // LCOV_EXCL_START
 #ifndef NDEBUG
+    const auto _channel_view =
+      std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size());
     fmt::println(
       "{:%Y-%m-%d %H:%M:%S} REQUEST SUBSCRIBE channel={} from={} "
       "RESPONSE ok={}",
       std::chrono::system_clock::now(),
-      string_to_hex(std::string{_request.channel_}),
+      _channel_view,
       to_string(conn->id_),
       _inserted);
 #endif

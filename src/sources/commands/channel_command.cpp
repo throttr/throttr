@@ -43,8 +43,8 @@ namespace throttr
     const auto _request = request_channel::from_buffer(view);
 
     const auto &_subs = state->subscriptions_->subscriptions_.get<by_channel_name>();
-    const std::string _channel{_request.channel_};
-    auto _range = _subs.equal_range(_channel);
+    const auto _channel = std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size());
+    auto _range = _subs.equal_range(std::string(_channel));
 
     if (_range.first == _range.second) // LCOV_EXCL_LINE Note: Partially tested.
     {
@@ -54,7 +54,7 @@ namespace throttr
         "{:%Y-%m-%d %H:%M:%S} REQUEST CHANNEL channel={} from={}"
         "RESPONSE ok=false",
         std::chrono::system_clock::now(),
-        _request.channel_,
+        span_to_hex(_request.channel_),
         to_string(conn->id_));
 #endif
       // LCOV_EXCL_STOP
@@ -102,7 +102,7 @@ namespace throttr
       "{:%Y-%m-%d %H:%M:%S} REQUEST CHANNEL channel={} from={} "
       "RESPONSE ok=true",
       std::chrono::system_clock::now(),
-      _request.channel_,
+      span_to_hex(_request.channel_),
       to_string(conn->id_));
 #endif
     // LCOV_EXCL_STOP

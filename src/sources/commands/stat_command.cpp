@@ -40,7 +40,7 @@ namespace throttr
     return;
 #endif
 
-    const request_key _key{_request.key_};
+    const request_key _key{std::string_view(reinterpret_cast<const char *>(_request.key_.data()), _request.key_.size())};
     const auto _find = state->finder_->find_or_fail_for_batch(state, _key, batch);
     if (!_find.has_value()) // LCOV_EXCL_LINE
     {

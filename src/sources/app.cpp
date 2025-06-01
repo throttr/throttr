@@ -13,10 +13,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include <fstream>
 #include <throttr/app.hpp>
 
-#include <sentry.h>
 #include <thread>
 #include <vector>
 
@@ -28,26 +26,26 @@ namespace throttr
 
   int app::serve()
   {
-    std::ifstream f("/etc/sentry_dsn");
-    std::string dsn;
-    if (f.is_open())
-    {
-      std::getline(f, dsn);
-      if (dsn.empty())
-        dsn = "https://fallbackdsn@o000.ingest.sentry.io/default";
-    }
-    else
-    {
-      dsn = "https://fallbackdsn@o000.ingest.sentry.io/default";
-    }
-
-    sentry_options_t *options = sentry_options_new();
-    sentry_options_set_dsn(options, dsn.c_str());
-    sentry_options_set_database_path(options, ".sentry-native");
-    sentry_options_set_release(options, "throttr@6.0.0");
-    sentry_options_set_handler_path(options, "/usr/local/bin/crashpad_handler");
-    sentry_options_set_debug(options, 1);
-    sentry_init(options);
+    // std::ifstream f("/etc/sentry_dsn");
+    // std::string dsn;
+    // if (f.is_open())
+    // {
+    //   std::getline(f, dsn);
+    //   if (dsn.empty())
+    //     dsn = "https://fallbackdsn@o000.ingest.sentry.io/default";
+    // }
+    // else
+    // {
+    //   dsn = "https://fallbackdsn@o000.ingest.sentry.io/default";
+    // }
+    //
+    // sentry_options_t *options = sentry_options_new();
+    // sentry_options_set_dsn(options, dsn.c_str());
+    // sentry_options_set_database_path(options, ".sentry-native");
+    // sentry_options_set_release(options, "throttr@6.0.0");
+    // sentry_options_set_handler_path(options, "/usr/local/bin/crashpad_handler");
+    // sentry_options_set_debug(options, 1);
+    // sentry_init(options);
 
     server _server(ioc_, port_, state_);
 
@@ -76,6 +74,6 @@ namespace throttr
   void app::stop()
   {
     ioc_.stop();
-    sentry_close();
+    // sentry_close();
   }
 } // namespace throttr

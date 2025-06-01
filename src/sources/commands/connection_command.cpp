@@ -35,12 +35,12 @@ namespace throttr
     boost::ignore_unused(type, conn);
 
     const auto _request = request_connection::from_buffer(view);
-    const auto &_uuid = _request.header_->id_;
+    const auto &_uuid = _request.id_;
 
     std::lock_guard _lock(state->connections_mutex_);
     const auto &_map = state->connections_;
     boost::uuids::uuid _id{};
-    std::memcpy(_id.data, _uuid.data(), sizeof(_uuid));
+    std::memcpy(_id.data, _uuid.data(), _uuid.size());
     const auto _it = _map.find(_id);
 
     if (_it == _map.end())
@@ -52,7 +52,7 @@ namespace throttr
         "{:%Y-%m-%d %H:%M:%S} REQUEST CONNECTION id={} from={} "
         "RESPONSE ok=false",
         std::chrono::system_clock::now(),
-        id_to_hex(_request.header_->id_),
+        span_to_hex(_request.id_),
         to_string(conn->id_));
 #endif
       // LCOV_EXCL_STOP
@@ -69,7 +69,7 @@ namespace throttr
       "{:%Y-%m-%d %H:%M:%S} REQUEST CONNECTION id={} from={} "
       "RESPONSE ok=true",
       std::chrono::system_clock::now(),
-      id_to_hex(_request.header_->id_),
+      span_to_hex(_request.id_),
       to_string(conn->id_));
 #endif
     // LCOV_EXCL_STOP
