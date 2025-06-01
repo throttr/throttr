@@ -19,15 +19,15 @@ namespace throttr
 {
   bool subscriptions_service::is_subscribed(const std::array<std::byte, 16> &id, const std::string_view channel) const
   {
-    const auto &_index = subscriptions_.get<by_connection_id>();
-    const auto [_current, _next] = _index.equal_range(id);
-
-    for (auto _it = _current; _it != _next; ++_it) // LCOV_EXCL_LINE Note: Partially tested.
-    {
-      if (const auto _view = _it->channel(); _view == channel) // LCOV_EXCL_LINE Note: Partially tested.
-        return true;
-    }
-
     return false;
+    // const auto &_index = subscriptions_.get<by_connection_id>();
+    // auto it = _index.find(id);
+    // while (it != _index.end() && it->connection_id_ == id)
+    // {
+    //   if (it->channel() == channel)
+    //     return true;
+    //   ++it;
+    // }
+    // return false;
   }
 } // namespace throttr

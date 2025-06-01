@@ -40,22 +40,6 @@ namespace throttr
       reinterpret_cast<const std::byte *>(_request.channel_.data()),                           // NOSONAR
       reinterpret_cast<const std::byte *>(_request.channel_.data() + _request.channel_.size()) // NOSONAR
     );
-    if (state->subscriptions_->is_subscribed(conn->id_, _request.channel_)) // LCOV_EXCL_LINE Note: Partially tested.
-    {
-      // LCOV_EXCL_START
-#ifndef NDEBUG
-      fmt::println(
-        "{:%Y-%m-%d %H:%M:%S} REQUEST SUBSCRIBE channel={} from={} "
-        "RESPONSE ok=false",
-        std::chrono::system_clock::now(),
-        span_to_hex(_channel_bytes),
-        id_to_hex(conn->id_));
-#endif
-      // LCOV_EXCL_STOP
-
-      batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
-      return;
-    }
 
     const auto _connection_id = conn->id_;
     auto _subscription_ptr = subscription{_connection_id, _channel_bytes};
