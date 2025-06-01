@@ -84,8 +84,8 @@ namespace throttr
       write_buffer.insert(write_buffer.end(), _ts_ptr, _ts_ptr + 8);
       batch.emplace_back(boost::asio::buffer(&write_buffer[write_buffer.size() - 8], 8));
 
-      const uint64_t _read = _sub.metrics_.read_bytes_.accumulator_.load(std::memory_order_relaxed);
-      const uint64_t _write = _sub.metrics_.write_bytes_.accumulator_.load(std::memory_order_relaxed);
+      const uint64_t _read = _sub.metrics_->read_bytes_.accumulator_.load(std::memory_order_relaxed);
+      const uint64_t _write = _sub.metrics_->write_bytes_.accumulator_.load(std::memory_order_relaxed);
 
       for (uint64_t metric : {_read, _write})
       {

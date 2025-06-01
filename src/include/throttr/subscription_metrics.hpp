@@ -41,38 +41,18 @@ namespace throttr
      */
     subscription_metrics() = default;
 
-    /**
-     * Move
-     *
-     * @param other
-     */
-    subscription_metrics(subscription_metrics &&other) noexcept = default;
+    // Non copiable and movable
+    subscription_metrics(const subscription_metrics &) = delete;
+    subscription_metrics &operator=(const subscription_metrics &) = delete;
+    subscription_metrics(subscription_metrics &&) = delete;
+    subscription_metrics &operator=(subscription_metrics &&) = delete;
 
-    /**
-     * Copy assignment
-     *
-     * @param other
-     * @return
-     */
-    subscription_metrics &operator=(subscription_metrics &&other) noexcept = default;
-
-    /**
-     * Constructor
-     */
-    subscription_metrics(const subscription_metrics &) noexcept = default;
-
-    /**
-     * Assignment
-     *
-     * @return
-     */
-    subscription_metrics &operator=(const subscription_metrics &) noexcept = default;
-    // LCOV_EXCL_STOP
-#endif
     /**
      * Destructor
      */
     ~subscription_metrics() noexcept = default;
+    // LCOV_EXCL_STOP
+#endif
   };
 } // namespace throttr
 

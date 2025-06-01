@@ -42,7 +42,7 @@ namespace throttr
     std::uint64_t subscribed_at_ = 0;
 
 #ifdef ENABLED_FEATURE_METRICS
-    subscription_metrics metrics_;
+    std::shared_ptr<subscription_metrics> metrics_ = std::make_shared<subscription_metrics>();
 #endif
 
     /**

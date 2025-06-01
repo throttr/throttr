@@ -71,13 +71,13 @@ namespace throttr
       const auto &_sub_id = _sub.connection_id_;
 
 #ifdef ENABLED_FEATURE_METRICS
-      const_cast<subscription &>(_sub).metrics_.read_bytes_.mark(_payload_size);
+      const_cast<subscription &>(_sub).metrics_->read_bytes_.mark(_payload_size);
 #endif
 
       if (_sub_id == conn->id_) // LCOV_EXCL_LINE Note: Partially tested.
       {
 #ifdef ENABLED_FEATURE_METRICS
-        const_cast<subscription &>(_sub).metrics_.write_bytes_.mark(_payload_size);
+        const_cast<subscription &>(_sub).metrics_->write_bytes_.mark(_payload_size);
 #endif
         continue;
       }
