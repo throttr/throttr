@@ -27,7 +27,7 @@ RUN mkdir -p build && \
     make -j4 && \
     SENTRY_AUTH_TOKEN=$(cat /etc/sentry_token) sentry-cli upload-dif --org throttr --project native . && \
     mv throttr /usr/bin/throttr && \
-    ctest --output-on-failure -V --parallel 4 && \
+    ctest --output-on-failure -V && \
     adduser --system --no-create-home --shell /bin/false throttr
 
 FROM scratch
