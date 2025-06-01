@@ -7,6 +7,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 option(BUILD_TESTS "Build tests cases" ON)
 option(ENABLE_FEATURE_METRICS "Enable metrics feature" ON)
 option(ENABLE_STATIC_LINKING "Enable static linking feature" ON)
+option(ENABLE_SANITIZER "Enable sanitizer feature" ON)
+
+if (ENABLE_SANITIZER)
+    add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address)
+endif()
 
 if (ENABLE_STATIC_LINKING)
     set(Boost_USE_STATIC_LIBS ON)
