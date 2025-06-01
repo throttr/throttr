@@ -1,11 +1,6 @@
 name: Release
 
-on:
-  push:
-    branches:
-      - master
-    tags:
-      - '*'
+on: [push]
 
 env:
   VERSION: ${{ github.ref_name }}
