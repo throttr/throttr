@@ -36,13 +36,12 @@ namespace throttr
 
     batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
 
-    const auto _offset = write_buffer.size();
-    write_buffer.insert(
-      write_buffer.end(),                                                         // LCOV_EXCL_LINE Note: This is actually tested.
-      reinterpret_cast<const std::uint8_t *>(conn->id_.data()),                   // NOSONAR
-      reinterpret_cast<const std::uint8_t *>(conn->id_.data() + conn->id_.size()) // NOSONAR
-    );
-    batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], 16));
+    {
+      const auto _offset = write_buffer.size();
+      const auto *id_data = conn->id_.data();
+      write_buffer.insert(write_buffer.end(), id_data, id_data + conn->id_.size());
+      batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], conn->id_.size()));
+    }
 
     // LCOV_EXCL_START
 #ifndef NDEBUG

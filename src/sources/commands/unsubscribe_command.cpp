@@ -47,8 +47,8 @@ namespace throttr
       // LCOV_EXCL_START
 #ifndef NDEBUG
       const std::vector _channel_bytes(
-        reinterpret_cast<const std::byte *>(_request.channel_.data()),                           // NOSONAR
-        reinterpret_cast<const std::byte *>(_request.channel_.data() + _request.channel_.size()) // NOSONAR
+        _request.channel_.data(),                           // NOSONAR
+        _request.channel_.data() + _request.channel_.size() // NOSONAR
       );
       fmt::println(
         "{:%Y-%m-%d %H:%M:%S} REQUEST UNSUBSCRIBE channel={} from={} "

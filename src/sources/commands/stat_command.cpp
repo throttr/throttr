@@ -61,8 +61,9 @@ namespace throttr
     auto _append_uint64 = [&write_buffer, &batch](const uint64_t value)
     {
       const auto _offset = write_buffer.size();
-      const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&value); // NOSONAR
-      write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(uint64_t));
+      std::uint8_t value_bytes[sizeof(uint64_t)];
+      std::memcpy(value_bytes, &value, sizeof(uint64_t)); // Copiar los bytes de 'value' al buffer
+      write_buffer.insert(write_buffer.end(), value_bytes, value_bytes + sizeof(uint64_t));
       batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(uint64_t)));
     };
 

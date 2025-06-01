@@ -24,8 +24,8 @@ namespace throttr
     if (buffer.size() < request_insert_header_size)
       return 0;
     // LCOV_EXCL_STOP
-    auto *h = reinterpret_cast<const request_insert_header *>(buffer.data()); // NOSONAR
-    return request_insert_header_size + h->key_size_;
+    const auto _key_size = std::to_integer<uint8_t>(buffer[sizeof(value_type) * 2 + 2]);
+    return request_insert_header_size + _key_size;
   }
 
   static std::size_t get_query_size(const std::span<const std::byte> &buffer)
@@ -34,8 +34,8 @@ namespace throttr
     if (buffer.size() < request_query_header_size)
       return 0;
     // LCOV_EXCL_STOP
-    auto *h = reinterpret_cast<const request_query_header *>(buffer.data()); // NOSONAR
-    return request_query_header_size + h->key_size_;
+    const auto _key_size = std::to_integer<uint8_t>(buffer[1]);
+    return request_query_header_size + _key_size;
   }
 
   static std::size_t get_update_size(const std::span<const std::byte> &buffer)
@@ -44,8 +44,8 @@ namespace throttr
     if (buffer.size() < request_update_header_size)
       return 0;
     // LCOV_EXCL_STOP
-    auto *h = reinterpret_cast<const request_update_header *>(buffer.data()); // NOSONAR
-    return request_update_header_size + h->key_size_;
+    const auto _key_size = std::to_integer<uint8_t>(buffer[sizeof(value_type) + 3]);
+    return request_update_header_size + _key_size;
   }
 
   static std::size_t get_set_size(const std::span<const std::byte> &buffer)
@@ -54,8 +54,13 @@ namespace throttr
     if (buffer.size() < request_set_header_size)
       return 0;
     // LCOV_EXCL_STOP
-    auto *h = reinterpret_cast<const request_set_header *>(buffer.data()); // NOSONAR
-    return request_set_header_size + h->key_size_ + h->value_size_;
+    const auto _key_size = std::to_integer<uint8_t>(buffer[2 + sizeof(value_type)]);
+    value_type _value_size = 0;
+    for (std::size_t i = 0; i < sizeof(value_type); ++i)
+    {
+      _value_size |= static_cast<value_type>(std::to_integer<uint8_t>(buffer[3 + sizeof(value_type) + i])) << (8 * i);
+    }
+    return request_set_header_size + _key_size + _value_size;
   }
 
   static std::size_t get_get_size(const std::span<const std::byte> &buffer)
@@ -64,8 +69,8 @@ namespace throttr
     if (buffer.size() < request_get_header_size)
       return 0;
     // LCOV_EXCL_STOP
-    auto *h = reinterpret_cast<const request_get_header *>(buffer.data()); // NOSONAR
-    return request_get_header_size + h->key_size_;
+    const auto _key_size = std::to_integer<uint8_t>(buffer[1]);
+    return request_get_header_size + _key_size;
   }
 
   static std::size_t get_purge_size(const std::span<const std::byte> &buffer)
@@ -74,8 +79,8 @@ namespace throttr
     if (buffer.size() < request_purge_header_size)
       return 0;
     // LCOV_EXCL_STOP
-    auto *h = reinterpret_cast<const request_purge_header *>(buffer.data()); // NOSONAR
-    return request_purge_header_size + h->key_size_;
+    const auto _key_size = std::to_integer<uint8_t>(buffer[1]);
+    return request_purge_header_size + _key_size;
   }
 
   static std::size_t get_stat_size(const std::span<const std::byte> &buffer)
@@ -84,8 +89,8 @@ namespace throttr
     if (buffer.size() < request_stat_header_size)
       return 0;
     // LCOV_EXCL_STOP
-    auto *h = reinterpret_cast<const request_stat_header *>(buffer.data()); // NOSONAR
-    return request_stat_header_size + h->key_size_;
+    const auto _key_size = std::to_integer<uint8_t>(buffer[1]);
+    return request_stat_header_size + _key_size;
   }
 
   static std::size_t get_list_size(const std::span<const std::byte> &buffer)
@@ -119,8 +124,8 @@ namespace throttr
     if (buffer.size() < request_subscribe_header_size)
       return 0;
     // LCOV_EXCL_STOP
-    auto *h = reinterpret_cast<const request_subscribe_header *>(buffer.data()); // NOSONAR
-    return request_subscribe_header_size + h->channel_size_;
+    const auto _channel_size = std::to_integer<uint8_t>(buffer[1]);
+    return request_subscribe_header_size + _channel_size;
   }
 
   static std::size_t get_unsubscribe_size(const std::span<const std::byte> &buffer)
@@ -129,8 +134,8 @@ namespace throttr
     if (buffer.size() < request_unsubscribe_header_size)
       return 0;
     // LCOV_EXCL_STOP
-    auto *h = reinterpret_cast<const request_unsubscribe_header *>(buffer.data()); // NOSONAR
-    return request_unsubscribe_header_size + h->channel_size_;
+    const auto _channel_size = std::to_integer<uint8_t>(buffer[1]);
+    return request_unsubscribe_header_size + _channel_size;
   }
 
   static std::size_t get_publish_size(const std::span<const std::byte> &buffer)
@@ -139,8 +144,13 @@ namespace throttr
     if (buffer.size() < request_publish_header_size)
       return 0;
     // LCOV_EXCL_STOP
-    auto *h = reinterpret_cast<const request_publish_header *>(buffer.data()); // NOSONAR
-    return request_publish_header_size + h->channel_size_ + h->value_size_;
+    const auto _channel_size = std::to_integer<uint8_t>(buffer[1]);
+    value_type _value_size = 0;
+    for (std::size_t i = 0; i < sizeof(value_type); ++i)
+    {
+      _value_size |= static_cast<value_type>(std::to_integer<uint8_t>(buffer[2 + i])) << (8 * i);
+    }
+    return request_publish_header_size + _channel_size + _value_size;
   }
 
   static std::size_t get_channels_size(const std::span<const std::byte> &buffer)
@@ -154,8 +164,8 @@ namespace throttr
     if (buffer.size() < request_channel_header_size)
       return 0;
     // LCOV_EXCL_STOP
-    auto *h = reinterpret_cast<const request_channel_header *>(buffer.data()); // NOSONAR
-    return request_channel_header_size + h->channel_size_;
+    const auto _channel_size = std::to_integer<uint8_t>(buffer[1]);
+    return request_channel_header_size + _channel_size;
   }
 
   static std::size_t get_info_size(const std::span<const std::byte> &buffer)

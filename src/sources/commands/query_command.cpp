@@ -70,8 +70,9 @@ namespace throttr
       // TTL
       {
         const auto _offset = write_buffer.size();
-        const auto *_ttl_ptr = reinterpret_cast<const std::uint8_t *>(&_ttl); // NOSONAR
-        write_buffer.insert(write_buffer.end(), _ttl_ptr, _ttl_ptr + sizeof(_ttl));
+        std::uint8_t ttl_bytes[sizeof(_ttl)];
+        std::memcpy(ttl_bytes, &_ttl, sizeof(_ttl));
+        write_buffer.insert(write_buffer.end(), ttl_bytes, ttl_bytes + sizeof(_ttl));
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_ttl)));
       }
     }
@@ -82,18 +83,21 @@ namespace throttr
       // TTL
       {
         const auto _offset = write_buffer.size();
-        const auto *_ttl_ptr = reinterpret_cast<const std::uint8_t *>(&_ttl); // NOSONAR
-        write_buffer.insert(write_buffer.end(), _ttl_ptr, _ttl_ptr + sizeof(_ttl));
+        std::uint8_t ttl_bytes[sizeof(_ttl)];
+        std::memcpy(ttl_bytes, &_ttl, sizeof(_ttl));
+        write_buffer.insert(write_buffer.end(), ttl_bytes, ttl_bytes + sizeof(_ttl));
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_ttl)));
       }
       // Size
       {
         const auto _offset = write_buffer.size();
-        const auto _size = static_cast<value_type>(_it->entry_.value_.size());
-        const auto *_size_ptr = reinterpret_cast<const std::uint8_t *>(&_size); // NOSONAR
-        write_buffer.insert(write_buffer.end(), _size_ptr, _size_ptr + sizeof(_size));
+        const auto _size = _it->entry_.value_.size();
+        std::uint8_t size_bytes[sizeof(_size)];
+        std::memcpy(size_bytes, &_size, sizeof(_size));
+        write_buffer.insert(write_buffer.end(), size_bytes, size_bytes + sizeof(_size));
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_size)));
       }
+
       // Value
       batch.emplace_back(boost::asio::buffer(_it->entry_.value_.data(), _it->entry_.value_.size()));
     }
