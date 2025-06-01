@@ -35,7 +35,7 @@ namespace throttr
     const std::shared_ptr<connection> &conn)
   {
     boost::ignore_unused(type, view, conn);
-    write_buffer.reserve(424);
+    write_buffer.reserve(4096);
     std::scoped_lock _lock(state->subscriptions_->mutex_, state->connections_mutex_);
 
     batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
