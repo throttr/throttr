@@ -18,7 +18,7 @@
 
 namespace throttr
 {
-  bool subscriptions_service::is_subscribed(const std::array<std::byte, 16> &id, const std::string_view channel) const
+  bool subscriptions_service::is_subscribed(const boost::uuids::uuid &id, const std::string_view channel) const
   {
     // const auto &_index = subscriptions_.get<by_connection_id>();
     // auto it = _index.find(id);

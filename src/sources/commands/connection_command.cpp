@@ -16,6 +16,7 @@
 #include <throttr/commands/connection_command.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <throttr/connection.hpp>
 #include <throttr/services/response_builder_service.hpp>
 #include <throttr/state.hpp>
@@ -38,7 +39,9 @@ namespace throttr
 
     std::lock_guard _lock(state->connections_mutex_);
     const auto &_map = state->connections_;
-    const auto _it = _map.find(_uuid);
+    boost::uuids::uuid _id{};
+    std::memcpy(_id.data, _uuid.data(), sizeof(_uuid));
+    const auto _it = _map.find(_id);
 
     if (_it == _map.end())
     {
@@ -50,7 +53,7 @@ namespace throttr
         "RESPONSE ok=false",
         std::chrono::system_clock::now(),
         id_to_hex(_request.header_->id_),
-        id_to_hex(conn->id_));
+        to_string(conn->id_));
 #endif
       // LCOV_EXCL_STOP
       return;
@@ -67,7 +70,7 @@ namespace throttr
       "RESPONSE ok=true",
       std::chrono::system_clock::now(),
       id_to_hex(_request.header_->id_),
-      id_to_hex(conn->id_));
+      to_string(conn->id_));
 #endif
     // LCOV_EXCL_STOP
   }

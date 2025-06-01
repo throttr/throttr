@@ -84,7 +84,7 @@ namespace throttr
     /**
      * Connections container
      */
-    std::unordered_map<std::array<std::byte, 16>, connection *, hash> connections_;
+    std::unordered_map<boost::uuids::uuid, connection *, std::hash<boost::uuids::uuid>> connections_;
 
     /**
      * Connections mutex

@@ -16,6 +16,7 @@
 #include <throttr/commands/query_command.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <throttr/connection.hpp>
 #include <throttr/state.hpp>
 #include <throttr/time.hpp>
@@ -49,7 +50,7 @@ namespace throttr
         std::chrono::system_clock::now(),
         _as_query ? "QUERY" : "GET",
         _key.key_,
-        id_to_hex(conn->id_));
+        to_string(conn->id_));
 #endif
       // LCOV_EXCL_STOP
       return;
@@ -107,7 +108,7 @@ namespace throttr
         "ttl_type={} ttl={}",
         std::chrono::system_clock::now(),
         _key.key_,
-        id_to_hex(conn->id_),
+        to_string(conn->id_),
         *_quota,
         to_string(_it->entry_.ttl_type_),
         _ttl);
@@ -119,7 +120,7 @@ namespace throttr
         "ttl_type={} ttl={}",
         std::chrono::system_clock::now(),
         _key.key_,
-        id_to_hex(conn->id_),
+        to_string(conn->id_),
         span_to_hex(std::span(_it->entry_.value_.data(), _it->entry_.value_.size())),
         to_string(_it->entry_.ttl_type_),
         _ttl);

@@ -43,7 +43,7 @@ namespace throttr
     /**
      * ID
      */
-    std::array<std::byte, 16> id_;
+    boost::uuids::uuid id_;
 
     /**
      * Connected at

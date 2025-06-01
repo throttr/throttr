@@ -18,6 +18,7 @@
 #include <throttr/services/update_service.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <throttr/connection.hpp>
 #include <throttr/state.hpp>
 #include <throttr/utils.hpp>
@@ -84,7 +85,7 @@ namespace throttr
       _key.key_,
       to_string(request.header_->attribute_),
       to_string(request.header_->change_),
-      id_to_hex(conn->id_),
+      to_string(conn->id_),
       request.header_->value_,
       _modified);
 #endif

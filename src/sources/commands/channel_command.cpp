@@ -16,6 +16,7 @@
 #include <throttr/commands/channel_command.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <throttr/connection.hpp>
 #include <throttr/services/response_builder_service.hpp>
 #include <throttr/state.hpp>
@@ -54,7 +55,7 @@ namespace throttr
         "RESPONSE ok=false",
         std::chrono::system_clock::now(),
         _request.channel_,
-        id_to_hex(conn->id_));
+        to_string(conn->id_));
 #endif
       // LCOV_EXCL_STOP
       batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
@@ -102,7 +103,7 @@ namespace throttr
       "RESPONSE ok=true",
       std::chrono::system_clock::now(),
       _request.channel_,
-      id_to_hex(conn->id_));
+      to_string(conn->id_));
 #endif
     // LCOV_EXCL_STOP
   }

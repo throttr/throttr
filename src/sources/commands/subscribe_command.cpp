@@ -16,6 +16,7 @@
 #include <throttr/commands/subscribe_command.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <throttr/connection.hpp>
 #include <throttr/services/subscriptions_service.hpp>
 #include <throttr/state.hpp>
@@ -38,8 +39,7 @@ namespace throttr
     const auto _request = request_subscribe::from_buffer(view);
     const std::string _channel{_request.channel_};
 
-    const auto _connection_id = conn->id_;
-    auto [_it, _inserted] = state->subscriptions_->subscriptions_.insert(subscription{_connection_id, _channel});
+    auto [_it, _inserted] = state->subscriptions_->subscriptions_.insert(subscription{conn->id_, _channel});
 
     batch.emplace_back(boost::asio::buffer(_inserted ? &state::success_response_ : &state::failed_response_, 1));
 
@@ -50,7 +50,7 @@ namespace throttr
       "RESPONSE ok={}",
       std::chrono::system_clock::now(),
       string_to_hex(std::string{_request.channel_}),
-      id_to_hex(conn->id_),
+      to_string(conn->id_),
       _inserted);
 #endif
     // LCOV_EXCL_STOP

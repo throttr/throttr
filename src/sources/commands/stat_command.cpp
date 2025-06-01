@@ -16,6 +16,7 @@
 #include <throttr/commands/stat_command.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <throttr/connection.hpp>
 #include <throttr/state.hpp>
 #include <throttr/utils.hpp>
@@ -49,7 +50,7 @@ namespace throttr
         "{:%Y-%m-%d %H:%M:%S} REQUEST STAT key={} from={} RESPONSE ok=false",
         std::chrono::system_clock::now(),
         _key.key_,
-        id_to_hex(conn->id_));
+        to_string(conn->id_));
 #endif
       return;
       // LCOV_EXCL_STOP
@@ -78,7 +79,7 @@ namespace throttr
       "write_total={}",
       std::chrono::system_clock::now(),
       _key.key_,
-      id_to_hex(conn->id_),
+      to_string(conn->id_),
       metrics.reads_per_minute_.load(),
       metrics.writes_per_minute_.load(),
       metrics.reads_accumulator_.load(),

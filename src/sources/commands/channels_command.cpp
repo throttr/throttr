@@ -16,6 +16,7 @@
 #include <throttr/commands/channels_command.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <throttr/connection.hpp>
 #include <throttr/services/response_builder_service.hpp>
 #include <throttr/state.hpp>
@@ -46,7 +47,7 @@ namespace throttr
       "{:%Y-%m-%d %H:%M:%S} REQUEST CHANNELS from={} "
       "RESPONSE ok=true",
       std::chrono::system_clock::now(),
-      id_to_hex(conn->id_));
+      to_string(conn->id_));
 #endif
     // LCOV_EXCL_STOP
   }

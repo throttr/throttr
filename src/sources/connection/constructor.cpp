@@ -20,13 +20,8 @@
 namespace throttr
 {
   connection::connection(boost::asio::ip::tcp::socket socket, const std::shared_ptr<state> &state) :
-      socket_(std::move(socket)), state_(state)
+      id_(state->id_generator_()), socket_(std::move(socket)), state_(state)
   {
-    const auto _uuid = state->id_generator_();
-    id_.fill(std::byte{0x00});
-    for (std::size_t _i = 0; _i < id_.size(); ++_i)
-      id_[_i] = static_cast<std::byte>(_uuid.data[_i]);
-
     // LCOV_EXCL_START
     if (socket_.is_open())
     {

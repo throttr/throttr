@@ -16,6 +16,7 @@
 #include <throttr/commands/purge_command.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <throttr/connection.hpp>
 #include <throttr/state.hpp>
 #include <throttr/utils.hpp>
@@ -59,7 +60,7 @@ namespace throttr
       "{:%Y-%m-%d %H:%M:%S} REQUEST PURGE key={} from={} RESPONSE ok={}",
       std::chrono::system_clock::now(),
       _key.key_,
-      id_to_hex(conn->id_),
+      to_string(conn->id_),
       _erased);
 #endif
     // LCOV_EXCL_STOP

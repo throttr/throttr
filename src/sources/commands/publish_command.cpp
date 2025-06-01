@@ -16,6 +16,7 @@
 #include <throttr/commands/publish_command.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <throttr/connection.hpp>
 #include <throttr/services/response_builder_service.hpp>
 #include <throttr/state.hpp>
@@ -102,7 +103,7 @@ namespace throttr
       "RESPONSE ok=true",
       std::chrono::system_clock::now(),
       _channel,
-      id_to_hex(conn->id_),
+      to_string(conn->id_),
       span_to_hex(_payload));
 #endif
     // LCOV_EXCL_STOP

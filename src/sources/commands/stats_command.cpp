@@ -16,6 +16,7 @@
 #include <throttr/commands/stats_command.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <throttr/state.hpp>
 #include <throttr/utils.hpp>
 
@@ -54,7 +55,7 @@ namespace throttr
       "{:%Y-%m-%d %H:%M:%S} REQUEST STATS id={} "
       "RESPONSE ok=true",
       std::chrono::system_clock::now(),
-      id_to_hex(conn->id_));
+      to_string(conn->id_));
 #endif
     // LCOV_EXCL_STOP
   }

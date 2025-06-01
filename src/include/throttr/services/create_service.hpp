@@ -20,6 +20,7 @@
 #include <string_view>
 #include <vector>
 
+#include <boost/uuid/uuid.hpp>
 #include <throttr/protocol_wrapper.hpp>
 
 namespace throttr
@@ -55,7 +56,7 @@ namespace throttr
       ttl_types ttl_type,
       uint64_t ttl,
       entry_types type,
-      const std::array<std::byte, 16> &id,
+      const boost::uuids::uuid &id,
       bool as_insert = false); // NOSONAR
   };
 } // namespace throttr

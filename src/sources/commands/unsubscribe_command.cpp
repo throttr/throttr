@@ -16,6 +16,7 @@
 #include <throttr/commands/unsubscribe_command.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <throttr/connection.hpp>
 #include <throttr/services/subscriptions_service.hpp>
 #include <throttr/state.hpp>
@@ -52,7 +53,7 @@ namespace throttr
         "RESPONSE ok=false",
         std::chrono::system_clock::now(),
         span_to_hex(_channel_bytes),
-        id_to_hex(conn->id_));
+        to_string(conn->id_));
 #endif
       // LCOV_EXCL_STOP
       return;
@@ -87,7 +88,7 @@ namespace throttr
       "RESPONSE ok=true",
       std::chrono::system_clock::now(),
       span_to_hex(_channel_bytes),
-      id_to_hex(conn->id_));
+      to_string(conn->id_));
 #endif
     // LCOV_EXCL_STOP
   }

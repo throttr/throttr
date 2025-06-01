@@ -16,6 +16,7 @@
 #include <throttr/services/create_service.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <throttr/state.hpp>
 #include <throttr/time.hpp>
 #include <throttr/utils.hpp>
@@ -29,7 +30,7 @@ namespace throttr
     const ttl_types ttl_type,
     uint64_t ttl,
     const entry_types type,
-    const std::array<std::byte, 16> &id,
+    const boost::uuids::uuid &id,
     const bool as_insert) // NOSONAR
   {
     boost::ignore_unused(as_insert);
@@ -85,7 +86,7 @@ namespace throttr
       std::chrono::system_clock::now(),
       as_insert ? "INSERT" : "SET",
       key,
-      id_to_hex(id),
+      to_string(id),
       span_to_hex(std::span(_entry_ptr.entry_.value_.data(), _entry_ptr.entry_.value_.size())),
       to_string(ttl_type),
       ttl,
