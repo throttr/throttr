@@ -52,6 +52,7 @@ jobs:
           outputs: type=image,push-by-digest=true,name-canonical=true
           secrets: |
             SENTRY_DSN=${{ secrets.SENTRY_DSN }}
+            SENTRY_TOKEN=${{ secrets.SENTRY_TOKEN }}
 
       - name: Export digest
         run: |
