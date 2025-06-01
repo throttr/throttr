@@ -16,9 +16,9 @@
 #include <fstream>
 #include <throttr/app.hpp>
 
+#include <sentry.h>
 #include <thread>
 #include <vector>
-#include <sentry.h>
 
 namespace throttr
 {
@@ -30,10 +30,14 @@ namespace throttr
   {
     std::ifstream f("/etc/sentry_dsn");
     std::string dsn;
-    if (f.is_open()) {
+    if (f.is_open())
+    {
       std::getline(f, dsn);
-      if (dsn.empty()) dsn = "https://fallbackdsn@o000.ingest.sentry.io/default";
-    } else {
+      if (dsn.empty())
+        dsn = "https://fallbackdsn@o000.ingest.sentry.io/default";
+    }
+    else
+    {
       dsn = "https://fallbackdsn@o000.ingest.sentry.io/default";
     }
 

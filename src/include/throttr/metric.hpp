@@ -97,6 +97,30 @@ namespace throttr
      * Destructor default
      */
     ~metric() noexcept = default;
+
+    /**
+     * Copy constructor
+     */
+    metric(const metric &other) noexcept
+    {
+      count_.store(other.count_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+      accumulator_.store(other.accumulator_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+      per_minute_.store(other.per_minute_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+    }
+
+    /**
+     * Copy assignment
+     */
+    metric &operator=(const metric &other) noexcept
+    {
+      if (this != &other)
+      {
+        count_.store(other.count_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+        accumulator_.store(other.accumulator_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+        per_minute_.store(other.per_minute_.load(std::memory_order_relaxed), std::memory_order_relaxed);
+      }
+      return *this;
+    }
   };
 #endif
 } // namespace throttr

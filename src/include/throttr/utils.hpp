@@ -63,12 +63,12 @@ namespace throttr
   }
 
   /**
- * Span to hex
- *
- * @param buffer
- * @return std::string
- */
-  static std::string string_to_hex(const std::string & buffer)
+   * Span to hex
+   *
+   * @param buffer
+   * @return std::string
+   */
+  static std::string string_to_hex(const std::string &buffer)
   {
     std::string out;
     for (const auto c : buffer)

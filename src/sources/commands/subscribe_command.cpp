@@ -36,7 +36,7 @@ namespace throttr
     std::scoped_lock _lock(state->subscriptions_->mutex_);
 
     const auto _request = request_subscribe::from_buffer(view);
-    const std::string _channel{ _request.channel_ };
+    const std::string _channel{_request.channel_};
 
     const auto _connection_id = conn->id_;
     auto [_it, _inserted] = state->subscriptions_->subscriptions_.insert(subscription{_connection_id, _channel});

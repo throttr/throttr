@@ -46,32 +46,27 @@ namespace throttr
      *
      * @param other
      */
-    subscription_metrics(subscription_metrics &&other) noexcept :
-        read_bytes_(std::move(other.read_bytes_)), write_bytes_(std::move(other.write_bytes_))
-    {
-    }
+    subscription_metrics(subscription_metrics &&other) noexcept = default;
 
-    subscription_metrics &operator=(subscription_metrics &&other) noexcept
-    {
-      if (this != &other)
-      {
-        read_bytes_ = std::move(other.read_bytes_);
-        write_bytes_ = std::move(other.write_bytes_);
-      }
-      return *this;
-    }
+    /**
+     * Copy assignment
+     *
+     * @param other
+     * @return
+     */
+    subscription_metrics &operator=(subscription_metrics &&other) noexcept = default;
 
     /**
      * Constructor
      */
-    subscription_metrics(const subscription_metrics &) = delete;
+    subscription_metrics(const subscription_metrics &) noexcept = default;
 
     /**
      * Assignment
      *
      * @return
      */
-    subscription_metrics &operator=(const subscription_metrics &) = delete;
+    subscription_metrics &operator=(const subscription_metrics &) noexcept = default;
     // LCOV_EXCL_STOP
 #endif
     /**
