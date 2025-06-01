@@ -36,12 +36,10 @@ namespace throttr
     std::scoped_lock _lock(state->subscriptions_->mutex_);
 
     const auto _request = request_subscribe::from_buffer(view);
-    const std::string _channel(_request.channel_);
+    const std::string _channel{ _request.channel_ };
 
     const auto _connection_id = conn->id_;
-    auto _subscription_ptr = subscription{_connection_id, _channel};
-
-    auto [_it, _inserted] = state->subscriptions_->subscriptions_.insert(std::move(_subscription_ptr));
+    auto [_it, _inserted] = state->subscriptions_->subscriptions_.insert(subscription{_connection_id, _channel});
 
     batch.emplace_back(boost::asio::buffer(_inserted ? &state::success_response_ : &state::failed_response_, 1));
 

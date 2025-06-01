@@ -388,7 +388,7 @@ namespace throttr
       }
 
       if (!_current_fragment.empty()) // LCOV_EXCL_LINE Note: Partially tested.
-        _fragments.push_back(std::move(_current_fragment));
+        _fragments.push_back(_current_fragment);
     }
 
     push_total_fragments(batch, write_buffer, _fragments.size());
@@ -427,7 +427,9 @@ namespace throttr
 
       for (const auto &_chan : _frag)
       {
-        batch.emplace_back(boost::asio::buffer(_chan.data(), _chan.size()));
+        const auto offset = write_buffer.size();
+        write_buffer.insert(write_buffer.end(), _chan.begin(), _chan.end());
+        batch.emplace_back(boost::asio::buffer(&write_buffer[offset], _chan.size()));
       }
     }
   }
