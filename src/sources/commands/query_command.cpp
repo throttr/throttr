@@ -16,6 +16,8 @@
 #include <throttr/commands/query_command.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <throttr/connection.hpp>
 #include <throttr/state.hpp>
 #include <throttr/time.hpp>
 #include <throttr/utils.hpp>
@@ -36,7 +38,8 @@ namespace throttr
 
     const bool _as_query = type == request_types::query;
 
-    const request_key _key{_request.key_};
+    const request_key _key{
+      std::string_view(reinterpret_cast<const char *>(_request.key_.data()), _request.key_.size())}; // NOSONAR
     const auto _find = state->finder_->find_or_fail_for_batch(state, _key, batch);
 
     if (!_find.has_value()) // LCOV_EXCL_LINE Note: Partially tested.
@@ -44,10 +47,11 @@ namespace throttr
       // LCOV_EXCL_START
 #ifndef NDEBUG
       fmt::println(
-        "{:%Y-%m-%d %H:%M:%S} REQUEST {} key={} RESPONSE ok=false",
+        "{:%Y-%m-%d %H:%M:%S} REQUEST {} key={} id={} RESPONSE ok=false",
         std::chrono::system_clock::now(),
         _as_query ? "QUERY" : "GET",
-        _key.key_);
+        _key.key_,
+        to_string(conn->id_));
 #endif
       // LCOV_EXCL_STOP
       return;
@@ -67,8 +71,9 @@ namespace throttr
       // TTL
       {
         const auto _offset = write_buffer.size();
-        const auto *_ttl_ptr = reinterpret_cast<const std::uint8_t *>(&_ttl); // NOSONAR
-        write_buffer.insert(write_buffer.end(), _ttl_ptr, _ttl_ptr + sizeof(_ttl));
+        std::uint8_t ttl_bytes[sizeof(_ttl)]; // NOSONAR
+        std::memcpy(ttl_bytes, &_ttl, sizeof(_ttl));
+        write_buffer.insert(write_buffer.end(), ttl_bytes, ttl_bytes + sizeof(_ttl));
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_ttl)));
       }
     }
@@ -79,18 +84,21 @@ namespace throttr
       // TTL
       {
         const auto _offset = write_buffer.size();
-        const auto *_ttl_ptr = reinterpret_cast<const std::uint8_t *>(&_ttl); // NOSONAR
-        write_buffer.insert(write_buffer.end(), _ttl_ptr, _ttl_ptr + sizeof(_ttl));
+        std::uint8_t ttl_bytes[sizeof(_ttl)]; // NOSONAR
+        std::memcpy(ttl_bytes, &_ttl, sizeof(_ttl));
+        write_buffer.insert(write_buffer.end(), ttl_bytes, ttl_bytes + sizeof(_ttl));
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_ttl)));
       }
       // Size
       {
         const auto _offset = write_buffer.size();
-        const auto _size = static_cast<value_type>(_it->entry_.value_.size());
-        const auto *_size_ptr = reinterpret_cast<const std::uint8_t *>(&_size); // NOSONAR
-        write_buffer.insert(write_buffer.end(), _size_ptr, _size_ptr + sizeof(_size));
-        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_size)));
+        const auto _size = _it->entry_.value_.size();
+        std::uint8_t size_bytes[sizeof(value_type)]; // NOSONAR
+        std::memcpy(size_bytes, &_size, sizeof(value_type));
+        write_buffer.insert(write_buffer.end(), size_bytes, size_bytes + sizeof(value_type));
+        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(value_type)));
       }
+
       // Value
       batch.emplace_back(boost::asio::buffer(_it->entry_.value_.data(), _it->entry_.value_.size()));
     }
@@ -101,10 +109,11 @@ namespace throttr
     {
       auto *_quota = reinterpret_cast<const value_type *>(_it->entry_.value_.data()); // NOSONAR
       fmt::println(
-        "{:%Y-%m-%d %H:%M:%S} REQUEST QUERY key={} RESPONSE ok=true quota={} "
+        "{:%Y-%m-%d %H:%M:%S} REQUEST QUERY key={} from={} RESPONSE ok=true quota={} "
         "ttl_type={} ttl={}",
         std::chrono::system_clock::now(),
         _key.key_,
+        to_string(conn->id_),
         *_quota,
         to_string(_it->entry_.ttl_type_),
         _ttl);
@@ -112,10 +121,11 @@ namespace throttr
     else
     {
       fmt::println(
-        "{:%Y-%m-%d %H:%M:%S} REQUEST GET key={} RESPONSE ok=true value={} "
+        "{:%Y-%m-%d %H:%M:%S} REQUEST GET key={} from={} RESPONSE ok=true value={} "
         "ttl_type={} ttl={}",
         std::chrono::system_clock::now(),
         _key.key_,
+        to_string(conn->id_),
         span_to_hex(std::span(_it->entry_.value_.data(), _it->entry_.value_.size())),
         to_string(_it->entry_.ttl_type_),
         _ttl);

@@ -16,6 +16,7 @@
 #include <throttr/commands/subscribe_command.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <throttr/connection.hpp>
 #include <throttr/services/subscriptions_service.hpp>
 #include <throttr/state.hpp>
@@ -33,20 +34,28 @@ namespace throttr
     const std::shared_ptr<connection> &conn)
   {
     boost::ignore_unused(type, write_buffer);
+    std::scoped_lock _lock(state->subscriptions_->mutex_);
 
     const auto _request = request_subscribe::from_buffer(view);
-    if (state->subscriptions_->is_subscribed(conn->id_, _request.channel_)) // LCOV_EXCL_LINE Note: Partially tested.
-    {
-      batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
-      return;
-    }
+    const std::string _channel{
+      std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size())}; // NOSONAR
 
-    const std::vector<std::byte> channel_bytes{
-      reinterpret_cast<const std::byte *>(_request.channel_.data()),                             // NOSONAR
-      reinterpret_cast<const std::byte *>(_request.channel_.data() + _request.channel_.size())}; // NOSONAR
+    auto [_it, _inserted] = state->subscriptions_->subscriptions_.insert(subscription{conn->id_, _channel});
 
-    state->subscriptions_->subscriptions_.insert(subscription{conn->id_, channel_bytes});
+    batch.emplace_back(boost::asio::buffer(_inserted ? &state::success_response_ : &state::failed_response_, 1));
 
-    batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
+    // LCOV_EXCL_START
+#ifndef NDEBUG
+    const auto _channel_view =
+      std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size()); // NOSONAR
+    fmt::println(
+      "{:%Y-%m-%d %H:%M:%S} REQUEST SUBSCRIBE channel={} from={} "
+      "RESPONSE ok={}",
+      std::chrono::system_clock::now(),
+      _channel_view,
+      to_string(conn->id_),
+      _inserted);
+#endif
+    // LCOV_EXCL_STOP
   }
 } // namespace throttr

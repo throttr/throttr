@@ -13,21 +13,21 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+#include <mutex>
 #include <throttr/services/subscriptions_service.hpp>
 
 namespace throttr
 {
-  bool subscriptions_service::is_subscribed(const boost::uuids::uuid id, const std::string_view channel) const
+  bool subscriptions_service::is_subscribed(const boost::uuids::uuid &id, const std::string_view channel) const
   {
     const auto &_index = subscriptions_.get<by_connection_id>();
-    const auto [_current, _next] = _index.equal_range(id);
-
-    for (auto _it = _current; _it != _next; ++_it)
+    auto it = _index.find(id);
+    while (it != _index.end()) // LCOV_EXCL_LINE Note: Partially tested.
     {
-      if (const auto _view = _it->channel(); _view == channel) // LCOV_EXCL_LINE Note: Partially tested.
+      if (it->channel_ == channel) // LCOV_EXCL_LINE Note: Partially tested.
         return true;
+      ++it; // LCOV_EXCL_LINE Note: Must be tested.
     }
-
     return false;
   }
 } // namespace throttr

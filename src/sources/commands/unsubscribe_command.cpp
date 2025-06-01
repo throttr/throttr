@@ -16,10 +16,12 @@
 #include <throttr/commands/unsubscribe_command.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <throttr/connection.hpp>
 #include <throttr/services/subscriptions_service.hpp>
 #include <throttr/state.hpp>
 #include <throttr/time.hpp>
+#include <throttr/utils.hpp>
 
 namespace throttr
 {
@@ -32,26 +34,65 @@ namespace throttr
     const std::shared_ptr<connection> &conn)
   {
     boost::ignore_unused(type, write_buffer);
+    std::scoped_lock _lock(state->subscriptions_->mutex_);
 
     const auto _request = request_unsubscribe::from_buffer(view);
 
-    if (!state->subscriptions_->is_subscribed(conn->id_, _request.channel_)) // LCOV_EXCL_LINE Note: Partially tested.
+    const auto _channel =
+      std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size()); // NOSONAR
+
+    if (!state->subscriptions_->is_subscribed(conn->id_, _channel)) // LCOV_EXCL_LINE Note: Partially tested.
     {
       batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
+
+      // LCOV_EXCL_START
+#ifndef NDEBUG
+      const std::vector _channel_bytes(
+        _request.channel_.data(),                           // NOSONAR
+        _request.channel_.data() + _request.channel_.size() // NOSONAR
+      );
+      fmt::println(
+        "{:%Y-%m-%d %H:%M:%S} REQUEST UNSUBSCRIBE channel={} from={} "
+        "RESPONSE ok=false",
+        std::chrono::system_clock::now(),
+        span_to_hex(_channel_bytes),
+        to_string(conn->id_));
+#endif
+      // LCOV_EXCL_STOP
       return;
     }
 
     auto &index = state->subscriptions_->subscriptions_.get<by_connection_id>();
     auto [begin, end] = index.equal_range(conn->id_);
 
-    for (auto it = begin; it != end;) // LCOV_EXCL_LINE Note: Partially tested.
+    std::vector<decltype(index.begin())> _to_erase;
+
+    for (auto it = begin; it != end; ++it) // LCOV_EXCL_LINE Note: Partially tested.
     {
-      if (it->channel() == _request.channel_) // LCOV_EXCL_LINE Note: Partially tested.
-        it = index.erase(it);
-      else
-        ++it; // LCOV_EXCL_LINE Note: Ignored.
+      if (it->channel_ == _channel) // LCOV_EXCL_LINE Note: Partially tested.
+        _to_erase.push_back(it);
+    }
+
+    for (const auto it : _to_erase)
+    {
+      index.erase(it);
     }
 
     batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
+
+    // LCOV_EXCL_START
+#ifndef NDEBUG
+    const std::vector _channel_bytes(
+      reinterpret_cast<const std::byte *>(_request.channel_.data()),                           // NOSONAR
+      reinterpret_cast<const std::byte *>(_request.channel_.data() + _request.channel_.size()) // NOSONAR
+    );
+    fmt::println(
+      "{:%Y-%m-%d %H:%M:%S} REQUEST UNSUBSCRIBE channel={} from={} "
+      "RESPONSE ok=true",
+      std::chrono::system_clock::now(),
+      span_to_hex(_channel_bytes),
+      to_string(conn->id_));
+#endif
+    // LCOV_EXCL_STOP
   }
 } // namespace throttr

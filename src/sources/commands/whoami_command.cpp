@@ -16,9 +16,11 @@
 #include <throttr/commands/whoami_command.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <throttr/connection.hpp>
 #include <throttr/services/response_builder_service.hpp>
 #include <throttr/state.hpp>
+#include <throttr/utils.hpp>
 
 namespace throttr
 {
@@ -34,9 +36,21 @@ namespace throttr
 
     batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
 
-    const auto _offset = write_buffer.size();
-    for (const auto _byte : conn->id_)
-      write_buffer.push_back(_byte);
-    batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], 16));
+    {
+      const auto _offset = write_buffer.size();
+      const auto *id_data = conn->id_.data();
+      write_buffer.insert(write_buffer.end(), id_data, id_data + conn->id_.size());
+      batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], conn->id_.size()));
+    }
+
+    // LCOV_EXCL_START
+#ifndef NDEBUG
+    fmt::println(
+      "{:%Y-%m-%d %H:%M:%S} REQUEST WHOAMI from={} "
+      "RESPONSE ok=true",
+      std::chrono::system_clock::now(),
+      to_string(conn->id_));
+#endif
+    // LCOV_EXCL_STOP
   }
 } // namespace throttr

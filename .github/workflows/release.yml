@@ -10,6 +10,7 @@ permissions:
 
 jobs:
   build:
+    name: Build and create release
     runs-on: ubuntu-latest
 
     strategy:
@@ -18,15 +19,16 @@ jobs:
         size: [UINT8, UINT16, UINT32, UINT64]
 
     container:
-      image:  ghcr.io/throttr/builder-alpine:1.87.0-debug
+      image: ghcr.io/throttr/builder-alpine:1.87.0-debug
 
     steps:
       - uses: actions/checkout@v4
+
       - name: Build and test
         run: |
           mkdir -p build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.type }} -DBUILD_TESTS=OFF -DRUNTIME_VALUE_SIZE=${{ matrix.size }}
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.type }} -DBUILD_TESTS=OFF -DRUNTIME_VALUE_SIZE=${{ matrix.size }} -DENABLE_STATIC_LINKING=ON
           make -j4
           cd ..
           mkdir -p dist

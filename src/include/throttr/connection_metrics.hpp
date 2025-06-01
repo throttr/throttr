@@ -19,6 +19,7 @@
 #define THROTTR_CONNECTION_METRICS_HPP
 
 #include <atomic>
+#include <throttr/metric.hpp>
 
 namespace throttr
 {
@@ -31,22 +32,22 @@ namespace throttr
     /**
      * Read bytes
      */
-    std::atomic<uint64_t> read_bytes_ = 0;
+    metric read_bytes_;
 
     /**
      * Write bytes
      */
-    std::atomic<uint64_t> write_bytes_ = 0;
+    metric write_bytes_;
 
     /**
      * Published bytes
      */
-    std::atomic<uint64_t> published_bytes_ = 0;
+    metric published_bytes_;
 
     /**
      * Received bytes
      */
-    std::atomic<uint64_t> received_bytes_ = 0;
+    metric received_bytes_;
   };
 
   /**
@@ -57,108 +58,12 @@ namespace throttr
     /**
      * Allocated bytes
      */
-    std::atomic<uint64_t> allocated_bytes_ = 0;
+    metric allocated_bytes_;
 
     /**
      * Consumed bytes
      */
-    std::atomic<uint64_t> consumed_bytes_ = 0;
-  };
-
-  /**
-   * Connection service metrics
-   */
-  struct connection_service_metrics
-  {
-    /**
-     * INSERT requests
-     */
-    std::atomic<uint64_t> insert_request_ = 0;
-
-    /**
-     * SET requests
-     */
-    std::atomic<uint64_t> set_request_ = 0;
-
-    /**
-     * QUERY requests
-     */
-    std::atomic<uint64_t> query_request_ = 0;
-
-    /**
-     * GET requests
-     */
-    std::atomic<uint64_t> get_request_ = 0;
-
-    /**
-     * UPDATE requests
-     */
-    std::atomic<uint64_t> update_request_ = 0;
-
-    /**
-     * PURGE requests
-     */
-    std::atomic<uint64_t> purge_request_ = 0;
-
-    /**
-     * LIST requests
-     */
-    std::atomic<uint64_t> list_request_ = 0;
-
-    /**
-     * INFO requests
-     */
-    std::atomic<uint64_t> info_request_ = 0;
-
-    /**
-     * STAT requests
-     */
-    std::atomic<uint64_t> stat_request_ = 0;
-
-    /**
-     * STATS requests
-     */
-    std::atomic<uint64_t> stats_request_ = 0;
-
-    /**
-     * SUBSCRIBE requests
-     */
-    std::atomic<uint64_t> subscribe_request_ = 0;
-
-    /**
-     * UNSUBSCRIBE requests
-     */
-    std::atomic<uint64_t> unsubscribe_request_ = 0;
-
-    /**
-     * CONNECTIONS requests
-     */
-    std::atomic<uint64_t> connections_request_ = 0;
-
-    /**
-     * CONNECTION requests
-     */
-    std::atomic<uint64_t> connection_request_ = 0;
-
-    /**
-     * CHANNELS requests
-     */
-    std::atomic<uint64_t> channels_request_ = 0;
-
-    /**
-     * CHANNEL requests
-     */
-    std::atomic<uint64_t> channel_request_ = 0;
-
-    /**
-     * WHOAMI requests
-     */
-    std::atomic<uint64_t> whoami_request_ = 0;
-
-    /**
-     * PUBLISH requests
-     */
-    std::atomic<uint64_t> publish_requests_ = 0;
+    metric consumed_bytes_;
   };
 
   /**
@@ -177,9 +82,9 @@ namespace throttr
     connection_memory_metrics memory_;
 
     /**
-     * Service metrics
+     * Commands metrics
      */
-    connection_service_metrics service_;
+    std::array<metric, 32> commands_;
   };
 #endif
 } // namespace throttr

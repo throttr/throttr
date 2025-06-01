@@ -54,7 +54,7 @@ namespace throttr
         boost::multi_index::member<subscription, boost::uuids::uuid, &subscription::connection_id_>>,
       boost::multi_index::ordered_non_unique<
         boost::multi_index::tag<by_channel_name>,
-        boost::multi_index::const_mem_fun<subscription, std::string_view, &subscription::channel>>>>;
+        boost::multi_index::member<subscription, std::string, &subscription::channel_>>>>;
 
   /**
    * Subscriptions service
@@ -68,13 +68,18 @@ namespace throttr
     subscription_container subscriptions_;
 
     /**
+     * Mutex
+     */
+    std::mutex mutex_;
+
+    /**
      * Is subscribed
      *
      * @param id
      * @param channel
      * @return
      */
-    bool is_subscribed(boost::uuids::uuid id, std::string_view channel) const;
+    bool is_subscribed(const boost::uuids::uuid &id, std::string_view channel) const;
   };
 } // namespace throttr
 

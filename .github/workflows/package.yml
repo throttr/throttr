@@ -1,45 +1,122 @@
 name: Package
 
-on:
-  push:
-    branches:
-      - master
-    tags:
-      - '*'
+on: [push]
 
 env:
   VERSION: ${{ github.ref_name }}
+  REGISTRY_IMAGE: ghcr.io/throttr/throttr
 
 jobs:
   build:
-    name: Build
+    name: Image
     strategy:
+      fail-fast: false
       matrix:
         type: [debug, release]
         size: [UINT8, UINT16, UINT32, UINT64]
+        platform: [linux/amd64, linux/arm64]
 
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-22.04-arm' || 'ubuntu-latest' }}
+
     steps:
-      -
-        name: Set up QEMU
+      - uses: actions/checkout@v4
+
+      - name: Set platform pair
+        run: |
+          platform=${{ matrix.platform }}
+          echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY_IMAGE }}
+          tags: |
+            type=raw,value=${{ env.VERSION }}-${{ matrix.type }}-${{ matrix.size }}
+
+      - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
-      -
-        name: Set up Docker Buildx
+
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      -
-        name: Login to GitHub Container Registry
+
+      - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ secrets.GHCR_USERNAME }}
           password: ${{ secrets.GHCR_PAT }}
-      -
-        name: Build and push
+
+      - name: Build
+        id: build
         uses: docker/build-push-action@v6
         with:
-          platforms: linux/amd64,linux/arm64
-          push: ${{ github.ref_type == 'tag' }}
-          tags: ghcr.io/throttr/throttr:${{ env.VERSION }}-${{ matrix.type }}-${{ matrix.size }}
+          context: .
+          platforms: ${{ matrix.platform }}
+          tags: ${{ env.REGISTRY_IMAGE }}:${{ env.VERSION }}-${{ matrix.type }}-${{ matrix.size }}
           build-args: |
             TYPE=${{ matrix.type }}
             SIZE=${{ matrix.size }}
+          outputs: type=image,push-by-digest=true,name-canonical=true,push=false
+
+      - name: Build and push image
+        if: github.ref_type == 'tag'
+        id: build_push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: ${{ matrix.platform }}
+          tags: ${{ env.REGISTRY_IMAGE }}:${{ env.VERSION }}-${{ matrix.type }}-${{ matrix.size }}
+          build-args: |
+            TYPE=${{ matrix.type }}
+            SIZE=${{ matrix.size }}
+          outputs: type=image,push-by-digest=true,name-canonical=true,push=true
+
+      - name: Export digest
+        if: github.ref_type == 'tag'
+        run: |
+          mkdir -p ${{ runner.temp }}/digests
+          digest="${{ steps.build_push.outputs.digest }}"
+          touch "${{ runner.temp }}/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        if: github.ref_type == 'tag'
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ env.VERSION }}-${{ matrix.type }}-${{ matrix.size }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    name: Merge manifests
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref_type == 'tag'
+
+    steps:
+      - name: Download all digests
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/digests
+          pattern: digests-*
+          merge-multiple: true
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ secrets.GHCR_USERNAME }}
+          password: ${{ secrets.GHCR_PAT }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Create and push manifest
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *)
+
+      - name: Inspect
+        run: docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:${{ steps.meta.outputs.version }}

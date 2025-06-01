@@ -45,6 +45,9 @@ TEST_F(UnsubscribeTestFixture, OnSuccess)
   std::vector<std::byte> _unsubscribe_response(1);
   boost::asio::read(_socket, boost::asio::buffer(_unsubscribe_response.data(), _unsubscribe_response.size()));
   ASSERT_EQ(_unsubscribe_response[0], std::byte{0x01});
+
+  boost::system::error_code _ec;
+  _socket.close(_ec);
 }
 
 TEST_F(UnsubscribeTestFixture, OnFailed)
@@ -63,4 +66,7 @@ TEST_F(UnsubscribeTestFixture, OnFailed)
   std::vector<std::byte> _unsubscribe_response(1);
   boost::asio::read(_socket, boost::asio::buffer(_unsubscribe_response.data(), _unsubscribe_response.size()));
   ASSERT_EQ(_unsubscribe_response[0], std::byte{0x00});
+
+  boost::system::error_code _ec;
+  _socket.close(_ec);
 }

@@ -18,6 +18,8 @@
 #include <throttr/services/update_service.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <throttr/connection.hpp>
 #include <throttr/state.hpp>
 #include <throttr/utils.hpp>
 
@@ -34,8 +36,9 @@ namespace throttr
 
     boost::ignore_unused(type, write_buffer, conn);
 
-    const auto request = request_update::from_buffer(view);
-    const request_key _key{request.key_};
+    const auto _request = request_update::from_buffer(view);
+    const request_key _key{
+      std::string_view(reinterpret_cast<const char *>(_request.key_.data()), _request.key_.size())}; // NOSONAR
     const auto _now = std::chrono::steady_clock::now();
     const auto _it = state->finder_->find_or_fail(state, _key);
 
@@ -53,16 +56,16 @@ namespace throttr
       _it.value(),
       [&](entry_wrapper &object)
       {
-        switch (request.header_->attribute_)
+        switch (_request.attribute_)
         {
           case quota:
             if (object.entry_.type_ == entry_types::counter) // LCOV_EXCL_LINE Note: Partially tested.
             {
-              _modified = update_service::apply_quota_change(state, object.entry_, request);
+              _modified = update_service::apply_quota_change(state, object.entry_, _request);
             }
             break;
           case ttl:
-            _modified = update_service::apply_ttl_change(state, object.entry_, request, _now, object.key_);
+            _modified = update_service::apply_ttl_change(state, object.entry_, _request, _now, object.key_);
             break;
         }
       });
@@ -77,13 +80,14 @@ namespace throttr
     // LCOV_EXCL_START
 #ifndef NDEBUG
     fmt::println(
-      "{:%Y-%m-%d %H:%M:%S} REQUEST UPDATE key={} attribute={} change={} "
+      "{:%Y-%m-%d %H:%M:%S} REQUEST UPDATE key={} attribute={} change={} from={} "
       "value={} RESPONSE ok={}",
       std::chrono::system_clock::now(),
       _key.key_,
-      to_string(request.header_->attribute_),
-      to_string(request.header_->change_),
-      request.header_->value_,
+      to_string(_request.attribute_),
+      to_string(_request.change_),
+      to_string(conn->id_),
+      _request.value_,
       _modified);
 #endif
     // LCOV_EXCL_STOP

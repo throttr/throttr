@@ -40,6 +40,10 @@ namespace throttr
   {
     if (!error) // LCOV_EXCL_LINE note: Partially tested.
     {
+#ifdef ENABLED_FEATURE_METRICS
+      metrics_->network_.read_bytes_.mark(length);
+#endif
+
       buffer_end_ += length;
       try_process_next();
       // LCOV_EXCL_START

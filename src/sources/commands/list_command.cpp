@@ -16,8 +16,11 @@
 #include <throttr/commands/list_command.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <throttr/connection.hpp>
 #include <throttr/services/response_builder_service.hpp>
 #include <throttr/state.hpp>
+#include <throttr/utils.hpp>
 
 namespace throttr
 {
@@ -41,5 +44,15 @@ namespace throttr
        _write_buffer_ref = // LCOV_EXCL_LINE Note: For some reason this line isn't tested ...
        std::ref(write_buffer)](std::vector<boost::asio::const_buffer> *b, const entry_wrapper *e, const bool measure)
       { return _state->response_builder_->write_list_entry_to_buffer(_state, b, e, _write_buffer_ref, measure); });
+
+    // LCOV_EXCL_START
+#ifndef NDEBUG
+    fmt::println(
+      "{:%Y-%m-%d %H:%M:%S} REQUEST LIST from={} "
+      "RESPONSE ok=true",
+      std::chrono::system_clock::now(),
+      to_string(conn->id_));
+#endif
+    // LCOV_EXCL_STOP
   }
 } // namespace throttr

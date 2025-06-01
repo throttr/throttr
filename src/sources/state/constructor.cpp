@@ -24,5 +24,7 @@ namespace throttr
 #endif
       strand_(ioc.get_executor())
   {
+    started_at_ =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
   }
 } // namespace throttr

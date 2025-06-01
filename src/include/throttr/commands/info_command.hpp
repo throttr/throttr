@@ -13,52 +13,53 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#ifndef THROTTR_SERVICES_CREATE_SERVICE_HPP
-#define THROTTR_SERVICES_CREATE_SERVICE_HPP
+#ifndef THROTTR_COMMANDS_INFO_COMMAND_HPP
+#define THROTTR_COMMANDS_INFO_COMMAND_HPP
 
+#include <boost/asio/buffer.hpp>
+#include <boost/uuid/uuid.hpp>
 #include <memory>
-#include <string_view>
+#include <span>
 #include <vector>
 
-#include <boost/uuid/uuid.hpp>
-#include <throttr/protocol_wrapper.hpp>
+#include <throttr/protocol/request_types.hpp>
 
 namespace throttr
 {
   /**
    * Forward state
    */
+  class connection;
+
+  /**
+   * Forward state
+   */
   class state;
 
   /**
-   * Create service
+   * Info command
    */
-  class create_service
+  class info_command
   {
   public:
     /**
-     * Use
+     * Call
      *
      * @param state
-     * @param key
-     * @param value
-     * @param ttl_type
-     * @param ttl
      * @param type
-     * @param id
-     * @param as_insert
-     * @return
+     * @param view
+     * @param batch
+     * @param write_buffer
+     * @param conn
      */
-    static bool use( // NOSONAR
+    static void call(
       const std::shared_ptr<state> &state,
-      std::span<const std::byte> key,
-      std::span<const std::byte> value,
-      ttl_types ttl_type,
-      std::span<const std::byte> ttl,
-      entry_types type,
-      const boost::uuids::uuid &id,
-      bool as_insert = false); // NOSONAR
+      request_types type,
+      std::span<const std::byte> view,
+      std::vector<boost::asio::const_buffer> &batch,
+      std::vector<std::uint8_t> &write_buffer,
+      const std::shared_ptr<connection> &conn);
   };
 } // namespace throttr
 
-#endif // THROTTR_SERVICES_CREATE_SERVICE_HPP
+#endif // THROTTR_COMMANDS_INFO_COMMAND_HPP

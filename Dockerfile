@@ -14,9 +14,12 @@ COPY main.cpp .
 RUN mkdir -p build && \
     cd build && \
     if [ "$TYPE" = "debug" ]; then BUILD_TYPE="Debug"; else BUILD_TYPE="Release"; fi && \
-    cmake .. -DCMAKE_BUILD_TYPE="$BUILD_TYPE" -DBUILD_TESTS=ON -DRUNTIME_VALUE_SIZE="$SIZE" && \
-    make -j16 && \
-    strip --strip-all throttr  && \
+    cmake .. \
+      -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
+      -DBUILD_TESTS=ON \
+      -DRUNTIME_VALUE_SIZE="$SIZE" \
+      -DENABLE_STATIC_LINKING=ON && \
+    make -j4 && \
     mv throttr /usr/bin/throttr && \
     ctest --output-on-failure -V && \
     adduser --system --no-create-home --shell /bin/false throttr

@@ -51,6 +51,11 @@ namespace throttr
   {
   public:
     /**
+     * Started at
+     */
+    std::uint64_t started_at_ = 0;
+
+    /**
      * Acceptor ready
      */
     std::atomic_bool acceptor_ready_;
@@ -78,7 +83,7 @@ namespace throttr
     /**
      * Connections container
      */
-    std::unordered_map<boost::uuids::uuid, connection *, boost::hash<boost::uuids::uuid>> connections_;
+    std::unordered_map<boost::uuids::uuid, connection *, std::hash<boost::uuids::uuid>> connections_;
 
     /**
      * Connections mutex

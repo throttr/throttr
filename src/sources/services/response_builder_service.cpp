@@ -28,8 +28,9 @@ namespace throttr
     const uint64_t total)
   {
     const auto _offset = write_buffer.size();
-    const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&total); // NOSONAR
-    write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(total));
+    std::uint8_t total_bytes[sizeof(total)]; // NOSONAR
+    std::memcpy(total_bytes, &total, sizeof(total));
+    write_buffer.insert(write_buffer.end(), total_bytes, total_bytes + sizeof(total));
     batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(total)));
   }
 
@@ -51,20 +52,24 @@ namespace throttr
     batch->emplace_back(boost::asio::buffer(&entry->entry_.type_, sizeof(entry->entry_.type_)));
     batch->emplace_back(boost::asio::buffer(&entry->entry_.ttl_type_, sizeof(entry->entry_.ttl_type_)));
 
+    // Handling _expires_at
     {
       const auto _expires_at =
         std::chrono::duration_cast<std::chrono::nanoseconds>(entry->entry_.expires_at_.time_since_epoch()).count();
-      const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&_expires_at); // NOSONAR
+      std::uint8_t expires_at_bytes[sizeof(_expires_at)];               // NOSONAR
+      std::memcpy(expires_at_bytes, &_expires_at, sizeof(_expires_at)); // NOSONAR Copiar _expires_at en bytes
       const auto _off = write_buffer.size();
-      write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(_expires_at));
+      write_buffer.insert(write_buffer.end(), expires_at_bytes, expires_at_bytes + sizeof(_expires_at));
       batch->emplace_back(boost::asio::buffer(&write_buffer[_off], sizeof(_expires_at)));
     }
 
+    // Handling _bytes_used
     {
       const auto _bytes_used = static_cast<value_type>(entry->entry_.value_.size());
-      const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&_bytes_used); // NOSONAR
+      std::uint8_t bytes_used_bytes[sizeof(_bytes_used)];               // NOSONAR
+      std::memcpy(bytes_used_bytes, &_bytes_used, sizeof(_bytes_used)); // Copiar _bytes_used en bytes
       const auto _off = write_buffer.size();
-      write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(_bytes_used));
+      write_buffer.insert(write_buffer.end(), bytes_used_bytes, bytes_used_bytes + sizeof(_bytes_used));
       batch->emplace_back(boost::asio::buffer(&write_buffer[_off], sizeof(_bytes_used)));
     }
 
@@ -93,9 +98,11 @@ namespace throttr
                                                   _metric.reads_accumulator_.load(std::memory_order_relaxed),
                                                   _metric.writes_accumulator_.load(std::memory_order_relaxed)})
     {
-      const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&_v); // NOSONAR
+      std::uint8_t _v_bytes[sizeof(_v)]; // NOSONAR
+      std::memcpy(_v_bytes, &_v, sizeof(_v));
+
       const auto _off = write_buffer.size();
-      write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(_v));
+      write_buffer.insert(write_buffer.end(), _v_bytes, _v_bytes + sizeof(_v));
       batch->emplace_back(boost::asio::buffer(&write_buffer[_off], sizeof(_v)));
     }
 
@@ -123,7 +130,7 @@ namespace throttr
     };
 
     // UUID (16 bytes)
-    _push(conn->id_.data, 16);
+    _push(conn->id_.data(), 16);
 
     // IP version (1 byte)
     const std::uint8_t _ip_version = conn->ip_.contains(':') ? 0x06 : 0x04;
@@ -142,35 +149,45 @@ namespace throttr
 #ifdef ENABLED_FEATURE_METRICS
     const auto &_metrics = *conn->metrics_;
 
-    for (uint64_t val :
+    for (uint64_t _val :
          {conn->connected_at_,
-          _metrics.network_.read_bytes_.load(std::memory_order_relaxed),
-          _metrics.network_.write_bytes_.load(std::memory_order_relaxed),
-          _metrics.network_.published_bytes_.load(std::memory_order_relaxed),
-          _metrics.network_.received_bytes_.load(std::memory_order_relaxed),
-          _metrics.memory_.allocated_bytes_.load(std::memory_order_relaxed),
-          _metrics.memory_.consumed_bytes_.load(std::memory_order_relaxed),
-          _metrics.service_.insert_request_.load(std::memory_order_relaxed),
-          _metrics.service_.set_request_.load(std::memory_order_relaxed),
-          _metrics.service_.query_request_.load(std::memory_order_relaxed),
-          _metrics.service_.get_request_.load(std::memory_order_relaxed),
-          _metrics.service_.update_request_.load(std::memory_order_relaxed),
-          _metrics.service_.purge_request_.load(std::memory_order_relaxed),
-          _metrics.service_.list_request_.load(std::memory_order_relaxed),
-          _metrics.service_.info_request_.load(std::memory_order_relaxed),
-          _metrics.service_.stat_request_.load(std::memory_order_relaxed),
-          _metrics.service_.stats_request_.load(std::memory_order_relaxed),
-          _metrics.service_.publish_requests_.load(std::memory_order_relaxed),
-          _metrics.service_.subscribe_request_.load(std::memory_order_relaxed),
-          _metrics.service_.unsubscribe_request_.load(std::memory_order_relaxed),
-          _metrics.service_.connections_request_.load(std::memory_order_relaxed),
-          _metrics.service_.connection_request_.load(std::memory_order_relaxed),
-          _metrics.service_.channels_request_.load(std::memory_order_relaxed),
-          _metrics.service_.channel_request_.load(std::memory_order_relaxed),
-          _metrics.service_.whoami_request_.load(std::memory_order_relaxed)})
+          _metrics.network_.read_bytes_.accumulator_.load(std::memory_order_relaxed),
+          _metrics.network_.write_bytes_.accumulator_.load(std::memory_order_relaxed),
+          _metrics.network_.published_bytes_.accumulator_.load(std::memory_order_relaxed),
+          _metrics.network_.received_bytes_.accumulator_.load(std::memory_order_relaxed),
+          _metrics.memory_.allocated_bytes_.accumulator_.load(std::memory_order_relaxed),
+          _metrics.memory_.consumed_bytes_.accumulator_.load(std::memory_order_relaxed)})
     {
-      _push(&val, sizeof(val));
+      _push(&_val, sizeof(_val));
     }
+
+    constexpr std::array monitored_request_types =
+      {request_types::insert,
+       request_types::set,
+       request_types::query,
+       request_types::get,
+       request_types::update,
+       request_types::purge,
+       request_types::list,
+       request_types::info,
+       request_types::stat,
+       request_types::stats,
+       request_types::publish,
+       request_types::subscribe,
+       request_types::unsubscribe,
+       request_types::connections,
+       request_types::connection,
+       request_types::channels,
+       request_types::channel,
+       request_types::whoami};
+
+    for (request_types type : monitored_request_types)
+    {
+      const auto &metric = conn->metrics_->commands_[static_cast<std::size_t>(type)];
+      const uint64_t _value = metric.accumulator_.load(std::memory_order_relaxed);
+      _push(&_value, sizeof(_value));
+    }
+
 #else
     // Rellenar con ceros si las métricas no están habilitadas
     std::array<std::uint8_t, 227 - 16 - 1 - 16 - 2> zeros = {};
@@ -226,14 +243,20 @@ namespace throttr
       const uint64_t _fragment_index = _index;
       ++_index;
 
+      // Convert _fragment_index and _connection_count to bytes
       for (const uint64_t _connection_count = _frag.size(); uint64_t val : {_fragment_index, _connection_count})
       {
         const auto _offset = write_buffer.size();
-        const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&val); // NOSONAR
-        write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(val));
+
+        // Convert value to bytes using std::array
+        std::array<std::uint8_t, sizeof(val)> _value_bytes;
+        std::memcpy(_value_bytes.data(), &val, sizeof(val));
+
+        write_buffer.insert(write_buffer.end(), _value_bytes.begin(), _value_bytes.end());
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(val)));
       }
 
+      // Serialize connections in the fragment
       for (const auto *_conn : _frag)
       {
         write_connections_entry_to_buffer(state, &batch, _conn, write_buffer, false);
@@ -286,33 +309,42 @@ namespace throttr
       _fragments.push_back(std::move(_fragment_items));
     }
 
+    // Insert fragment count
     {
       const auto _offset = write_buffer.size();
-      const uint64_t _fragment_count = _fragments.size();
-      const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&_fragment_count); // NOSONAR
-      write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(_fragment_count));
+      uint64_t _fragment_count = _fragments.size();
+
+      // Convert to bytes and insert into the buffer
+      std::array<std::uint8_t, sizeof(_fragment_count)> _fragment_count_bytes;
+      std::memcpy(_fragment_count_bytes.data(), &_fragment_count, sizeof(_fragment_count));
+      write_buffer.insert(write_buffer.end(), _fragment_count_bytes.begin(), _fragment_count_bytes.end());
+
       batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_fragment_count)));
     }
 
     std::size_t _i = 0;
     for (const auto &_fragment : _fragments) // LCOV_EXCL_LINE Note: Partially tested.
     {
-      const uint64_t _fragment_index = _i + 1;
-      const uint64_t _key_count = _fragment.size();
+      uint64_t _fragment_index = _i + 1;
+      uint64_t _key_count = _fragment.size();
 
-      for (uint64_t value : {_fragment_index, _key_count}) // LCOV_EXCL_LINE Note: Partially tested.
+      // Convert _fragment_index and _key_count to bytes and insert into the buffer
+      for (uint64_t _value : {_fragment_index, _key_count}) // LCOV_EXCL_LINE Note: Partially tested.
       {
         const auto _offset = write_buffer.size();
-        const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&value); // NOSONAR
-        write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(value));
-        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(value)));
+        std::array<std::uint8_t, sizeof(_value)> _value_bytes;
+        std::memcpy(_value_bytes.data(), &_value, sizeof(_value));
+        write_buffer.insert(write_buffer.end(), _value_bytes.begin(), _value_bytes.end());
+        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_value)));
       }
 
+      // Serialize entries
       for (const auto *_entry : _fragment) // LCOV_EXCL_LINE Note: Partially tested.
       {
         serialize_entry(&batch, _entry, false);
       }
 
+      // Add key data to the batch
       for (const auto &_entry : _fragment) // LCOV_EXCL_LINE Note: Partially tested.
       {
         batch.emplace_back(boost::asio::buffer(_entry->key_.data(), _entry->key_.size()));
@@ -334,29 +366,29 @@ namespace throttr
 
     batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
 
-    std::vector<std::string_view> _channels_list;
-    std::vector<std::vector<std::string_view>> _fragments;
-    std::unordered_map<std::string_view, std::tuple<uint64_t, uint64_t, uint64_t>> _channel_stats;
+    std::vector<std::string> _channels_list;
+    std::vector<std::vector<std::string>> _fragments;
+    std::unordered_map<std::string, std::tuple<uint64_t, uint64_t, uint64_t>> _channel_stats; // NOSONAR
     {
       const auto &_subs = state->subscriptions_->subscriptions_.get<by_channel_name>();
       uint64_t _read_sum = 0;
       uint64_t _write_sum = 0;
       uint64_t _count = 0;
       std::size_t _fragment_size = 0;
-      std::vector<std::string_view> _current_fragment;
+      std::vector<std::string> _current_fragment;
 
-      for (auto it = _subs.begin(); it != _subs.end();) // LCOV_EXCL_LINE Note: Partially tested.
+      for (auto _it = _subs.begin(); _it != _subs.end();) // LCOV_EXCL_LINE Note: Partially tested.
       {
-        std::string_view _current_channel = it->channel();
+        std::string _current_channel{_it->channel_};
         _read_sum = 0;
         _write_sum = 0;
         _count = 0;
 
-        auto range = _subs.equal_range(_current_channel); // NOSONAR
-        for (auto range_it = range.first; range_it != range.second; ++range_it) // LCOV_EXCL_LINE Note: Partially tested.
+        auto _range = _subs.equal_range(_current_channel);                           // NOSONAR
+        for (auto _range_it = _range.first; _range_it != _range.second; ++_range_it) // LCOV_EXCL_LINE Note: Partially tested.
         {
-          _read_sum += range_it->metrics_.read_bytes_.load(std::memory_order_relaxed);
-          _write_sum += range_it->metrics_.write_bytes_.load(std::memory_order_relaxed);
+          _read_sum += _range_it->metrics_->read_bytes_.accumulator_.load(std::memory_order_relaxed);
+          _write_sum += _range_it->metrics_->write_bytes_.accumulator_.load(std::memory_order_relaxed);
           ++_count;
         }
 
@@ -365,7 +397,7 @@ namespace throttr
         // LCOV_EXCL_START
         if (_fragment_size + _channel_size > 2048)
         {
-          _fragments.push_back(std::move(_current_fragment));
+          _fragments.push_back(_current_fragment);
           _current_fragment.clear();
           _fragment_size = 0;
         }
@@ -374,11 +406,11 @@ namespace throttr
         _current_fragment.push_back(_current_channel);
         _fragment_size += _channel_size;
 
-        it = range.second;
+        _it = _range.second;
       }
 
       if (!_current_fragment.empty()) // LCOV_EXCL_LINE Note: Partially tested.
-        _fragments.push_back(std::move(_current_fragment));
+        _fragments.push_back(_current_fragment);
     }
 
     push_total_fragments(batch, write_buffer, _fragments.size());
@@ -389,35 +421,46 @@ namespace throttr
       uint64_t _fragment_index = _index;
       _index++;
 
-      for (const uint64_t _channel_count = _frag.size(); uint64_t val : {_fragment_index, _channel_count})
+      // Convert _fragment_index and _channel_count to bytes using std::array
+      for (const uint64_t _channel_count = _frag.size(); uint64_t _val : {_fragment_index, _channel_count})
       {
         const auto _offset = write_buffer.size();
-        const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&val); // NOSONAR
-        write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(val));
-        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(val)));
+
+        // Convert value to bytes using std::array
+        std::array<std::uint8_t, sizeof(_val)> _value_bytes;
+        std::memcpy(_value_bytes.data(), &_val, sizeof(_val));
+
+        write_buffer.insert(write_buffer.end(), _value_bytes.begin(), _value_bytes.end());
+        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_val)));
       }
 
+      // Serialize channels in the fragment
       for (const auto &_chan : _frag)
       {
-        const auto &[read, write, count] = _channel_stats[_chan];
+        const auto &[_read, _write, _count] = _channel_stats[_chan];
         const auto _size = static_cast<std::uint8_t>(_chan.size());
 
-        const auto _offset1 = write_buffer.size();
+        const auto _offset = write_buffer.size();
         write_buffer.push_back(_size);
-        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset1], 1));
+        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], 1));
 
-        for (uint64_t metric : {read, write, count})
+        for (uint64_t _metric : {_read, _write, _count})
         {
-          const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&metric); // NOSONAR
+          // Convert metric to bytes using std::array
+          std::array<std::uint8_t, sizeof(_metric)> _metric_bytes;
+          std::memcpy(_metric_bytes.data(), &_metric, sizeof(_metric));
+
           const auto _off = write_buffer.size();
-          write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(metric));
-          batch.emplace_back(boost::asio::buffer(&write_buffer[_off], sizeof(metric)));
+          write_buffer.insert(write_buffer.end(), _metric_bytes.begin(), _metric_bytes.end());
+          batch.emplace_back(boost::asio::buffer(&write_buffer[_off], sizeof(_metric)));
         }
       }
 
       for (const auto &_chan : _frag)
       {
-        batch.emplace_back(boost::asio::buffer(_chan.data(), _chan.size()));
+        const auto _offset = write_buffer.size();
+        write_buffer.insert(write_buffer.end(), _chan.begin(), _chan.end());
+        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], _chan.size()));
       }
     }
   }

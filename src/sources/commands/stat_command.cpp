@@ -16,6 +16,8 @@
 #include <throttr/commands/stat_command.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <throttr/connection.hpp>
 #include <throttr/state.hpp>
 #include <throttr/utils.hpp>
 
@@ -38,13 +40,18 @@ namespace throttr
     return;
 #endif
 
-    const request_key _key{_request.key_};
+    const request_key _key{
+      std::string_view(reinterpret_cast<const char *>(_request.key_.data()), _request.key_.size())}; // NOSONAR
     const auto _find = state->finder_->find_or_fail_for_batch(state, _key, batch);
     if (!_find.has_value()) // LCOV_EXCL_LINE
     {
       // LCOV_EXCL_START
 #ifndef NDEBUG
-      fmt::println("{:%Y-%m-%d %H:%M:%S} REQUEST STAT key={} RESPONSE ok=false", std::chrono::system_clock::now(), _key.key_);
+      fmt::println(
+        "{:%Y-%m-%d %H:%M:%S} REQUEST STAT key={} from={} RESPONSE ok=false",
+        std::chrono::system_clock::now(),
+        _key.key_,
+        to_string(conn->id_));
 #endif
       return;
       // LCOV_EXCL_STOP
@@ -55,8 +62,9 @@ namespace throttr
     auto _append_uint64 = [&write_buffer, &batch](const uint64_t value)
     {
       const auto _offset = write_buffer.size();
-      const auto *_ptr = reinterpret_cast<const std::uint8_t *>(&value); // NOSONAR
-      write_buffer.insert(write_buffer.end(), _ptr, _ptr + sizeof(uint64_t));
+      std::uint8_t value_bytes[sizeof(uint64_t)];         // NOSONAR
+      std::memcpy(value_bytes, &value, sizeof(uint64_t)); // Copiar los bytes de 'value' al buffer
+      write_buffer.insert(write_buffer.end(), value_bytes, value_bytes + sizeof(uint64_t));
       batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(uint64_t)));
     };
 
@@ -69,10 +77,11 @@ namespace throttr
     // LCOV_EXCL_START
 #ifndef NDEBUG
     fmt::println(
-      "{:%Y-%m-%d %H:%M:%S} REQUEST STAT key={} RESPONSE ok=true read_per_minute={} write_per_minute={} read_total={} "
+      "{:%Y-%m-%d %H:%M:%S} REQUEST STAT key={} from={} RESPONSE ok=true read_per_minute={} write_per_minute={} read_total={} "
       "write_total={}",
       std::chrono::system_clock::now(),
       _key.key_,
+      to_string(conn->id_),
       metrics.reads_per_minute_.load(),
       metrics.writes_per_minute_.load(),
       metrics.reads_accumulator_.load(),

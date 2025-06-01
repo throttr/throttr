@@ -31,26 +31,34 @@ namespace throttr
    * @param ttl
    * @return std::chrono::steady_clock::time_point
    */
-  inline std::chrono::steady_clock::time_point
-  get_expiration_point(const std::chrono::steady_clock::time_point &now, const ttl_types ttl_type, const value_type ttl)
+  inline std::chrono::steady_clock::time_point get_expiration_point(
+    const std::chrono::steady_clock::time_point &now,
+    const ttl_types ttl_type,
+    const std::span<const std::byte> ttl)
   {
     using namespace std::chrono;
+
+    value_type _value = 0;
+    for (std::size_t i = 0; i < sizeof(value_type); ++i) // LCOV_EXCL_LINE Note: Partially tested.
+    {
+      _value |= static_cast<value_type>(std::to_integer<uint8_t>(ttl[i])) << (8 * i); // NOSONAR
+    }
 
     // LCOV_EXCL_START
     switch (ttl_type)
     {
       case ttl_types::nanoseconds:
-        return now + nanoseconds(ttl);
+        return now + nanoseconds(_value);
       case ttl_types::milliseconds:
-        return now + milliseconds(ttl);
+        return now + milliseconds(_value);
       case ttl_types::microseconds:
-        return now + microseconds(ttl);
+        return now + microseconds(_value);
       case ttl_types::minutes:
-        return now + minutes(ttl);
+        return now + minutes(_value);
       case ttl_types::hours:
-        return now + hours(ttl);
+        return now + hours(_value);
       default:
-        return now + seconds(ttl);
+        return now + seconds(_value);
     }
     // LCOV_EXCL_STOP
   }

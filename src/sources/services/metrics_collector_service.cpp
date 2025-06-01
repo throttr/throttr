@@ -20,6 +20,8 @@
 
 #include <boost/asio/bind_executor.hpp>
 
+#include "throttr/connection.hpp"
+
 namespace throttr
 {
 #ifdef ENABLED_FEATURE_METRICS
@@ -65,9 +67,23 @@ namespace throttr
       writes_accumulator_.fetch_add(writes, std::memory_order_relaxed);
     }
 
+    for (const auto &_conn : state->connections_) // NOSONAR
+    {
+      for (auto &_m : _conn.second->metrics_->commands_)
+        _m.compute();
+    }
+
+    state->metrics_collector_->compute_all();
+
 #ifndef NDEBUG
     fmt::println("{:%Y-%m-%d %H:%M:%S} METRICS SNAPSHOT COMPLETED", std::chrono::system_clock::now());
 #endif // NDEBUG
+  }
+
+  void metrics_collector_service::compute_all()
+  {
+    for (auto &m : commands_)
+      m.compute();
   }
 #endif // ENABLED_FEATURE_METRICS
 } // namespace throttr

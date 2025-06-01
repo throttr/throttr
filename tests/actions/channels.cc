@@ -77,4 +77,8 @@ TEST_F(ChannelsTestFixture, OnSuccess)
   std::string _name(reinterpret_cast<const char *>(_chan_name.data()), _chan_name.size());
 
   ASSERT_EQ(_name, "metrics");
+
+  boost::system::error_code _ec;
+  _socket1.close(_ec);
+  _socket2.close(_ec);
 }

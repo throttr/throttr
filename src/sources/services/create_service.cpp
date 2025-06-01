@@ -16,28 +16,38 @@
 #include <throttr/services/create_service.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <throttr/state.hpp>
 #include <throttr/time.hpp>
 #include <throttr/utils.hpp>
 
 namespace throttr
 {
-  bool create_service::use(
+  bool create_service::use( // NOSONAR
     const std::shared_ptr<state> &state,
-    const std::string_view &key,
-    const std::vector<std::byte> &value,
+    std::span<const std::byte> key,
+    std::span<const std::byte> value,
     const ttl_types ttl_type,
-    uint64_t ttl,
+    std::span<const std::byte> ttl,
     const entry_types type,
-    const bool as_insert)
+    const boost::uuids::uuid &id,
+    const bool as_insert) // NOSONAR
   {
+    boost::ignore_unused(as_insert);
+
     const auto _now = std::chrono::steady_clock::now();
     const auto _expires_at = get_expiration_point(_now, ttl_type, ttl);
 
     auto &_index = state->storage_.get<tag_by_key>();
-    const auto _key = std::vector<std::byte>(
-      reinterpret_cast<const std::byte *>(key.data()), reinterpret_cast<const std::byte *>(key.data() + key.size())); // NOSONAR
-    const auto _entry_ptr = entry_wrapper{_key, request_entry{type, value, ttl_type, _expires_at}};
+    const std::vector _key(
+      key.data(),             // NOSONAR
+      key.data() + key.size() // NOSONAR
+    );
+    const std::vector _value(
+      value.data(),               // NOSONAR
+      value.data() + value.size() // NOSONAR
+    );
+    const auto _entry_ptr = entry_wrapper{_key, request_entry{type, _value, ttl_type, _expires_at}};
 
 #ifdef ENABLED_FEATURE_METRICS
     _entry_ptr.metrics_->writes_.fetch_add(1, std::memory_order_relaxed);
@@ -75,14 +85,15 @@ namespace throttr
     // LCOV_EXCL_START
 #ifndef NDEBUG
     fmt::println(
-      "{:%Y-%m-%d %H:%M:%S} REQUEST {} key={} value={}ttl_type={} ttl={} "
+      "{:%Y-%m-%d %H:%M:%S} REQUEST {} key={} from={} value={}ttl_type={} ttl={} "
       "RESPONSE ok={}",
       std::chrono::system_clock::now(),
       as_insert ? "INSERT" : "SET",
-      key,
-      span_to_hex(std::span(_entry_ptr.entry_.value_.data(), _entry_ptr.entry_.value_.size())),
+      span_to_hex(key),
+      to_string(id),
+      span_to_hex(_entry_ptr.entry_.value_),
       to_string(ttl_type),
-      ttl,
+      span_to_hex(ttl),
       _inserted);
 #endif
     // LCOV_EXCL_STOP

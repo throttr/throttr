@@ -65,6 +65,10 @@ TEST_F(ChannelTestFixture, OnSuccess)
   boost::asio::read(_socket2, boost::asio::buffer(_data));
 
   ASSERT_EQ(_data.size(), 40);
+
+  boost::system::error_code _ec;
+  _socket1.close(_ec);
+  _socket2.close(_ec);
 }
 
 TEST_F(ChannelTestFixture, OnFailed)
@@ -93,4 +97,7 @@ TEST_F(ChannelTestFixture, OnFailed)
 
   // Debe ser 0x00 → canal no existe
   ASSERT_EQ(_response[0], std::byte{0x00});
+
+  boost::system::error_code _ec;
+  _socket.close(_ec);
 }

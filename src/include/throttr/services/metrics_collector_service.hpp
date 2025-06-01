@@ -16,7 +16,9 @@
 #ifndef THROTTR_SERVICES_METRICS_COLLECTOR_SERVICE_HPP
 #define THROTTR_SERVICES_METRICS_COLLECTOR_SERVICE_HPP
 
+#include <array>
 #include <memory>
+#include <throttr/metric.hpp>
 
 namespace throttr
 {
@@ -33,6 +35,11 @@ namespace throttr
   {
   public:
     /**
+     * Commands
+     */
+    std::array<metric, 32> commands_{};
+
+    /**
      * Schedule timer
      *
      * @param state
@@ -46,6 +53,11 @@ namespace throttr
      * @param state
      */
     static void run(const std::shared_ptr<state> &state);
+
+    /**
+     * Compute all
+     */
+    void compute_all();
   };
 #endif
 } // namespace throttr

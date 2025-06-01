@@ -15,7 +15,7 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON
+          cmake .. -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DENABLE_STATIC_LINKING=ON
           make -j4
           ctest  --output-on-failure --verbose --parallel 4
           cd ..

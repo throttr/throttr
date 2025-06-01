@@ -16,6 +16,8 @@
 #include <throttr/commands/purge_command.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <throttr/connection.hpp>
 #include <throttr/state.hpp>
 #include <throttr/utils.hpp>
 
@@ -33,7 +35,8 @@ namespace throttr
     boost::ignore_unused(type, write_buffer, conn);
 
     const auto _request = request_purge::from_buffer(view);
-    const request_key _key{_request.key_};
+    const request_key _key{
+      std::string_view(reinterpret_cast<const char *>(_request.key_.data()), _request.key_.size())}; // NOSONAR
 
     auto &_index = state->storage_.get<tag_by_key>();
     const auto _it = _index.find(_key);
@@ -54,8 +57,12 @@ namespace throttr
 
     // LCOV_EXCL_START
 #ifndef NDEBUG
-    fmt::
-      println("{:%Y-%m-%d %H:%M:%S} REQUEST PURGE key={} RESPONSE ok={}", std::chrono::system_clock::now(), _key.key_, _erased);
+    fmt::println(
+      "{:%Y-%m-%d %H:%M:%S} REQUEST PURGE key={} from={} RESPONSE ok={}",
+      std::chrono::system_clock::now(),
+      _key.key_,
+      to_string(conn->id_),
+      _erased);
 #endif
     // LCOV_EXCL_STOP
 

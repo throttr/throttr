@@ -16,6 +16,7 @@
 #include <throttr/commands/set_command.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <throttr/connection.hpp>
 #include <throttr/services/create_service.hpp>
 #include <throttr/state.hpp>
 
@@ -31,10 +32,10 @@ namespace throttr
   {
     boost::ignore_unused(type, batch, write_buffer, conn);
 
-    const auto [header_, key_, value_] = request_set::from_buffer(view);
-    const std::vector _value(value_.begin(), value_.end());
+    const auto _request = request_set::from_buffer(view);
 
-    const auto _inserted = create_service::use(state, key_, _value, header_->ttl_type_, header_->ttl_, entry_types::raw);
+    const auto _inserted =
+      create_service::use(state, _request.key_, _request.value_, _request.ttl_type_, _request.ttl_, entry_types::raw, conn->id_);
     batch.emplace_back(boost::asio::buffer(_inserted ? &state::success_response_ : &state::failed_response_, 1));
   }
 } // namespace throttr

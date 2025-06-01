@@ -34,7 +34,7 @@ namespace throttr
     /**
      * Channel
      */
-    std::vector<std::byte> channel_;
+    std::string channel_;
 
     /**
      * Subscribed at
@@ -42,7 +42,7 @@ namespace throttr
     std::uint64_t subscribed_at_ = 0;
 
 #ifdef ENABLED_FEATURE_METRICS
-    subscription_metrics metrics_;
+    std::shared_ptr<subscription_metrics> metrics_ = std::make_shared<subscription_metrics>();
 #endif
 
     /**
@@ -51,21 +51,11 @@ namespace throttr
      * @param connection_id
      * @param channel
      */
-    subscription(const boost::uuids::uuid connection_id, const std::vector<std::byte> &channel) :
-        connection_id_(connection_id), channel_(channel)
+    subscription(const boost::uuids::uuid connection_id, std::string channel) :
+        connection_id_(connection_id), channel_(std::move(channel))
     {
       subscribed_at_ =
         std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    }
-
-    /**
-     * Channel
-     *
-     * @return
-     */
-    [[nodiscard]] std::string_view channel() const noexcept
-    {
-      return {reinterpret_cast<const char *>(channel_.data()), channel_.size()}; // NOSONAR
     }
   };
 } // namespace throttr

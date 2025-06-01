@@ -16,8 +16,11 @@
 #include <throttr/commands/connection_command.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <throttr/connection.hpp>
 #include <throttr/services/response_builder_service.hpp>
 #include <throttr/state.hpp>
+#include <throttr/utils.hpp>
 
 namespace throttr
 {
@@ -32,20 +35,43 @@ namespace throttr
     boost::ignore_unused(type, conn);
 
     const auto _request = request_connection::from_buffer(view);
-    const auto &_uuid = _request.header_->id_;
+    const auto &_uuid = _request.id_;
 
     std::lock_guard _lock(state->connections_mutex_);
     const auto &_map = state->connections_;
-    const auto _it = _map.find(_uuid);
+    boost::uuids::uuid _id{};
+    std::memcpy(_id.data, _uuid.data(), _uuid.size());
+    const auto _it = _map.find(_id);
 
     if (_it == _map.end())
     {
       batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
+      // LCOV_EXCL_START
+#ifndef NDEBUG
+      fmt::println(
+        "{:%Y-%m-%d %H:%M:%S} REQUEST CONNECTION id={} from={} "
+        "RESPONSE ok=false",
+        std::chrono::system_clock::now(),
+        span_to_hex(_request.id_),
+        to_string(conn->id_));
+#endif
+      // LCOV_EXCL_STOP
       return;
     }
 
     const connection *_conn = _it->second;
     batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
     response_builder_service::write_connections_entry_to_buffer(state, &batch, _conn, write_buffer, false);
+
+    // LCOV_EXCL_START
+#ifndef NDEBUG
+    fmt::println(
+      "{:%Y-%m-%d %H:%M:%S} REQUEST CONNECTION id={} from={} "
+      "RESPONSE ok=true",
+      std::chrono::system_clock::now(),
+      span_to_hex(_request.id_),
+      to_string(conn->id_));
+#endif
+    // LCOV_EXCL_STOP
   }
 } // namespace throttr

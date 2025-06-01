@@ -16,8 +16,11 @@
 #include <throttr/commands/connections_command.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <throttr/connection.hpp>
 #include <throttr/services/response_builder_service.hpp>
 #include <throttr/state.hpp>
+#include <throttr/utils.hpp>
 
 namespace throttr
 {
@@ -36,5 +39,15 @@ namespace throttr
     return;
 #endif
     state->response_builder_->handle_fragmented_connections_response(state, batch, write_buffer);
+
+    // LCOV_EXCL_START
+#ifndef NDEBUG
+    fmt::println(
+      "{:%Y-%m-%d %H:%M:%S} REQUEST CONNECTIONS from={} "
+      "RESPONSE ok=true",
+      std::chrono::system_clock::now(),
+      to_string(conn->id_));
+#endif
+    // LCOV_EXCL_STOP
   }
 } // namespace throttr
