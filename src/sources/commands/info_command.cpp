@@ -47,8 +47,8 @@ namespace throttr
     {
       write_buffer.insert(
         write_buffer.end(),
-        reinterpret_cast<const uint8_t *>(&value),
-        reinterpret_cast<const uint8_t *>(&value) + sizeof(uint64_t));
+        reinterpret_cast<const uint8_t *>(&value), // NOSONAR
+        reinterpret_cast<const uint8_t *>(&value) + sizeof(uint64_t)); // NOSONAR
     };
 
     const auto &metrics = state->metrics_collector_->commands_;
