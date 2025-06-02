@@ -53,6 +53,7 @@ namespace throttr
         _key.key_,
         to_string(conn->id_));
 #endif
+      batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
       return;
       // LCOV_EXCL_STOP
     }
