@@ -36,7 +36,6 @@ namespace throttr
     const std::shared_ptr<connection> &conn)
   {
     boost::ignore_unused(type, view, conn);
-    write_buffer.reserve(4096);
     std::scoped_lock _lock(state->subscriptions_->mutex_, state->connections_mutex_);
 
     batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
@@ -46,9 +45,10 @@ namespace throttr
 
     const auto push_u64 = [&](const uint64_t value)
     {
-      const auto _offset = write_buffer.size();
-      write_buffer.resize(_offset + sizeof(uint64_t));
-      std::memcpy(write_buffer.data() + _offset, &value, sizeof(uint64_t));
+      write_buffer.insert(
+        write_buffer.end(),
+        reinterpret_cast<const uint8_t *>(&value), // NOSONAR
+        reinterpret_cast<const uint8_t *>(&value) + sizeof(uint64_t)); // NOSONAR
     };
 
     const auto &metrics = state->metrics_collector_->commands_;
@@ -157,10 +157,9 @@ namespace throttr
     const uint64_t _total_connections = state->connections_.size();
     push_u64(_total_connections);
 
-    const std::size_t _offset = write_buffer.size();
-    write_buffer.resize(_offset + 16);
-    std::memset(write_buffer.data() + _offset, 0, 16);
-    std::memcpy(write_buffer.data() + _offset, get_version().data(), get_version().size());
+    const auto version_data = get_version();
+    write_buffer.insert(write_buffer.end(), 16, 0);
+    std::ranges::copy(version_data, write_buffer.end() - 16);
 
     batch.push_back(boost::asio::buffer(write_buffer));
 

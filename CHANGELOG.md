@@ -1,6 +1,7 @@
 ### v5.0.2
 
 - Connection now have a message container. This reduces the number of allocations to 1 during the entire life of the connection.
+- Now we don't use resize and write_buffer so there are no option to overwrite buffer.
 
 ### v5.0.1
 

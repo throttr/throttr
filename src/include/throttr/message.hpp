@@ -50,7 +50,7 @@ namespace throttr
     message()
     {
       write_buffer_.reserve(8096);
-      buffers_.reserve(1024);
+      buffers_.reserve(64);
     }
   };
 } // namespace throttr
