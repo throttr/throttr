@@ -48,6 +48,7 @@ namespace throttr
     // LCOV_EXCL_STOP
 
     const auto _message = std::make_shared<message>();
+    _message->recyclable_ = false;
     auto &_buffer = _message->write_buffer_;
     _buffer.reserve(1 + sizeof(value_type) + _payload.size());
 

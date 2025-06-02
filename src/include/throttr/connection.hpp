@@ -183,6 +183,11 @@ namespace throttr
     std::deque<std::shared_ptr<message>> pending_writes_;
 
     /**
+     * Messages pool
+     */
+    std::shared_ptr<message> message_ = std::make_shared<message>();
+
+    /**
      * On send
      *
      * @param batch
