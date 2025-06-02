@@ -79,10 +79,8 @@ namespace throttr
       const auto &_sub = *it;
 
       {
-        const auto _off = write_buffer.size();
-        write_buffer.resize(_off + 16);
-        std::memcpy(write_buffer.data() + _off, _sub.connection_id_.data(), 16); // NOSONAR
-        batch.emplace_back(boost::asio::buffer(write_buffer.data() + _off, 16));
+        write_buffer.insert(write_buffer.end(), _sub.connection_id_.begin(), _sub.connection_id_.end());
+        batch.emplace_back(boost::asio::buffer(write_buffer.data() + write_buffer.size() - 16, 16));
       }
 
       {
