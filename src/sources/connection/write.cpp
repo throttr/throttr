@@ -36,7 +36,13 @@ namespace throttr
       return;
     }
 
-    pending_writes_.erase(pending_writes_.begin());
+    const std::shared_ptr<message> _message = pending_writes_.front();
+    pending_writes_.pop_front();
+    if (_message->recyclable_)
+    {
+      _message->write_buffer_.clear();
+      _message->buffers_.clear();
+    }
 
     // LCOV_EXCL_START
     if (!pending_writes_.empty())

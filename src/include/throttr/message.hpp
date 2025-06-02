@@ -40,11 +40,17 @@ namespace throttr
     std::vector<boost::asio::const_buffer> buffers_;
 
     /**
+     * Recyclable
+     */
+    bool recyclable_ = true;
+
+    /**
      * Constructor
      */
     message()
     {
       write_buffer_.reserve(8096);
+      buffers_.reserve(1024);
     }
   };
 } // namespace throttr

@@ -23,8 +23,6 @@ namespace throttr
 {
   void connection::try_process_next()
   {
-    const auto _message = std::make_shared<message>();
-
     while (true)
     {
       const std::span<const std::byte> _span(buffer_.data() + buffer_start_, buffer_end_ - buffer_start_);
@@ -52,15 +50,15 @@ namespace throttr
       metrics_->commands_[static_cast<std::size_t>(_type)].mark();
 #endif
       state_->commands_->commands_[static_cast<std::size_t>(
-        _type)](state_, _type, _view, _message->buffers_, _message->write_buffer_, shared_from_this());
+        _type)](state_, _type, _view, message_->buffers_, message_->write_buffer_, shared_from_this());
       // LCOV_EXCL_STOP
     }
 
     // LCOV_EXCL_START Note: Partially tested.
     // The not tested case is when in-while break condition is triggered but no
     // queue element exists.
-    if (!_message->buffers_.empty())
-      send(_message);
+    if (!message_->buffers_.empty())
+      send(message_);
     // LCOV_EXCL_STOP
 
     compact_buffer_if_needed();

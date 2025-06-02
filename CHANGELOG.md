@@ -1,3 +1,7 @@
+### v5.0.2
+
+- Connection now have a message container. This reduces the number of allocations to 1 during the entire life of the connection.
+
 ### v5.0.1
 
 - Server now uses protocol v7.0.1 which removes pragma packs.
