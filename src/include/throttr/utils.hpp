@@ -46,7 +46,7 @@ namespace throttr
    */
   inline void append_value_type(std::vector<std::byte> &buffer, const value_type value)
   {
-    const auto *_pointer = reinterpret_cast<const std::byte *>(&value);
+    const auto *_pointer = reinterpret_cast<const std::byte *>(&value); // NOSONAR
     buffer.insert(buffer.end(), _pointer, _pointer + sizeof(value_type));
   }
 
