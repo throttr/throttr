@@ -1,6 +1,7 @@
 ### v5.0.3
 
 - Now entry containers are more thread safe.
+- Now SET operation over existing key updates the buffer, ttl and ttl type, ideally to make HOT SWAP.
 
 ### v5.0.2
 

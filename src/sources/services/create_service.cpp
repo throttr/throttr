@@ -45,6 +45,44 @@ namespace throttr
       key.data() + key.size() // NOSONAR
     );
 
+    if (!as_insert)
+    {
+      const request_key _lookup_key{std::string_view(reinterpret_cast<const char *>(_key.data()), _key.size())};
+      auto _it_existing = _index.find(_lookup_key);
+      if (_it_existing != _index.end())
+      {
+        if (_it_existing->entry_.type_ != entry_types::counter)
+        {
+          auto _modified = _index.modify(
+            _it_existing,
+            [&](entry_wrapper &item)
+            {
+              item.entry_.buffer_.assign(value.begin(), value.end());
+              item.entry_.expires_at_ = _expires_at;
+              item.entry_.ttl_type_ = ttl_type;
+
+#ifdef ENABLED_FEATURE_METRICS
+              item.metrics_->writes_.fetch_add(1, std::memory_order_relaxed);
+#endif
+            });
+
+#ifndef NDEBUG
+          fmt::println(
+            "{:%Y-%m-%d %H:%M:%S} REQUEST SET AGAIN key={} from={} value={}ttl_type={} ttl={} "
+            "RESPONSE ok={}",
+            std::chrono::system_clock::now(),
+            span_to_hex(key),
+            to_string(id),
+            span_to_hex(value),
+            to_string(ttl_type),
+            span_to_hex(ttl),
+            _modified);
+#endif
+          return _modified;
+        }
+      }
+    }
+
     entry _entry;
     _entry.type_ = type;
     _entry.ttl_type_ = ttl_type;
