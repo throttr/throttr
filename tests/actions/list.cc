@@ -23,6 +23,7 @@ TEST_F(ListTestFixture, OnSuccessSingleFragment)
 {
   const std::string _key1 = "abc";
   const std::string _key2 = "EHLO";
+  const std::string _key3 = "KEYS";
   const std::vector _value1 = {std::byte{0x01}, std::byte{0x02}, std::byte{0x03}, std::byte{0x04}};
   const std::vector _value2 =
     {std::byte{0x05},
@@ -44,10 +45,15 @@ TEST_F(ListTestFixture, OnSuccessSingleFragment)
   const auto _response2 = send_and_receive(_buffer2);
   ASSERT_EQ(static_cast<uint8_t>(_response2[0]), 1);
 
+  // INSERT key3 (buffer, type 0x01)
+  const auto _buffer3 = request_insert_builder(60, ttl_types::seconds, 10, _key3);
+  const auto _response3 = send_and_receive(_buffer3);
+  ASSERT_EQ(static_cast<uint8_t>(_response3[0]), 1);
+
   // LIST request
   const auto _list_buffer = request_list_builder();
   const auto _response =
-    send_and_receive(_list_buffer, 1 + 8 + 16 + ((11 + sizeof(value_type)) * 2) + _key1.size() + _key2.size());
+    send_and_receive(_list_buffer, 1 + 8 + 16 + ((11 + sizeof(value_type)) * 3) + _key1.size() + _key2.size() + _key3.size());
 
   size_t _offset = 1;
 
@@ -67,7 +73,7 @@ TEST_F(ListTestFixture, OnSuccessSingleFragment)
   uint64_t _key_count;
   std::memcpy(&_key_count, _response.data() + _offset, sizeof(_key_count));
   _offset += sizeof(_key_count);
-  ASSERT_EQ(_key_count, 2);
+  ASSERT_EQ(_key_count, 3);
 
   // Key 1 metadata
   ASSERT_EQ(static_cast<uint8_t>(_response[_offset]), _key1.size());
@@ -105,6 +111,24 @@ TEST_F(ListTestFixture, OnSuccessSingleFragment)
   _offset += sizeof(_bytes_used_2);
   ASSERT_EQ(_bytes_used_2, _value2.size());
 
+  // Key 3 metadata
+  ASSERT_EQ(static_cast<uint8_t>(_response[_offset]), _key3.size());
+  _offset += 1;
+  ASSERT_EQ(static_cast<uint8_t>(_response[_offset]), 0x00);
+  _offset += 1; // type
+  ASSERT_EQ(static_cast<uint8_t>(_response[_offset]), static_cast<uint8_t>(ttl_types::seconds));
+  _offset += 1;
+
+  uint64_t _expires3;
+  std::memcpy(&_expires3, _response.data() + _offset, sizeof(_expires3));
+  _offset += sizeof(_expires3);
+  ASSERT_GT(_expires3, 0);
+
+  value_type _bytes_used_3;
+  std::memcpy(&_bytes_used_3, _response.data() + _offset, sizeof(_bytes_used_3));
+  _offset += sizeof(_bytes_used_3);
+  ASSERT_EQ(_bytes_used_3, sizeof(value_type));
+
   // Key 1 raw
   ASSERT_EQ(std::memcmp(_response.data() + _offset, _key1.data(), _key1.size()), 0);
   _offset += _key1.size();
@@ -112,6 +136,10 @@ TEST_F(ListTestFixture, OnSuccessSingleFragment)
   // Key 2 raw
   ASSERT_EQ(std::memcmp(_response.data() + _offset, _key2.data(), _key2.size()), 0);
   _offset += _key2.size();
+
+  // Key 3 raw
+  ASSERT_EQ(std::memcmp(_response.data() + _offset, _key3.data(), _key3.size()), 0);
+  _offset += _key3.size();
 
   ASSERT_EQ(_offset, _response.size());
 }

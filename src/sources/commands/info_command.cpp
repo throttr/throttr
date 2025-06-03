@@ -123,14 +123,7 @@ namespace throttr
       else
       {
         _total_buffers++;
-        if (_item.entry_.type_ == entry_types::counter)
-        {
-          _total_allocated_bytes_on_counters += sizeof(value_type);
-        }
-        else
-        {
-          _total_allocated_bytes_on_buffers += _item.entry_.buffer_.size();
-        }
+        _total_allocated_bytes_on_buffers += _item.entry_.buffer_.size();
       }
       _total_keys++;
     }
