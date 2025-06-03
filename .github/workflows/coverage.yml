@@ -1,0 +1,27 @@
+name: Coverage
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    container:
+      image: ghcr.io/throttr/builder-alpine:1.87.0-debug
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test
+        run: |
+          mkdir -p build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DRUNTIME_VALUE_SIZE=UINT16 -DENABLE_STATIC_LINKING=ON
+          make -j4
+          ctest  --output-on-failure --verbose
+          cd ..
+          gcovr --filter='src/' --print-summary --sort-percentage
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}

@@ -34,7 +34,7 @@ namespace throttr
     const boost::uuids::uuid &id,
     const bool as_insert) // NOSONAR
   {
-    boost::ignore_unused(as_insert);
+    boost::ignore_unused(as_insert, id);
 
     const auto _now = std::chrono::steady_clock::now();
     const auto _expires_at = get_expiration_point(_now, ttl_type, ttl);
@@ -44,6 +44,44 @@ namespace throttr
       key.data(),             // NOSONAR
       key.data() + key.size() // NOSONAR
     );
+
+    if (!as_insert)
+    {
+      const request_key _lookup_key{std::string_view(reinterpret_cast<const char *>(_key.data()), _key.size())}; // NOSONAR
+      auto _it_existing = _index.find(_lookup_key);
+      if (_it_existing != _index.end()) // LCOV_EXCL_LINE Note: Partially tested.
+      {
+        if (_it_existing->entry_.type_ != entry_types::counter) // LCOV_EXCL_LINE Note: Partially tested.
+        {
+          auto _modified = _index.modify(
+            _it_existing,
+            [&](entry_wrapper &item)
+            {
+              item.entry_.buffer_.assign(value.begin(), value.end());
+              item.entry_.expires_at_ = _expires_at;
+              item.entry_.ttl_type_ = ttl_type;
+
+#ifdef ENABLED_FEATURE_METRICS
+              item.metrics_->writes_.fetch_add(1, std::memory_order_relaxed);
+#endif
+            });
+
+#ifndef NDEBUG
+          fmt::println(
+            "{:%Y-%m-%d %H:%M:%S} REQUEST SET AGAIN key={} from={} value={}ttl_type={} ttl={} "
+            "RESPONSE ok={}",
+            std::chrono::system_clock::now(),
+            span_to_hex(key),
+            to_string(id),
+            span_to_hex(value),
+            to_string(ttl_type),
+            span_to_hex(ttl),
+            _modified);
+#endif
+          return _modified;
+        }
+      }
+    }
 
     entry _entry;
     _entry.type_ = type;
