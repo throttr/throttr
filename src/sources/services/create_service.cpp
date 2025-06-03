@@ -70,7 +70,7 @@ namespace throttr
     _entry_ptr.metrics_->writes_.fetch_add(1, std::memory_order_relaxed);
 #endif
 
-    auto [_it, _inserted] = state->storage_.insert(std::move(_entry_ptr));
+    auto [_it, _inserted] = state->storage_.insert(_entry_ptr);
 
     boost::ignore_unused(_it);
 
