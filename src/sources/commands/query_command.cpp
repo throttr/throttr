@@ -65,7 +65,14 @@ namespace throttr
     if (_as_query) // LCOV_EXCL_LINE
     {
       // Value
-      batch.push_back(boost::asio::buffer(_it->entry_.value_.data(), sizeof(value_type)));
+      {
+        const auto _offset = write_buffer.size();
+        const value_type _counter_value = _it->entry_.counter_.load(std::memory_order_relaxed);
+        std::uint8_t value_bytes[sizeof(value_type)];
+        std::memcpy(value_bytes, &_counter_value, sizeof(value_type));
+        write_buffer.insert(write_buffer.end(), value_bytes, value_bytes + sizeof(value_type));
+        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(value_type)));
+      }
       // TTL Type
       batch.push_back(boost::asio::buffer(&_it->entry_.ttl_type_, sizeof(_it->entry_.ttl_type_)));
       // TTL
@@ -92,7 +99,7 @@ namespace throttr
       // Size
       {
         const auto _offset = write_buffer.size();
-        const auto _size = _it->entry_.value_.size();
+        const auto _size = _it->entry_.buffer_.size();
         std::uint8_t size_bytes[sizeof(value_type)]; // NOSONAR
         std::memcpy(size_bytes, &_size, sizeof(value_type));
         write_buffer.insert(write_buffer.end(), size_bytes, size_bytes + sizeof(value_type));
@@ -100,21 +107,21 @@ namespace throttr
       }
 
       // Value
-      batch.emplace_back(boost::asio::buffer(_it->entry_.value_.data(), _it->entry_.value_.size()));
+      batch.emplace_back(boost::asio::buffer(_it->entry_.buffer_.data(), _it->entry_.buffer_.size()));
     }
 
     // LCOV_EXCL_START
 #ifndef NDEBUG
     if (_as_query)
     {
-      auto *_quota = reinterpret_cast<const value_type *>(_it->entry_.value_.data()); // NOSONAR
+      auto _quota = _it->entry_.counter_.load(std::memory_order_relaxed);
       fmt::println(
         "{:%Y-%m-%d %H:%M:%S} REQUEST QUERY key={} from={} RESPONSE ok=true quota={} "
         "ttl_type={} ttl={}",
         std::chrono::system_clock::now(),
         _key.key_,
         to_string(conn->id_),
-        *_quota,
+        _quota,
         to_string(_it->entry_.ttl_type_),
         _ttl);
     }
@@ -126,7 +133,7 @@ namespace throttr
         std::chrono::system_clock::now(),
         _key.key_,
         to_string(conn->id_),
-        span_to_hex(std::span(_it->entry_.value_.data(), _it->entry_.value_.size())),
+        span_to_hex(std::span(_it->entry_.buffer_.data(), _it->entry_.buffer_.size())),
         to_string(_it->entry_.ttl_type_),
         _ttl);
     }

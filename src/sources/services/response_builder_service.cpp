@@ -44,7 +44,7 @@ namespace throttr
     boost::ignore_unused(state);
 
     if (measure) // LCOV_EXCL_LINE Note: Partially tested.
-      return entry->key_.size() + entry->entry_.value_.size() + 11;
+      return entry->key_.size() + sizeof(value_type) + 11;
 
     const auto _offset = write_buffer.size();
     write_buffer.push_back(static_cast<std::uint8_t>(entry->key_.size()));
@@ -65,7 +65,15 @@ namespace throttr
 
     // Handling _bytes_used
     {
-      const auto _bytes_used = static_cast<value_type>(entry->entry_.value_.size());
+      value_type _bytes_used = 0;
+      if (entry->entry_.type_ == entry_types::counter)
+      {
+        _bytes_used = sizeof(value_type);
+      }
+      else
+      {
+        _bytes_used = static_cast<value_type>(entry->entry_.buffer_.size());
+      }
       std::uint8_t bytes_used_bytes[sizeof(_bytes_used)];               // NOSONAR
       std::memcpy(bytes_used_bytes, &_bytes_used, sizeof(_bytes_used)); // Copiar _bytes_used en bytes
       const auto _off = write_buffer.size();

@@ -17,6 +17,7 @@
 
 #include <boost/core/ignore_unused.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include <throttr/entry.hpp>
 #include <throttr/state.hpp>
 #include <throttr/time.hpp>
 #include <throttr/utils.hpp>
@@ -43,11 +44,27 @@ namespace throttr
       key.data(),             // NOSONAR
       key.data() + key.size() // NOSONAR
     );
-    const std::vector _value(
-      value.data(),               // NOSONAR
-      value.data() + value.size() // NOSONAR
-    );
-    const auto _entry_ptr = entry_wrapper{_key, request_entry{type, _value, ttl_type, _expires_at}};
+
+    entry _entry;
+    _entry.type_ = type;
+    _entry.ttl_type_ = ttl_type;
+    _entry.expires_at_ = _expires_at;
+
+    if (_entry.type_ == entry_types::counter)
+    {
+      value_type _parsed_value = 0;
+      std::memcpy(&_parsed_value, value.data(), sizeof(value_type));
+      _entry.counter_.store(_parsed_value, std::memory_order_relaxed);
+    }
+    else
+    {
+      _entry.buffer_ = std::vector(
+        value.data(),               // NOSONAR
+        value.data() + value.size() // NOSONAR
+      );
+    }
+
+    const auto _entry_ptr = entry_wrapper{_key, _entry};
 
 #ifdef ENABLED_FEATURE_METRICS
     _entry_ptr.metrics_->writes_.fetch_add(1, std::memory_order_relaxed);
@@ -84,17 +101,33 @@ namespace throttr
 
     // LCOV_EXCL_START
 #ifndef NDEBUG
-    fmt::println(
-      "{:%Y-%m-%d %H:%M:%S} REQUEST {} key={} from={} value={}ttl_type={} ttl={} "
-      "RESPONSE ok={}",
-      std::chrono::system_clock::now(),
-      as_insert ? "INSERT" : "SET",
-      span_to_hex(key),
-      to_string(id),
-      span_to_hex(_entry_ptr.entry_.value_),
-      to_string(ttl_type),
-      span_to_hex(ttl),
-      _inserted);
+    if (_entry_ptr.entry_.type_ == entry_types::counter)
+    {
+      const value_type _counter_value = _entry_ptr.entry_.counter_.load(std::memory_order_relaxed);
+      fmt::println(
+        "{:%Y-%m-%d %H:%M:%S} REQUEST INSERT key={} from={} value={}ttl_type={} ttl={} "
+        "RESPONSE ok={}",
+        std::chrono::system_clock::now(),
+        span_to_hex(key),
+        to_string(id),
+        _counter_value,
+        to_string(ttl_type),
+        span_to_hex(ttl),
+        _inserted);
+    }
+    else
+    {
+      fmt::println(
+        "{:%Y-%m-%d %H:%M:%S} REQUEST SET key={} from={} value={}ttl_type={} ttl={} "
+        "RESPONSE ok={}",
+        std::chrono::system_clock::now(),
+        span_to_hex(key),
+        to_string(id),
+        span_to_hex(_entry_ptr.entry_.buffer_),
+        to_string(ttl_type),
+        span_to_hex(ttl),
+        _inserted);
+    }
 #endif
     // LCOV_EXCL_STOP
 

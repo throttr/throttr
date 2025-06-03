@@ -18,6 +18,7 @@
 
 #include <memory>
 
+#include <throttr/entry.hpp>
 #include <throttr/protocol_wrapper.hpp>
 
 namespace throttr
@@ -41,7 +42,7 @@ namespace throttr
      * @param request
      * @return bool
      */
-    static bool apply_quota_change(const std::shared_ptr<state> &state, request_entry &entry, const request_update &request);
+    static bool apply_quota_change(const std::shared_ptr<state> &state, entry &entry, const request_update &request);
 
     /**
      * Apply TTL change
@@ -55,7 +56,7 @@ namespace throttr
      */
     static bool apply_ttl_change(
       const std::shared_ptr<state> &state,
-      request_entry &entry,
+      entry &entry,
       const request_update &request,
       const std::chrono::steady_clock::time_point &now,
       std::span<const std::byte> key);
