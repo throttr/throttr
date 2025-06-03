@@ -38,9 +38,9 @@ namespace throttr
 
     {
       const auto _offset = write_buffer.size();
-      const auto *id_data = reinterpret_cast<const std::byte *>(conn->id_.data());
+      const auto *id_data = reinterpret_cast<const std::byte *>(conn->id_.data()); // NOSONAR
       write_buffer.insert(write_buffer.end(), id_data, id_data + 16);
-      batch.emplace_back(boost::asio::buffer(reinterpret_cast<const void *>(&write_buffer[_offset]), 16));
+      batch.emplace_back(boost::asio::buffer(reinterpret_cast<const void *>(&write_buffer[_offset]), 16)); // NOSONAR
     }
 
     // LCOV_EXCL_START

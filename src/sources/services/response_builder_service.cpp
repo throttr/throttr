@@ -126,7 +126,7 @@ namespace throttr
       const auto _offset = write_buffer.size();
       const auto *_bytes = static_cast<const std::byte *>(ptr);
       write_buffer.insert(write_buffer.end(), _bytes, _bytes + size);
-      batch->emplace_back(boost::asio::buffer(reinterpret_cast<const void *>(&write_buffer[_offset]), size));
+      batch->emplace_back(boost::asio::buffer(reinterpret_cast<const void *>(&write_buffer[_offset]), size)); // NOSONAR
     };
 
     // UUID (16 bytes)
