@@ -49,7 +49,7 @@ template<typename T>
 void
 test_ttl_change(
   std::shared_ptr<state> &_state,
-  request_entry &_entry,
+  entry &_entry,
   const std::vector<std::byte> &_key,
   const ttl_types _ttl_type,
   const change_types _change_type,
@@ -97,7 +97,7 @@ TEST(StateManagementTest, TTLChange)
 
   boost::asio::io_context _ioc;
   auto _state = std::make_shared<state>(_ioc);
-  request_entry _entry;
+  entry _entry;
   _entry.expires_at_ = steady_clock::now();
   const std::vector _key = {std::byte{0x01}, std::byte{0x02}, std::byte{0x03}, std::byte{0x04}};
 
@@ -201,35 +201,35 @@ TEST(StateManagementTest, QuotaChange)
 {
   boost::asio::io_context _ioc;
   auto _state = std::make_shared<state>(_ioc);
-  request_entry _entry;
-  _entry.value_.resize(sizeof(value_type));
+  entry _entry;
+  _entry.buffer_.resize(sizeof(value_type));
 
   // patch
-  *reinterpret_cast<value_type *>(_entry.value_.data()) = 0;
+  _entry.counter_.store(0, std::memory_order_relaxed);
   request_update _patch_req{attribute_types::quota, change_types::patch, 42, std::vector{std::byte{0x00}}};
   EXPECT_TRUE(update_service::apply_quota_change(_state, _entry, _patch_req));
-  EXPECT_EQ(*reinterpret_cast<value_type *>(_entry.value_.data()), 42);
+  EXPECT_EQ(_entry.counter_.load(std::memory_order_relaxed), 42);
 
   // increase
-  *reinterpret_cast<value_type *>(_entry.value_.data()) = 10;
+  _entry.counter_.store(10, std::memory_order_relaxed);
   request_update _inc_req{attribute_types::quota, change_types::increase, 5, std::vector{std::byte{0x00}}};
   EXPECT_TRUE(update_service::apply_quota_change(_state, _entry, _inc_req));
-  EXPECT_EQ(*reinterpret_cast<value_type *>(_entry.value_.data()), 15);
+  EXPECT_EQ(_entry.counter_.load(std::memory_order_relaxed), 15);
 
   // decrease (quota > value)
-  *reinterpret_cast<value_type *>(_entry.value_.data()) = 20;
+  _entry.counter_.store(20, std::memory_order_relaxed);
   request_update _dec_gt_req{attribute_types::quota, change_types::decrease, 10, std::vector{std::byte{0x00}}};
   EXPECT_TRUE(update_service::apply_quota_change(_state, _entry, _dec_gt_req));
-  EXPECT_EQ(*reinterpret_cast<value_type *>(_entry.value_.data()), 10);
+  EXPECT_EQ(_entry.counter_.load(std::memory_order_relaxed), 10);
 
   // decrease (quota == value)
-  *reinterpret_cast<value_type *>(_entry.value_.data()) = 10;
+  _entry.counter_.store(10, std::memory_order_relaxed);
   request_update _dec_eq_req{attribute_types::quota, change_types::decrease, 10, std::vector{std::byte{0x00}}};
   EXPECT_TRUE(update_service::apply_quota_change(_state, _entry, _dec_eq_req));
-  EXPECT_EQ(*reinterpret_cast<value_type *>(_entry.value_.data()), 0);
+  EXPECT_EQ(_entry.counter_.load(std::memory_order_relaxed), 0);
 
   // decrease (quota < value)
-  *reinterpret_cast<value_type *>(_entry.value_.data()) = 5;
+  _entry.counter_.store(5, std::memory_order_relaxed);
   request_update _dec_lt_req{attribute_types::quota, change_types::decrease, 10, std::vector{std::byte{0x00}}};
   EXPECT_FALSE(update_service::apply_quota_change(_state, _entry, _dec_lt_req));
 }
@@ -242,14 +242,14 @@ TEST_F(StateManagementTestFixture, ScheduleExpiration_ReprogramsIfNextEntryExist
 
   const auto _now = steady_clock::now();
 
-  request_entry _entry1;
+  entry _entry1;
   _entry1.type_ = entry_types::counter;
-  _entry1.value_ = {std::byte{1}}; // NOSONAR
+  _entry1.buffer_ = {std::byte{1}}; // NOSONAR
   _entry1.expires_at_ = _now;
 
-  request_entry _entry2;
+  entry _entry2;
   _entry2.type_ = entry_types::counter;
-  _entry2.value_ = {std::byte{1}}; // NOSONAR
+  _entry2.buffer_ = {std::byte{1}}; // NOSONAR
   _entry2.expires_at_ = _now + seconds(5);
 
   _index.insert(entry_wrapper{to_bytes("c1r1"), std::move(_entry1)});

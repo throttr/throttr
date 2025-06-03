@@ -21,26 +21,24 @@
 
 namespace throttr
 {
-  bool
-  update_service::apply_quota_change(const std::shared_ptr<state> &state, request_entry &entry, const request_update &request)
+  bool update_service::apply_quota_change(const std::shared_ptr<state> &state, entry &entry, const request_update &request)
   {
     boost::ignore_unused(state);
 
     using enum change_types;
-    auto &_atomic = *reinterpret_cast<std::atomic<value_type> *>(entry.value_.data()); // NOSONAR
 
     switch (request.change_)
     {
       case patch:
-        _atomic.store(request.value_);
+        entry.counter_.store(request.value_, std::memory_order_relaxed);
         break;
       case increase:
-        _atomic.fetch_add(request.value_, std::memory_order_relaxed);
+        entry.counter_.fetch_add(request.value_, std::memory_order_relaxed);
         break;
       case decrease:
-        if (_atomic.load(std::memory_order_relaxed) >= request.value_) // LCOV_EXCL_LINE note: Partially covered.
+        if (entry.counter_.load(std::memory_order_relaxed) >= request.value_) // LCOV_EXCL_LINE note: Partially covered.
         {
-          _atomic.fetch_sub(request.value_, std::memory_order_relaxed);
+          entry.counter_.fetch_sub(request.value_, std::memory_order_relaxed);
         }
         else
         {
@@ -53,7 +51,7 @@ namespace throttr
 
   bool update_service::apply_ttl_change(
     const std::shared_ptr<state> &state,
-    request_entry &entry,
+    entry &entry,
     const request_update &request,
     const std::chrono::steady_clock::time_point &now,
     std::span<const std::byte> key)

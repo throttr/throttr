@@ -47,7 +47,7 @@ namespace throttr
     {
       write_buffer.insert(
         write_buffer.end(),
-        reinterpret_cast<const uint8_t *>(&value), // NOSONAR
+        reinterpret_cast<const uint8_t *>(&value),                     // NOSONAR
         reinterpret_cast<const uint8_t *>(&value) + sizeof(uint64_t)); // NOSONAR
     };
 
@@ -123,7 +123,14 @@ namespace throttr
       else
       {
         _total_buffers++;
-        _total_allocated_bytes_on_buffers += _item.entry_.value_.size();
+        if (_item.entry_.type_ == entry_types::counter)
+        {
+          _total_allocated_bytes_on_counters += sizeof(value_type);
+        }
+        else
+        {
+          _total_allocated_bytes_on_buffers += _item.entry_.buffer_.size();
+        }
       }
       _total_keys++;
     }

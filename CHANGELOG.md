@@ -1,3 +1,7 @@
+### v5.0.3
+
+- Now entry containers are more thread safe.
+
 ### v5.0.2
 
 - Connection now have a message container. This reduces the number of allocations to 1 during the entire life of the connection.

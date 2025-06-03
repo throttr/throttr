@@ -19,6 +19,7 @@
 #define THROTTR_ENTRY_WRAPPER_HPP
 
 #include <memory>
+#include <throttr/entry.hpp>
 #include <throttr/entry_metrics.hpp>
 #include <throttr/protocol_wrapper.hpp>
 #include <vector>
@@ -38,7 +39,7 @@ namespace throttr
     /**
      * Entry
      */
-    request_entry entry_;
+    entry entry_;
 
     /**
      * Expired
@@ -72,7 +73,7 @@ namespace throttr
      * @param k
      * @param e
      */
-    entry_wrapper(std::vector<std::byte> k, request_entry e) : key_(std::move(k)), entry_(std::move(e))
+    entry_wrapper(std::vector<std::byte> k, entry e) : key_(std::move(k)), entry_(std::move(e))
     {
     }
   };
