@@ -15,7 +15,7 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON -DRUNTIME_VALUE_SIZE=UINT16 -DENABLE_STATIC_LINKING=ON
+          cmake .. -DCMAKE_BUILD_TYPE=Debug -DBUILD_TESTS=ON -DRUNTIME_VALUE_SIZE=UINT16 -DENABLE_STATIC_LINKING=ON
           make -j4
           ctest  --output-on-failure --verbose
           cd ..
