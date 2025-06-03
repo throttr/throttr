@@ -202,7 +202,7 @@ TEST(StateManagementTest, QuotaChange)
   boost::asio::io_context _ioc;
   auto _state = std::make_shared<state>(_ioc);
   entry _entry;
-  _entry.buffer_.resize(sizeof(value_type));
+  _entry.buffer_.store(std::make_shared<std::vector<std::byte>>(sizeof(value_type)), std::memory_order_release);
 
   // patch
   _entry.counter_.store(0, std::memory_order_relaxed);
@@ -244,12 +244,12 @@ TEST_F(StateManagementTestFixture, ScheduleExpiration_ReprogramsIfNextEntryExist
 
   entry _entry1;
   _entry1.type_ = entry_types::counter;
-  _entry1.buffer_ = {std::byte{1}}; // NOSONAR
+  _entry1.buffer_.store(std::make_shared<std::vector<std::byte>>(1, std::byte{1}), std::memory_order_release);
   _entry1.expires_at_ = _now;
 
   entry _entry2;
   _entry2.type_ = entry_types::counter;
-  _entry2.buffer_ = {std::byte{1}}; // NOSONAR
+  _entry2.buffer_.store(std::make_shared<std::vector<std::byte>>(1, std::byte{1}), std::memory_order_release);
   _entry2.expires_at_ = _now + seconds(5);
 
   _index.insert(entry_wrapper{to_bytes("c1r1"), std::move(_entry1)});

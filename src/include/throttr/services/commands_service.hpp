@@ -40,7 +40,7 @@ namespace throttr
       request_types,
       std::span<const std::byte>,
       std::vector<boost::asio::const_buffer> &,
-      std::vector<std::uint8_t> &,
+      std::vector<std::byte> &,
       const std::shared_ptr<connection> &);
 
     /**

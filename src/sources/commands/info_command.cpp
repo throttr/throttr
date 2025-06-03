@@ -32,7 +32,7 @@ namespace throttr
     const request_types type,
     const std::span<const std::byte> view,
     std::vector<boost::asio::const_buffer> &batch,
-    std::vector<std::uint8_t> &write_buffer,
+    std::vector<std::byte> &write_buffer,
     const std::shared_ptr<connection> &conn)
   {
     boost::ignore_unused(type, view, conn);
@@ -45,10 +45,9 @@ namespace throttr
 
     const auto push_u64 = [&](const uint64_t value)
     {
-      write_buffer.insert(
-        write_buffer.end(),
-        reinterpret_cast<const uint8_t *>(&value),                     // NOSONAR
-        reinterpret_cast<const uint8_t *>(&value) + sizeof(uint64_t)); // NOSONAR
+      const auto _offset = write_buffer.size();
+      append_uint64_t(write_buffer, value);
+      batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(value)));
     };
 
     const auto &metrics = state->metrics_collector_->commands_;
@@ -123,7 +122,7 @@ namespace throttr
       else
       {
         _total_buffers++;
-        _total_allocated_bytes_on_buffers += _item.entry_.buffer_.size();
+        _total_allocated_bytes_on_buffers += _item.entry_.buffer_.load(std::memory_order_acquire)->size();
       }
       _total_keys++;
     }
@@ -157,11 +156,13 @@ namespace throttr
     const uint64_t _total_connections = state->connections_.size();
     push_u64(_total_connections);
 
-    const auto version_data = get_version();
-    write_buffer.insert(write_buffer.end(), 16, 0);
-    std::ranges::copy(version_data, write_buffer.end() - 16);
-
-    batch.emplace_back(boost::asio::buffer(write_buffer));
+    {
+      const auto _offset = write_buffer.size();
+      const auto _version_data = get_version();
+      write_buffer.insert(write_buffer.end(), 16, std::byte{0});
+      std::ranges::transform(_version_data, write_buffer.end() - 16, [](char c) { return static_cast<std::byte>(c); });
+      batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], 16));
+    }
 
     // LCOV_EXCL_START
 #ifndef NDEBUG

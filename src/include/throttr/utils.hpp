@@ -27,6 +27,30 @@
 namespace throttr
 {
   /**
+   * Append uint64_t
+   *
+   * @param buffer
+   * @param value
+   */
+  inline void append_uint64_t(std::vector<std::byte> &buffer, const uint64_t value)
+  {
+    const auto *_pointer = reinterpret_cast<const std::byte *>(&value);
+    buffer.insert(buffer.end(), _pointer, _pointer + sizeof(uint64_t));
+  }
+
+  /**
+   * Append value_type
+   *
+   * @param buffer
+   * @param value
+   */
+  inline void append_value_type(std::vector<std::byte> &buffer, const value_type value)
+  {
+    const auto *_pointer = reinterpret_cast<const std::byte *>(&value);
+    buffer.insert(buffer.end(), _pointer, _pointer + sizeof(value_type));
+  }
+
+  /**
    * Buffers to hex
    *
    * @param buffers

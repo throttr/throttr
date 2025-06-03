@@ -29,7 +29,7 @@ namespace throttr
     const request_types type,
     const std::span<const std::byte> view,
     std::vector<boost::asio::const_buffer> &batch,
-    std::vector<std::uint8_t> &write_buffer,
+    std::vector<std::byte> &write_buffer,
     const std::shared_ptr<connection> &conn)
   {
     boost::ignore_unused(conn);
@@ -68,9 +68,7 @@ namespace throttr
       {
         const auto _offset = write_buffer.size();
         const value_type _counter_value = _it->entry_.counter_.load(std::memory_order_relaxed);
-        std::uint8_t value_bytes[sizeof(value_type)];
-        std::memcpy(value_bytes, &_counter_value, sizeof(value_type));
-        write_buffer.insert(write_buffer.end(), value_bytes, value_bytes + sizeof(value_type));
+        append_value_type(write_buffer, _counter_value);
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(value_type)));
       }
       // TTL Type
@@ -78,9 +76,7 @@ namespace throttr
       // TTL
       {
         const auto _offset = write_buffer.size();
-        std::uint8_t ttl_bytes[sizeof(_ttl)]; // NOSONAR
-        std::memcpy(ttl_bytes, &_ttl, sizeof(_ttl));
-        write_buffer.insert(write_buffer.end(), ttl_bytes, ttl_bytes + sizeof(_ttl));
+        append_value_type(write_buffer, _ttl);
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_ttl)));
       }
     }
@@ -91,23 +87,25 @@ namespace throttr
       // TTL
       {
         const auto _offset = write_buffer.size();
-        std::uint8_t ttl_bytes[sizeof(_ttl)]; // NOSONAR
-        std::memcpy(ttl_bytes, &_ttl, sizeof(_ttl));
-        write_buffer.insert(write_buffer.end(), ttl_bytes, ttl_bytes + sizeof(_ttl));
+        append_value_type(write_buffer, _ttl);
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_ttl)));
       }
+
+      const auto _buffer = _it->entry_.buffer_.load(std::memory_order_acquire);
+
       // Size
       {
         const auto _offset = write_buffer.size();
-        const auto _size = _it->entry_.buffer_.size();
-        std::uint8_t size_bytes[sizeof(value_type)]; // NOSONAR
-        std::memcpy(size_bytes, &_size, sizeof(value_type));
-        write_buffer.insert(write_buffer.end(), size_bytes, size_bytes + sizeof(value_type));
+        append_value_type(write_buffer, _buffer->size());
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(value_type)));
       }
 
       // Value
-      batch.emplace_back(boost::asio::buffer(_it->entry_.buffer_.data(), _it->entry_.buffer_.size()));
+      {
+        const auto _offset = write_buffer.size();
+        write_buffer.insert(write_buffer.end(), _buffer->begin(), _buffer->end());
+        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], _buffer->size()));
+      }
     }
 
     // LCOV_EXCL_START
@@ -127,13 +125,14 @@ namespace throttr
     }
     else
     {
+      const auto _buffer = _it->entry_.buffer_.load(std::memory_order_acquire);
       fmt::println(
         "{:%Y-%m-%d %H:%M:%S} REQUEST GET key={} from={} RESPONSE ok=true value={} "
         "ttl_type={} ttl={}",
         std::chrono::system_clock::now(),
         _key.key_,
         to_string(conn->id_),
-        span_to_hex(std::span(_it->entry_.buffer_.data(), _it->entry_.buffer_.size())),
+        span_to_hex(std::span(_buffer->data(), _buffer->size())),
         to_string(_it->entry_.ttl_type_),
         _ttl);
     }

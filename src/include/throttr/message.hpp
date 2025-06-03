@@ -32,7 +32,7 @@ namespace throttr
     /**
      * Write buffer
      */
-    std::vector<std::uint8_t> write_buffer_;
+    std::vector<std::byte> write_buffer_;
 
     /**
      * Buffers

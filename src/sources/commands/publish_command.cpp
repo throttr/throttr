@@ -29,7 +29,7 @@ namespace throttr
     const request_types type,
     const std::span<const std::byte> view,
     std::vector<boost::asio::const_buffer> &batch,
-    std::vector<std::uint8_t> &write_buffer,
+    std::vector<std::byte> &write_buffer,
     const std::shared_ptr<connection> &conn)
   {
     boost::ignore_unused(type, batch, write_buffer);
@@ -52,16 +52,16 @@ namespace throttr
     auto &_buffer = _message->write_buffer_;
     _buffer.reserve(1 + sizeof(value_type) + _payload.size());
 
-    _buffer.push_back(0x03);
+    _buffer.push_back(std::byte{0x03});
 
     const auto _size = _payload.size();
     for (std::size_t _i = 0; _i < sizeof(value_type); ++_i)
     {
-      _buffer.push_back(static_cast<unsigned char>(_size >> (8 * _i) & 0xFF));
+      _buffer.push_back(std::byte{static_cast<unsigned char>(_size >> (8 * _i) & 0xFF)});
     }
 
     for (const auto &_byte : _payload)
-      _buffer.push_back(std::to_integer<uint8_t>(_byte));
+      _buffer.push_back(std::byte{std::to_integer<uint8_t>(_byte)});
 
     _message->buffers_.emplace_back(boost::asio::buffer(_buffer));
 

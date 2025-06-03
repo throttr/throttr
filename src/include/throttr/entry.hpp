@@ -17,6 +17,7 @@
 #define THROTTR__ENTRY_HPP
 
 #include <atomic>
+#include <shared_mutex>
 #include <throttr/protocol_wrapper.hpp>
 
 namespace throttr
@@ -40,7 +41,7 @@ namespace throttr
     /**
      * Buffer
      */
-    std::vector<std::byte> buffer_;
+    std::atomic<std::shared_ptr<std::vector<std::byte>>> buffer_;
 
     /**
      * TTL type
@@ -57,7 +58,10 @@ namespace throttr
      * @param other
      */
     entry(entry &&other) noexcept :
-        type_(other.type_), buffer_(std::move(other.buffer_)), ttl_type_(other.ttl_type_), expires_at_(other.expires_at_)
+        type_(other.type_),
+        buffer_(other.buffer_.load(std::memory_order_acquire)),
+        ttl_type_(other.ttl_type_),
+        expires_at_(other.expires_at_)
     {
       counter_.store(other.counter_.load(std::memory_order_relaxed), std::memory_order_relaxed);
     }
@@ -73,7 +77,7 @@ namespace throttr
       if (this != &other)
       {
         type_ = other.type_;
-        buffer_ = std::move(other.buffer_);
+        buffer_ = other.buffer_.load(std::memory_order_acquire);
         ttl_type_ = other.ttl_type_;
         expires_at_ = other.expires_at_;
         counter_.store(other.counter_.load(std::memory_order_relaxed), std::memory_order_relaxed);
@@ -87,7 +91,10 @@ namespace throttr
      * @param other
      */
     entry(const entry &other) :
-        type_(other.type_), buffer_(other.buffer_), ttl_type_(other.ttl_type_), expires_at_(other.expires_at_)
+        type_(other.type_),
+        buffer_(other.buffer_.load(std::memory_order_acquire)),
+        ttl_type_(other.ttl_type_),
+        expires_at_(other.expires_at_)
     {
       counter_.store(other.counter_.load(std::memory_order_relaxed), std::memory_order_relaxed);
     }
@@ -103,7 +110,7 @@ namespace throttr
       if (this != &other)
       {
         type_ = other.type_;
-        buffer_ = other.buffer_;
+        buffer_ = other.buffer_.load(std::memory_order_acquire);
         ttl_type_ = other.ttl_type_;
         expires_at_ = other.expires_at_;
         counter_.store(other.counter_.load(std::memory_order_relaxed), std::memory_order_relaxed);
@@ -114,7 +121,7 @@ namespace throttr
     /**
      * Constructor
      */
-    entry() = default;
+    entry() : type_(entry_types::counter), buffer_(std::make_shared<std::vector<std::byte>>()){};
   };
 } // namespace throttr
 
