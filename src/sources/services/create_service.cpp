@@ -47,7 +47,7 @@ namespace throttr
 
     if (!as_insert)
     {
-      const request_key _lookup_key{std::string_view(reinterpret_cast<const char *>(_key.data()), _key.size())};
+      const request_key _lookup_key{std::string_view(reinterpret_cast<const char *>(_key.data()), _key.size())}; // NOSONAR
       auto _it_existing = _index.find(_lookup_key);
       if (_it_existing != _index.end())
       {
