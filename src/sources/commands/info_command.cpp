@@ -168,7 +168,7 @@ namespace throttr
     write_buffer.insert(write_buffer.end(), 16, 0);
     std::ranges::copy(version_data, write_buffer.end() - 16);
 
-    batch.push_back(boost::asio::buffer(write_buffer));
+    batch.emplace_back(boost::asio::buffer(write_buffer));
 
     // LCOV_EXCL_START
 #ifndef NDEBUG

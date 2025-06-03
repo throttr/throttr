@@ -34,7 +34,7 @@ namespace throttr
     const boost::uuids::uuid &id,
     const bool as_insert) // NOSONAR
   {
-    boost::ignore_unused(as_insert);
+    boost::ignore_unused(as_insert, id);
 
     const auto _now = std::chrono::steady_clock::now();
     const auto _expires_at = get_expiration_point(_now, ttl_type, ttl);
