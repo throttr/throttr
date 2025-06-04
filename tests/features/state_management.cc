@@ -136,6 +136,36 @@ TEST(StateManagementTest, TTLChange)
     for (const auto &[t, c, e] : cases)
       test_ttl_change<seconds>(_state, _entry, _key, t, c, e);
   }
+
+  {
+    std::vector cases{
+      std::make_tuple(ttl_types::microseconds, change_types::patch, microseconds(32)),
+      std::make_tuple(ttl_types::microseconds, change_types::increase, microseconds(64)),
+      std::make_tuple(ttl_types::microseconds, change_types::decrease, microseconds(16)),
+    };
+    for (const auto &[t, c, e] : cases)
+      test_ttl_change<microseconds>(_state, _entry, _key, t, c, e);
+  }
+
+  {
+    std::vector cases{
+      std::make_tuple(ttl_types::hours, change_types::patch, hours(32)),
+      std::make_tuple(ttl_types::hours, change_types::increase, hours(64)),
+      std::make_tuple(ttl_types::hours, change_types::decrease, hours(16)),
+    };
+    for (const auto &[t, c, e] : cases)
+      test_ttl_change<hours>(_state, _entry, _key, t, c, e);
+  }
+
+  {
+    std::vector cases{
+      std::make_tuple(ttl_types::minutes, change_types::patch, minutes(32)),
+      std::make_tuple(ttl_types::minutes, change_types::increase, minutes(64)),
+      std::make_tuple(ttl_types::minutes, change_types::decrease, minutes(16)),
+    };
+    for (const auto &[t, c, e] : cases)
+      test_ttl_change<minutes>(_state, _entry, _key, t, c, e);
+  }
 }
 
 TEST(StateManagementTest, CalculateExpirationPointNanoseconds)

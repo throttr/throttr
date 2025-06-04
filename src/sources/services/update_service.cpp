@@ -65,23 +65,20 @@ namespace throttr
       case ttl_types::nanoseconds:
         _duration_ns = request.value_;
         break;
-      case ttl_types::microseconds:
-        _duration_ns = std::chrono::duration_cast<nanoseconds>(microseconds(request.value_)).count();
-        break;
       case ttl_types::milliseconds:
         _duration_ns = std::chrono::duration_cast<nanoseconds>(milliseconds(request.value_)).count();
         break;
       case ttl_types::seconds:
         _duration_ns = std::chrono::duration_cast<nanoseconds>(seconds(request.value_)).count();
         break;
+      case ttl_types::microseconds:
+        _duration_ns = std::chrono::duration_cast<nanoseconds>(microseconds(request.value_)).count();
+        break;
       case ttl_types::minutes:
         _duration_ns = std::chrono::duration_cast<nanoseconds>(minutes(request.value_)).count();
         break;
       case ttl_types::hours:
         _duration_ns = std::chrono::duration_cast<nanoseconds>(hours(request.value_)).count();
-        break;
-      default:
-        _duration_ns = request.value_;
         break;
     }
 
