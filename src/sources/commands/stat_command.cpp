@@ -34,10 +34,6 @@ namespace throttr
 
     boost::ignore_unused(type, conn);
 
-#ifndef ENABLED_FEATURE_METRICS
-    batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
-    return;
-#else
     const auto _request = request_stat::from_buffer(view);
 
     const request_key _key{
@@ -67,11 +63,19 @@ namespace throttr
       batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(uint64_t)));
     };
 
+#ifdef ENABLED_FEATURE_METRICS
     const auto &metrics = *_it->metrics_;
     _append_uint64(metrics.reads_per_minute_.load(std::memory_order_relaxed));
     _append_uint64(metrics.writes_per_minute_.load(std::memory_order_relaxed));
     _append_uint64(metrics.reads_accumulator_.load(std::memory_order_relaxed));
     _append_uint64(metrics.writes_accumulator_.load(std::memory_order_relaxed));
+#else
+    for (int _i = 0; _i < 4; ++_i)
+    {
+      constexpr uint64_t _empty = 0;
+      _append_uint64(_empty);
+    }
+#endif
 
     // LCOV_EXCL_START
 #ifndef NDEBUG
@@ -81,12 +85,18 @@ namespace throttr
       std::chrono::system_clock::now(),
       _key.key_,
       to_string(conn->id_),
+#ifdef ENABLED_FEATURE_METRICS
       metrics.reads_per_minute_.load(),
       metrics.writes_per_minute_.load(),
       metrics.reads_accumulator_.load(),
       metrics.writes_accumulator_.load());
+#else
+      0,
+      0,
+      0,
+      0);
+#endif
 #endif
     // LCOV_EXCL_STOP
-#endif
   }
 } // namespace throttr

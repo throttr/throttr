@@ -15,7 +15,6 @@
 
 #include "../service_test_fixture.hpp"
 
-#ifdef ENABLED_FEATURE_METRICS
 class InfoTestFixture : public ServiceTestFixture
 {
 };
@@ -79,4 +78,3 @@ TEST_F(InfoTestFixture, OnSuccess)
   boost::system::error_code _ec;
   _socket.close(_ec);
 }
-#endif

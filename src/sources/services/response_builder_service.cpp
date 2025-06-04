@@ -105,6 +105,14 @@ namespace throttr
       append_uint64_t(write_buffer, _v);
       batch->emplace_back(boost::asio::buffer(&write_buffer[_off], sizeof(_v)));
     }
+#else
+    for (int _i = 0; _i < 4; ++_i)
+    {
+      constexpr uint64_t _empty = 0;
+      const auto _off = write_buffer.size();
+      append_uint64_t(write_buffer, _empty);
+      batch->emplace_back(boost::asio::buffer(&write_buffer[_off], sizeof(_empty)));
+    }
 #endif
 
     return 0;
@@ -149,15 +157,27 @@ namespace throttr
 
 #ifdef ENABLED_FEATURE_METRICS
     const auto &_metrics = *conn->metrics_;
+#else
+    constexpr uint64_t _empty = 0;
+#endif
 
     for (const uint64_t _val :
          {conn->connected_at_,
+#ifdef ENABLED_FEATURE_METRICS
           _metrics.network_.read_bytes_.accumulator_.load(std::memory_order_relaxed),
           _metrics.network_.write_bytes_.accumulator_.load(std::memory_order_relaxed),
           _metrics.network_.published_bytes_.accumulator_.load(std::memory_order_relaxed),
           _metrics.network_.received_bytes_.accumulator_.load(std::memory_order_relaxed),
           _metrics.memory_.allocated_bytes_.accumulator_.load(std::memory_order_relaxed),
           _metrics.memory_.consumed_bytes_.accumulator_.load(std::memory_order_relaxed)})
+#else
+          _empty,
+          _empty,
+          _empty,
+          _empty,
+          _empty,
+          _empty})
+#endif
     {
       const auto _offset = write_buffer.size();
       append_uint64_t(write_buffer, _val);
@@ -186,18 +206,16 @@ namespace throttr
 
     for (request_types type : monitored_request_types)
     {
+#ifdef ENABLED_FEATURE_METRICS
       const auto &metric = conn->metrics_->commands_[static_cast<std::size_t>(type)];
       const uint64_t _value = metric.accumulator_.load(std::memory_order_relaxed);
+#else
+      constexpr uint64_t _value = 0;
+#endif
       const auto _offset = write_buffer.size();
       append_uint64_t(write_buffer, _value);
       batch->emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(uint64_t)));
     }
-
-#else
-    // Rellenar con ceros si las métricas no están habilitadas
-    std::array<std::uint8_t, 227 - 16 - 1 - 16 - 2> zeros = {};
-    _push(zeros.data(), zeros.size());
-#endif
 
     return 0;
   }
@@ -207,10 +225,6 @@ namespace throttr
     std::vector<boost::asio::const_buffer> &batch,
     std::vector<std::byte> &write_buffer)
   {
-#ifndef ENABLED_FEATURE_METRICS
-    batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
-    return;
-#endif
     batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
 
     std::vector<const connection *> _fragment;
@@ -352,11 +366,6 @@ namespace throttr
     std::vector<boost::asio::const_buffer> &batch,
     std::vector<std::byte> &write_buffer)
   {
-#ifndef ENABLED_FEATURE_METRICS
-    batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
-    return;
-#else
-
     batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
 
     std::vector<std::string> _channels_list;
@@ -380,8 +389,13 @@ namespace throttr
         auto _range = _subs.equal_range(_current_channel);                           // NOSONAR
         for (auto _range_it = _range.first; _range_it != _range.second; ++_range_it) // LCOV_EXCL_LINE Note: Partially tested.
         {
+#ifdef ENABLED_FEATURE_METRICS
           _read_sum += _range_it->metrics_->read_bytes_.accumulator_.load(std::memory_order_relaxed);
           _write_sum += _range_it->metrics_->write_bytes_.accumulator_.load(std::memory_order_relaxed);
+#else
+          _read_sum += 0;
+          _write_sum += 0;
+#endif
           ++_count;
         }
 
@@ -447,6 +461,5 @@ namespace throttr
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], _channel.size()));
       }
     }
-#endif
   }
 } // namespace throttr

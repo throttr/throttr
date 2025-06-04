@@ -37,11 +37,6 @@ namespace throttr
   {
     boost::ignore_unused(type, view, conn);
 
-#ifndef ENABLED_FEATURE_METRICS
-    batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
-    return;
-#else
-
     std::scoped_lock _lock(state->subscriptions_->mutex_, state->connections_mutex_);
 
     batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
@@ -56,17 +51,18 @@ namespace throttr
       batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(value)));
     };
 
+    uint64_t _total_requests = 0;
+    uint64_t _total_requests_per_minute = 0;
+#ifdef ENABLED_FEATURE_METRICS
     const auto &metrics = state->metrics_collector_->commands_;
 
     push_u64(static_cast<uint64_t>(_now));
-
-    uint64_t _total_requests = 0;
-    uint64_t _total_requests_per_minute = 0;
     for (const auto &m : metrics)
     {
       _total_requests += m.accumulator_.load(std::memory_order_relaxed);
       _total_requests_per_minute += m.per_minute_.load(std::memory_order_relaxed);
     }
+#endif
     push_u64(_total_requests);
     push_u64(_total_requests_per_minute);
 
@@ -91,14 +87,20 @@ namespace throttr
            request_types::connections,
          })
     {
+#ifdef ENABLED_FEATURE_METRICS
       push_u64(metrics[static_cast<std::size_t>(metric_type)].accumulator_.load(std::memory_order_relaxed));
       push_u64(metrics[static_cast<std::size_t>(metric_type)].per_minute_.load(std::memory_order_relaxed));
+#else
+      push_u64(_total_requests);
+      push_u64(_total_requests);
+#endif
     }
 
     uint64_t _total_read = 0;
     uint64_t _total_write = 0;
     uint64_t _total_read_per_minute = 0;
     uint64_t _total_write_per_minute = 0;
+#ifdef ENABLED_FEATURE_METRICS
     for (const auto &_connection : state->connections_) // NOSONAR
     {
       _total_read += _connection.second->metrics_->network_.read_bytes_.accumulator_.load(std::memory_order_relaxed);
@@ -106,6 +108,7 @@ namespace throttr
       _total_read_per_minute += _connection.second->metrics_->network_.read_bytes_.per_minute_.load(std::memory_order_relaxed);
       _total_write_per_minute += _connection.second->metrics_->network_.write_bytes_.per_minute_.load(std::memory_order_relaxed);
     }
+#endif
 
     push_u64(_total_read);
     push_u64(_total_read_per_minute);
@@ -179,6 +182,5 @@ namespace throttr
       to_string(conn->id_));
 #endif
     // LCOV_EXCL_STOP
-#endif
   }
 } // namespace throttr

@@ -19,7 +19,6 @@ class StatTestFixture : public ServiceTestFixture
 {
 };
 
-#ifdef ENABLED_FEATURE_METRICS
 TEST_F(StatTestFixture, OnSuccess)
 {
   boost::asio::io_context _io_context;
@@ -62,22 +61,22 @@ TEST_F(StatTestFixture, OnSuccess)
 
   ASSERT_EQ(static_cast<uint8_t>(_stat_response[0]), 1);
 
+#ifdef ENABLED_FEATURE_METRIC
   uint64_t _rpm = 0;
   uint64_t _wpm = 0;
   uint64_t _reads_total = 0;
   uint64_t _writes_total = 0;
-
   std::memcpy(&_rpm, _stat_response.data() + 1, sizeof(uint64_t));
   std::memcpy(&_wpm, _stat_response.data() + 1 + sizeof(uint64_t), sizeof(uint64_t));
   std::memcpy(&_reads_total, _stat_response.data() + 1 + sizeof(uint64_t) * 2, sizeof(uint64_t));
   std::memcpy(&_writes_total, _stat_response.data() + 1 + sizeof(uint64_t) * 3, sizeof(uint64_t));
-
-  // Verificar que haya al menos 3 lecturas y 2 escrituras
-  ASSERT_GE(_rpm, 3);
+  S
+    // Verificar que haya al menos 3 lecturas y 2 escrituras
+    ASSERT_GE(_rpm, 3);
   ASSERT_GE(_wpm, 2);
   ASSERT_EQ(_reads_total, _rpm);
   ASSERT_EQ(_writes_total, _wpm);
+#endif
   boost::system::error_code _ec;
   _socket.close(_ec);
 }
-#endif

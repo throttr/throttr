@@ -21,7 +21,6 @@ class ChannelsTestFixture : public ServiceTestFixture
 {
 };
 
-#ifdef ENABLED_FEATURE_METRICS
 TEST_F(ChannelsTestFixture, OnSuccess)
 {
   boost::asio::io_context _io_context;
@@ -94,4 +93,3 @@ TEST_F(ChannelsTestFixture, OnSuccess)
   _socket1.close(_ec);
   _socket2.close(_ec);
 }
-#endif

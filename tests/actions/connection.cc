@@ -21,7 +21,6 @@ class ConnectionTestFixture : public ServiceTestFixture
 {
 };
 
-#ifdef ENABLED_FEATURE_METRICS
 TEST_F(ConnectionTestFixture, OnSuccess)
 {
   boost::asio::io_context _io_context;
@@ -121,4 +120,3 @@ TEST_F(ConnectionTestFixture, OnFailed)
   boost::system::error_code _ec;
   _socket.close(_ec);
 }
-#endif

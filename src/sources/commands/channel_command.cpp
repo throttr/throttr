@@ -35,11 +35,6 @@ namespace throttr
 
     boost::ignore_unused(type, conn);
 
-#ifndef ENABLED_FEATURE_METRICS
-    batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
-    return;
-#else
-
     const auto _request = request_channel::from_buffer(view);
 
     const auto &_subs = state->subscriptions_->subscriptions_.get<by_channel_name>();
@@ -89,8 +84,13 @@ namespace throttr
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_sub.subscribed_at_)));
       }
 
+#ifdef ENABLED_FEATURE_METRICS
       const uint64_t _read = _sub.metrics_->read_bytes_.accumulator_.load(std::memory_order_relaxed);
       const uint64_t _write = _sub.metrics_->write_bytes_.accumulator_.load(std::memory_order_relaxed);
+#else
+      const uint64_t _read = 0;
+      const uint64_t _write = 0;
+#endif
 
       for (uint64_t metric : {_read, _write})
       {
@@ -110,6 +110,5 @@ namespace throttr
       to_string(conn->id_));
 #endif
     // LCOV_EXCL_STOP
-#endif
   }
 } // namespace throttr

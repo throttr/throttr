@@ -19,7 +19,6 @@ class StatsTestFixture : public ServiceTestFixture
 {
 };
 
-#ifdef ENABLED_FEATURE_METRICS
 TEST_F(StatsTestFixture, OnSuccessSingleFragment)
 {
   const std::string _key1 = "abc";
@@ -221,4 +220,3 @@ TEST_F(StatsTestFixture, OnSuccessMultipleFragments)
     ASSERT_EQ(_read_keys[_i], _keys[_i]);
   }
 }
-#endif

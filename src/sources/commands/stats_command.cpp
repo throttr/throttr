@@ -35,11 +35,6 @@ namespace throttr
 
     boost::ignore_unused(type, view, conn);
 
-#ifndef ENABLED_FEATURE_METRICS
-    batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
-    return;
-#else
-
     response_builder_service::handle_fragmented_entries_response(
       state,
       batch,
@@ -58,6 +53,5 @@ namespace throttr
       to_string(conn->id_));
 #endif
     // LCOV_EXCL_STOP
-#endif
   }
 } // namespace throttr

@@ -18,6 +18,7 @@ jobs:
         type: [Release, Debug]
         size: [UINT8, UINT16, UINT32, UINT64]
         sockets: [ON, OFF]
+        metrics: [ON, OFF]
 
     container:
       image: ghcr.io/throttr/builder-alpine:1.87.0-debug
@@ -29,15 +30,15 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.type }} -DBUILD_TESTS=OFF -DRUNTIME_VALUE_SIZE=${{ matrix.size }} -DENABLE_UNIX_SOCKETS=${{ matrix.sockets }} -DENABLE_STATIC_LINKING=ON
+          cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.type }} -DBUILD_TESTS=OFF -DRUNTIME_VALUE_SIZE=${{ matrix.size }} -DENABLE_UNIX_SOCKETS=${{ matrix.sockets }} -DENABLE_FEATURE_METRICS=${{ matrix.metrics }} -DENABLE_STATIC_LINKING=ON
           make -j4
           cd ..
           mkdir -p dist
           cp build/throttr dist/
           cp LICENSE dist/
-          cd dist && zip throttr-${{ matrix.type }}-${{ matrix.size }}-${{ matrix.sockets }}.zip throttr LICENSE
+          cd dist && zip throttr-${{ matrix.type }}-${{ matrix.size }}-${{ matrix.sockets == 'ON' && 'unix' || 'tcp' }}-${{ matrix.metrics == 'ON' && 'with-metrics' || 'without-metrics' }}.zip throttr LICENSE
 
       - name: Upload release asset
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/throttr-${{ matrix.type }}-${{ matrix.size }}-${{ matrix.sockets }}.zip
+          files: dist/throttr-${{ matrix.type }}-${{ matrix.size }}-${{ matrix.sockets == 'ON' && 'unix' || 'tcp' }}-${{ matrix.metrics == 'ON' && 'with-metrics' || 'without-metrics' }}.zip
