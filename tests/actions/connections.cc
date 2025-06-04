@@ -68,6 +68,7 @@ TEST_F(ConnectionsTestFixture, OnSuccessSingleFragment)
   uint16_t _port;
   std::memcpy(&_port, _response.data() + _offset, sizeof(_port));
   _offset += sizeof(_port);
+  _port = boost::endian::native_to_little(_port);
   ASSERT_GT(_port, 0);
 
   // 24 métricas (8 bytes cada una)

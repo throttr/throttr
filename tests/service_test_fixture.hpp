@@ -21,6 +21,7 @@
 #include <gtest/gtest.h>
 
 #include <boost/asio.hpp>
+#include <boost/endian/conversion.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <thread>
 #include <throttr/app.hpp>

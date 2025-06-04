@@ -19,7 +19,9 @@
 #include <throttr/connection_metrics.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/endian/conversion.hpp>
 #include <boost/uuid/uuid_io.hpp>
+
 #include <throttr/services/response_builder_service.hpp>
 #include <throttr/state.hpp>
 #include <throttr/utils.hpp>
@@ -36,6 +38,7 @@ namespace throttr
     const std::shared_ptr<connection> &conn)
   {
     boost::ignore_unused(type, view, conn);
+    using namespace boost::endian;
 
     std::scoped_lock _lock(state->subscriptions_->mutex_, state->connections_mutex_);
 
@@ -44,10 +47,12 @@ namespace throttr
     const auto _now =
       std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
+    boost::ignore_unused(_now);
+
     const auto push_u64 = [&](const uint64_t value)
     {
       const auto _offset = write_buffer.size();
-      append_uint64_t(write_buffer, value);
+      append_uint64_t(write_buffer, native_to_little(value));
       batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(value)));
     };
 
@@ -91,6 +96,7 @@ namespace throttr
       push_u64(metrics[static_cast<std::size_t>(metric_type)].accumulator_.load(std::memory_order_relaxed));
       push_u64(metrics[static_cast<std::size_t>(metric_type)].per_minute_.load(std::memory_order_relaxed));
 #else
+      boost::ignore_unused(metric_type);
       push_u64(_total_requests);
       push_u64(_total_requests);
 #endif

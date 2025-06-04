@@ -14,6 +14,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "../service_test_fixture.hpp"
+#include <boost/endian/conversion.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <fmt/core.h>
 
@@ -74,6 +75,7 @@ TEST_F(ConnectionTestFixture, OnSuccess)
   uint16_t _port;
   std::memcpy(&_port, _conn_response.data() + _offset, sizeof(_port));
   _offset += sizeof(_port);
+  _port = boost::endian::little_to_native(_port);
   ASSERT_GT(_port, 0);
 
   for (int i = 0; i < 25; ++i)

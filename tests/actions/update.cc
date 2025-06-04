@@ -43,6 +43,7 @@ TEST_F(UpdateTestFixture, IncreaseQuota)
 
   value_type _quota = 0;
   std::memcpy(&_quota, _query_response.data() + 1, sizeof(_quota));
+  _quota = boost::endian::little_to_native(_quota);
   ASSERT_EQ(_quota, 10);
 }
 
@@ -64,6 +65,7 @@ TEST_F(UpdateTestFixture, DecreaseQuota)
 
   value_type _quota = 0;
   std::memcpy(&_quota, _query_response.data() + 1, sizeof(_quota));
+  _quota = boost::endian::little_to_native(_quota);
   ASSERT_EQ(_quota, 6);
 }
 
@@ -85,6 +87,7 @@ TEST_F(UpdateTestFixture, PatchQuota)
 
   value_type _quota = 0;
   std::memcpy(&_quota, _query_response.data() + 1, sizeof(_quota));
+  _quota = boost::endian::little_to_native(_quota);
   ASSERT_EQ(_quota, 4);
 }
 
@@ -108,6 +111,7 @@ TEST_F(UpdateTestFixture, PatchTTL)
 
   value_type _quota = 0;
   std::memcpy(&_quota, _query_response.data() + 1, sizeof(_quota));
+  _quota = boost::endian::little_to_native(_quota);
   ASSERT_EQ(_quota, 10);
 
   const auto _ttl_type = static_cast<uint8_t>(_query_response[1 + sizeof(_quota)]);
@@ -115,6 +119,7 @@ TEST_F(UpdateTestFixture, PatchTTL)
 
   value_type _ttl = 0;
   std::memcpy(&_ttl, _query_response.data() + 2 + sizeof(_quota), sizeof(_ttl));
+  _ttl = boost::endian::little_to_native(_ttl);
   ASSERT_GE(_ttl, 0);
   ASSERT_LE(_ttl, 64);
 }

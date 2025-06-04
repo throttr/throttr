@@ -14,6 +14,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/endian/conversion.hpp>
 #include <throttr/services/response_builder_service.hpp>
 
 #include <throttr/connection.hpp>
@@ -27,7 +28,7 @@ namespace throttr
   push_total_fragments(std::vector<boost::asio::const_buffer> &batch, std::vector<std::byte> &write_buffer, const uint64_t total)
   {
     const auto _offset = write_buffer.size();
-    append_uint64_t(write_buffer, total);
+    append_uint64_t(write_buffer, boost::endian::native_to_little(total));
     batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(total)));
   }
 
@@ -39,6 +40,8 @@ namespace throttr
     const bool measure)
   {
     boost::ignore_unused(state);
+
+    using namespace boost::endian;
 
     if (measure) // LCOV_EXCL_LINE Note: Partially tested.
       return entry->key_.size() + sizeof(value_type) + 11;
@@ -54,7 +57,7 @@ namespace throttr
       const auto _expires_at = entry->entry_.expires_at_.load(std::memory_order_acquire);
 
       const auto _off = write_buffer.size();
-      append_uint64_t(write_buffer, _expires_at);
+      append_uint64_t(write_buffer, native_to_little(_expires_at));
       batch->emplace_back(boost::asio::buffer(&write_buffer[_off], sizeof(_expires_at)));
     }
 
@@ -71,7 +74,7 @@ namespace throttr
         _bytes_used = static_cast<value_type>(_buffer->size());
       }
       const auto _scoped_offset = write_buffer.size();
-      append_uint64_t(write_buffer, _bytes_used);
+      append_uint64_t(write_buffer, native_to_little(_bytes_used));
       batch->emplace_back(boost::asio::buffer(&write_buffer[_scoped_offset], sizeof(_bytes_used)));
     }
 
@@ -86,6 +89,8 @@ namespace throttr
     const bool measure)
   {
     boost::ignore_unused(state);
+
+    using namespace boost::endian;
 
     if (measure) // LCOV_EXCL_LINE Note: Partially tested.
       return entry->key_.size() + 1 + 8 * 4;
@@ -102,7 +107,7 @@ namespace throttr
                                                   _metric.writes_accumulator_.load(std::memory_order_relaxed)})
     {
       const auto _off = write_buffer.size();
-      append_uint64_t(write_buffer, _v);
+      append_uint64_t(write_buffer, native_to_little(_v));
       batch->emplace_back(boost::asio::buffer(&write_buffer[_off], sizeof(_v)));
     }
 #else
@@ -110,7 +115,7 @@ namespace throttr
     {
       constexpr uint64_t _empty = 0;
       const auto _off = write_buffer.size();
-      append_uint64_t(write_buffer, _empty);
+      append_uint64_t(write_buffer, native_to_little(_empty));
       batch->emplace_back(boost::asio::buffer(&write_buffer[_off], sizeof(_empty)));
     }
 #endif
@@ -129,6 +134,8 @@ namespace throttr
 
     if (measure)
       return 227;
+
+    using namespace boost::endian;
 
     const auto _push = [&](const void *ptr, const std::size_t size) // NOSONAR
     {
@@ -153,7 +160,8 @@ namespace throttr
     _push(_ip_bytes.data(), 16);
 
     // Port (2 bytes)
-    _push(&conn->port_, sizeof(conn->port_));
+    const uint16_t _port = native_to_little(conn->port_);
+    _push(&_port, sizeof(conn->port_));
 
 #ifdef ENABLED_FEATURE_METRICS
     const auto &_metrics = *conn->metrics_;
@@ -180,7 +188,7 @@ namespace throttr
 #endif
     {
       const auto _offset = write_buffer.size();
-      append_uint64_t(write_buffer, _val);
+      append_uint64_t(write_buffer, native_to_little(_val));
       batch->emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(uint64_t)));
     }
 
@@ -206,6 +214,7 @@ namespace throttr
 
     for (request_types type : monitored_request_types)
     {
+      boost::ignore_unused(type);
 #ifdef ENABLED_FEATURE_METRICS
       const auto &metric = conn->metrics_->commands_[static_cast<std::size_t>(type)];
       const uint64_t _value = metric.accumulator_.load(std::memory_order_relaxed);
@@ -213,7 +222,7 @@ namespace throttr
       constexpr uint64_t _value = 0;
 #endif
       const auto _offset = write_buffer.size();
-      append_uint64_t(write_buffer, _value);
+      append_uint64_t(write_buffer, native_to_little(_value));
       batch->emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(uint64_t)));
     }
 
@@ -266,7 +275,7 @@ namespace throttr
       for (const uint64_t _connection_count = _frag.size(); uint64_t val : {_fragment_index, _connection_count})
       {
         const auto _offset = write_buffer.size();
-        append_uint64_t(write_buffer, val);
+        append_uint64_t(write_buffer, boost::endian::native_to_little(val));
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(val)));
       }
 
@@ -327,7 +336,7 @@ namespace throttr
     {
       const auto _offset = write_buffer.size();
       const uint64_t _fragment_count = _fragments.size();
-      append_uint64_t(write_buffer, _fragment_count);
+      append_uint64_t(write_buffer, boost::endian::native_to_little(_fragment_count));
       batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_fragment_count)));
     }
 
@@ -341,7 +350,7 @@ namespace throttr
       for (const uint64_t _value : {_fragment_index, _key_count}) // LCOV_EXCL_LINE Note: Partially tested.
       {
         const auto _offset = write_buffer.size();
-        append_uint64_t(write_buffer, _value);
+        append_uint64_t(write_buffer, boost::endian::native_to_little(_value));
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_value)));
       }
 
@@ -432,7 +441,7 @@ namespace throttr
       for (const uint64_t _channel_count = _frag.size(); uint64_t _val : {_fragment_index, _channel_count})
       {
         const auto _offset = write_buffer.size();
-        append_uint64_t(write_buffer, _val);
+        append_uint64_t(write_buffer, boost::endian::native_to_little(_val));
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_val)));
       }
 
@@ -449,7 +458,7 @@ namespace throttr
         for (const uint64_t _metric : {_read, _write, _count})
         {
           const auto _scoped_offset = write_buffer.size();
-          append_uint64_t(write_buffer, _metric);
+          append_uint64_t(write_buffer, boost::endian::native_to_little(_metric));
           batch.emplace_back(boost::asio::buffer(&write_buffer[_scoped_offset], sizeof(_metric)));
         }
       }

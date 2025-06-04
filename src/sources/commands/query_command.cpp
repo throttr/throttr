@@ -16,6 +16,7 @@
 #include <throttr/commands/query_command.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/endian/conversion.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <throttr/connection.hpp>
 #include <throttr/state.hpp>
@@ -33,6 +34,8 @@ namespace throttr
     const std::shared_ptr<connection> &conn)
   {
     boost::ignore_unused(conn);
+
+    using namespace boost::endian;
 
     const auto _request = request_query::from_buffer(view);
 
@@ -68,7 +71,7 @@ namespace throttr
       {
         const auto _offset = write_buffer.size();
         const value_type _counter_value = _it->entry_.counter_.load(std::memory_order_relaxed);
-        append_value_type(write_buffer, _counter_value);
+        append_value_type(write_buffer, native_to_little(_counter_value));
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(value_type)));
       }
       // TTL Type
@@ -76,7 +79,7 @@ namespace throttr
       // TTL
       {
         const auto _offset = write_buffer.size();
-        append_value_type(write_buffer, _ttl);
+        append_value_type(write_buffer, native_to_little(_ttl));
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_ttl)));
       }
     }
@@ -87,7 +90,7 @@ namespace throttr
       // TTL
       {
         const auto _offset = write_buffer.size();
-        append_value_type(write_buffer, _ttl);
+        append_value_type(write_buffer, native_to_little(_ttl));
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_ttl)));
       }
 
@@ -96,7 +99,7 @@ namespace throttr
       // Size
       {
         const auto _offset = write_buffer.size();
-        append_value_type(write_buffer, _buffer->size());
+        append_value_type(write_buffer, native_to_little(_buffer->size()));
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(value_type)));
       }
 

@@ -16,6 +16,7 @@
 #include <throttr/commands/publish_command.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/endian/conversion.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <throttr/connection.hpp>
 #include <throttr/services/response_builder_service.hpp>
@@ -33,6 +34,8 @@ namespace throttr
     const std::shared_ptr<connection> &conn)
   {
     boost::ignore_unused(type, batch, write_buffer);
+
+    using namespace boost::endian;
 
     const auto _request = request_publish::from_buffer(view);
     const auto &_payload = _request.value_;
@@ -54,11 +57,8 @@ namespace throttr
 
     _buffer.push_back(std::byte{0x03});
 
-    const auto _size = _payload.size();
-    for (std::size_t _i = 0; _i < sizeof(value_type); ++_i)
-    {
-      _buffer.push_back(std::byte{static_cast<unsigned char>(_size >> (8 * _i) & 0xFF)});
-    }
+    const value_type _size = _payload.size();
+    append_value_type(_buffer, native_to_little(_size));
 
     for (const auto &_byte : _payload)
       _buffer.push_back(std::byte{std::to_integer<uint8_t>(_byte)});

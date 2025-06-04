@@ -18,6 +18,7 @@
 #ifndef THROTTR_TIME_HPP
 #define THROTTR_TIME_HPP
 
+#include <boost/endian/conversion.hpp>
 #include <chrono>
 #include <throttr/protocol_wrapper.hpp>
 
@@ -36,10 +37,8 @@ namespace throttr
     using namespace std::chrono;
 
     value_type _value = 0;
-    for (std::size_t i = 0; i < sizeof(value_type); ++i) // LCOV_EXCL_LINE Note: Partially tested.
-    {
-      _value |= static_cast<value_type>(std::to_integer<uint8_t>(ttl[i])) << (8 * i); // NOSONAR
-    }
+    std::memcpy(&_value, ttl.data(), sizeof(value_type));
+    _value = boost::endian::little_to_native(_value);
 
     std::uint64_t offset_ns = 0;
 

@@ -61,18 +61,21 @@ TEST_F(ListTestFixture, OnSuccessSingleFragment)
   uint64_t _fragment_count;
   std::memcpy(&_fragment_count, _response.data() + _offset, sizeof(_fragment_count));
   _offset += sizeof(_fragment_count);
+  _fragment_count = boost::endian::little_to_native(_fragment_count);
   ASSERT_EQ(_fragment_count, 1);
 
   // Fragment ID
   uint64_t _fragment_id;
   std::memcpy(&_fragment_id, _response.data() + _offset, sizeof(_fragment_id));
   _offset += sizeof(_fragment_id);
+  _fragment_id = boost::endian::little_to_native(_fragment_id);
   ASSERT_EQ(_fragment_id, 1);
 
   // Key count
   uint64_t _key_count;
   std::memcpy(&_key_count, _response.data() + _offset, sizeof(_key_count));
   _offset += sizeof(_key_count);
+  _key_count = boost::endian::little_to_native(_key_count);
   ASSERT_EQ(_key_count, 3);
 
   // Key 1 metadata
@@ -86,11 +89,13 @@ TEST_F(ListTestFixture, OnSuccessSingleFragment)
   uint64_t _expires1;
   std::memcpy(&_expires1, _response.data() + _offset, sizeof(_expires1));
   _offset += sizeof(_expires1);
+  _expires1 = boost::endian::little_to_native(_expires1);
   ASSERT_GT(_expires1, 0);
 
   value_type _bytes_used_1;
   std::memcpy(&_bytes_used_1, _response.data() + _offset, sizeof(_bytes_used_1));
   _offset += sizeof(_bytes_used_1);
+  _bytes_used_1 = boost::endian::little_to_native(_bytes_used_1);
   ASSERT_EQ(_bytes_used_1, _value1.size());
 
   // Key 2 metadata
@@ -104,11 +109,13 @@ TEST_F(ListTestFixture, OnSuccessSingleFragment)
   uint64_t _expires2;
   std::memcpy(&_expires2, _response.data() + _offset, sizeof(_expires2));
   _offset += sizeof(_expires2);
+  _expires2 = boost::endian::little_to_native(_expires2);
   ASSERT_GT(_expires2, 0);
 
   value_type _bytes_used_2;
   std::memcpy(&_bytes_used_2, _response.data() + _offset, sizeof(_bytes_used_2));
   _offset += sizeof(_bytes_used_2);
+  _bytes_used_2 = boost::endian::little_to_native(_bytes_used_2);
   ASSERT_EQ(_bytes_used_2, _value2.size());
 
   // Key 3 metadata
@@ -122,11 +129,13 @@ TEST_F(ListTestFixture, OnSuccessSingleFragment)
   uint64_t _expires3;
   std::memcpy(&_expires3, _response.data() + _offset, sizeof(_expires3));
   _offset += sizeof(_expires3);
+  _expires3 = boost::endian::little_to_native(_expires3);
   ASSERT_GT(_expires3, 0);
 
   value_type _bytes_used_3;
   std::memcpy(&_bytes_used_3, _response.data() + _offset, sizeof(_bytes_used_3));
   _offset += sizeof(_bytes_used_3);
+  _bytes_used_3 = boost::endian::little_to_native(_bytes_used_3);
   ASSERT_EQ(_bytes_used_3, sizeof(value_type));
 
   // Key 1 raw
@@ -185,6 +194,7 @@ TEST_F(ListTestFixture, OnSuccessMultipleFragments)
 
   uint64_t _fragment_count = 0;
   boost::asio::read(_socket, boost::asio::buffer(&_fragment_count, 8));
+  _fragment_count = boost::endian::little_to_native(_fragment_count);
   ASSERT_GE(_fragment_count, 2);
 
   std::vector<std::byte> _full_response;
@@ -214,7 +224,7 @@ TEST_F(ListTestFixture, OnSuccessMultipleFragments)
       reinterpret_cast<std::byte *>(&_key_count),
       reinterpret_cast<std::byte *>(&_key_count) + sizeof(_key_count));
 
-    _total_keys += _key_count;
+    _total_keys += boost::endian::little_to_native(_key_count);
     std::vector<size_t> _fragment_key_sizes;
 
     for (uint64_t _k = 0; _k < _key_count; ++_k)
