@@ -29,12 +29,9 @@ namespace throttr
    * @param now
    * @param ttl_type
    * @param ttl
-   * @return std::chrono::steady_clock::time_point
+   * @return uint64_t
    */
-  inline std::chrono::steady_clock::time_point get_expiration_point(
-    const std::chrono::steady_clock::time_point &now,
-    const ttl_types ttl_type,
-    const std::span<const std::byte> ttl)
+  inline uint64_t get_expiration_point(const uint64_t now, const ttl_types ttl_type, const std::span<const std::byte> ttl)
   {
     using namespace std::chrono;
 
@@ -44,22 +41,31 @@ namespace throttr
       _value |= static_cast<value_type>(std::to_integer<uint8_t>(ttl[i])) << (8 * i); // NOSONAR
     }
 
+    std::uint64_t offset_ns = 0;
+
     // LCOV_EXCL_START
     switch (ttl_type)
     {
       case ttl_types::nanoseconds:
-        return now + nanoseconds(_value);
+        offset_ns = _value;
+        break;
       case ttl_types::milliseconds:
-        return now + milliseconds(_value);
+        offset_ns = duration_cast<nanoseconds>(microseconds(_value)).count();
+        break;
       case ttl_types::microseconds:
-        return now + microseconds(_value);
+        offset_ns = duration_cast<nanoseconds>(milliseconds(_value)).count();
+        break;
       case ttl_types::minutes:
-        return now + minutes(_value);
+        offset_ns = duration_cast<nanoseconds>(minutes(_value)).count();
+        break;
       case ttl_types::hours:
-        return now + hours(_value);
+        offset_ns = duration_cast<nanoseconds>(hours(_value)).count();
+        break;
       default:
-        return now + seconds(_value);
+        offset_ns = duration_cast<nanoseconds>(seconds(_value)).count();
+        break;
     }
+    return now + offset_ns;
     // LCOV_EXCL_STOP
   }
 
@@ -70,33 +76,33 @@ namespace throttr
    * @param ttl_type
    * @return value_type
    */
-  inline value_type get_ttl(const std::chrono::steady_clock::time_point &expires_at, const ttl_types ttl_type)
+  inline value_type get_ttl(const uint64_t expires_at, const ttl_types ttl_type)
   {
-    using enum ttl_types;
+    using namespace std::chrono;
 
-    const auto now = std::chrono::steady_clock::now();
-    if (expires_at <= now)
+    const std::uint64_t now_ns = steady_clock::now().time_since_epoch().count();
+    if (expires_at <= now_ns)
     {
       return 0;
     }
 
-    const auto diff = expires_at - now;
+    const std::uint64_t diff_ns = expires_at - now_ns;
 
     // LCOV_EXCL_START
     switch (ttl_type)
     {
-      case nanoseconds:
-        return std::chrono::duration_cast<std::chrono::nanoseconds>(diff).count();
-      case milliseconds:
-        return std::chrono::duration_cast<std::chrono::milliseconds>(diff).count();
-      case microseconds:
-        return std::chrono::duration_cast<std::chrono::microseconds>(diff).count();
-      case minutes:
-        return std::chrono::duration_cast<std::chrono::minutes>(diff).count();
-      case hours:
-        return std::chrono::duration_cast<std::chrono::hours>(diff).count();
+      case ttl_types::nanoseconds:
+        return diff_ns;
+      case ttl_types::microseconds:
+        return duration_cast<microseconds>(nanoseconds(diff_ns)).count();
+      case ttl_types::milliseconds:
+        return duration_cast<milliseconds>(nanoseconds(diff_ns)).count();
+      case ttl_types::minutes:
+        return duration_cast<minutes>(nanoseconds(diff_ns)).count();
+      case ttl_types::hours:
+        return duration_cast<hours>(nanoseconds(diff_ns)).count();
       default:
-        return std::chrono::duration_cast<std::chrono::seconds>(diff).count();
+        return duration_cast<seconds>(nanoseconds(diff_ns)).count();
     }
     // LCOV_EXCL_STOP
   }

@@ -37,7 +37,8 @@ namespace throttr
     boost::ignore_unused(as_insert, id);
 
     const auto _now = std::chrono::steady_clock::now();
-    const auto _expires_at = get_expiration_point(_now, ttl_type, ttl);
+    const auto _now_ns = _now.time_since_epoch().count();
+    const auto _expires_at = get_expiration_point(_now_ns, ttl_type, ttl);
 
     auto &_index = state->storage_.get<tag_by_key>();
     const std::vector _key(

@@ -17,7 +17,6 @@
 #define THROTTR__ENTRY_HPP
 
 #include <atomic>
-#include <shared_mutex>
 #include <throttr/protocol_wrapper.hpp>
 
 namespace throttr
@@ -51,7 +50,7 @@ namespace throttr
     /**
      * Expires at
      */
-    std::chrono::steady_clock::time_point expires_at_;
+    std::atomic<uint64_t> expires_at_;
 
     /**
      * Move constructor
@@ -61,7 +60,7 @@ namespace throttr
         type_(other.type_),
         buffer_(other.buffer_.load(std::memory_order_acquire)),
         ttl_type_(other.ttl_type_),
-        expires_at_(other.expires_at_)
+        expires_at_(other.expires_at_.load(std::memory_order_relaxed))
     {
       counter_.store(other.counter_.load(std::memory_order_relaxed), std::memory_order_relaxed);
     }
@@ -79,7 +78,7 @@ namespace throttr
         type_ = other.type_;
         buffer_ = other.buffer_.load(std::memory_order_acquire);
         ttl_type_ = other.ttl_type_;
-        expires_at_ = other.expires_at_;
+        expires_at_ = other.expires_at_.load(std::memory_order_relaxed);
         counter_.store(other.counter_.load(std::memory_order_relaxed), std::memory_order_relaxed);
       }
       return *this;
@@ -94,7 +93,7 @@ namespace throttr
         type_(other.type_),
         buffer_(other.buffer_.load(std::memory_order_acquire)),
         ttl_type_(other.ttl_type_),
-        expires_at_(other.expires_at_)
+        expires_at_(other.expires_at_.load(std::memory_order_relaxed))
     {
       counter_.store(other.counter_.load(std::memory_order_relaxed), std::memory_order_relaxed);
     }
@@ -112,7 +111,7 @@ namespace throttr
         type_ = other.type_;
         buffer_ = other.buffer_.load(std::memory_order_acquire);
         ttl_type_ = other.ttl_type_;
-        expires_at_ = other.expires_at_;
+        expires_at_ = other.expires_at_.load(std::memory_order_relaxed);
         counter_.store(other.counter_.load(std::memory_order_relaxed), std::memory_order_relaxed);
       }
       return *this;

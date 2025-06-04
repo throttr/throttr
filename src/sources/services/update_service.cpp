@@ -53,36 +53,48 @@ namespace throttr
     const std::shared_ptr<state> &state,
     entry &entry,
     const request_update &request,
-    const std::chrono::steady_clock::time_point &now,
+    const std::uint64_t now,
     std::span<const std::byte> key)
   {
-    using enum ttl_types;
-    std::chrono::nanoseconds _duration;
+    using namespace std::chrono;
+
+    std::uint64_t _duration_ns = 0;
 
     switch (entry.ttl_type_)
     {
-      case seconds:
-        _duration = std::chrono::seconds(request.value_);
+      case ttl_types::nanoseconds:
+        _duration_ns = request.value_;
         break;
-      case milliseconds:
-        _duration = std::chrono::milliseconds(request.value_);
+      case ttl_types::microseconds:
+        _duration_ns = std::chrono::duration_cast<nanoseconds>(microseconds(request.value_)).count();
         break;
-      case nanoseconds:
+      case ttl_types::milliseconds:
+        _duration_ns = std::chrono::duration_cast<nanoseconds>(milliseconds(request.value_)).count();
+        break;
+      case ttl_types::seconds:
+        _duration_ns = std::chrono::duration_cast<nanoseconds>(seconds(request.value_)).count();
+        break;
+      case ttl_types::minutes:
+        _duration_ns = std::chrono::duration_cast<nanoseconds>(minutes(request.value_)).count();
+        break;
+      case ttl_types::hours:
+        _duration_ns = std::chrono::duration_cast<nanoseconds>(hours(request.value_)).count();
+        break;
       default:
-        _duration = std::chrono::nanoseconds(request.value_);
+        _duration_ns = request.value_;
         break;
     }
 
     switch (request.change_)
     {
       case change_types::patch:
-        entry.expires_at_ = now + _duration;
+        entry.expires_at_.store(now + _duration_ns, std::memory_order_release);
         break;
       case change_types::increase:
-        entry.expires_at_ += _duration;
+        entry.expires_at_.fetch_add(_duration_ns, std::memory_order_acq_rel);
         break;
       case change_types::decrease:
-        entry.expires_at_ -= _duration;
+        entry.expires_at_.fetch_sub(_duration_ns, std::memory_order_acq_rel);
         break;
     }
 
@@ -93,7 +105,7 @@ namespace throttr
     {
       boost::asio::post(
         state->strand_,
-        [_state = state->shared_from_this(), _expires_at = entry.expires_at_]
+        [_state = state->shared_from_this(), _expires_at = entry.expires_at_.load(std::memory_order_relaxed)]
         { _state->garbage_collector_->schedule_timer(_state, _expires_at); });
     }
     // LCOV_EXCL_STOP

@@ -51,8 +51,7 @@ namespace throttr
 
     // Handling _expires_at
     {
-      const auto _expires_at =
-        std::chrono::duration_cast<std::chrono::nanoseconds>(entry->entry_.expires_at_.time_since_epoch()).count();
+      const auto _expires_at = entry->entry_.expires_at_.load(std::memory_order_acquire);
 
       const auto _off = write_buffer.size();
       append_uint64_t(write_buffer, _expires_at);
