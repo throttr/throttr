@@ -121,7 +121,9 @@ namespace throttr
       // Basically this operation is costly when a huge amount of keys is stored
       for (const auto &_item : _index)
       {
+#ifdef ENABLED_FEATURE_METRICS
         _item.metrics_->reads_.fetch_add(1, std::memory_order_relaxed);
+#endif
         if (!_item.expired_)
         {
           if (_expires_at <= _item.entry_.expires_at_)

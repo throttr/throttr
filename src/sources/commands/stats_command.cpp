@@ -35,11 +35,6 @@ namespace throttr
 
     boost::ignore_unused(type, view, conn);
 
-#ifndef ENABLED_FEATURE_METRICS
-    batch.emplace_back(boost::asio::buffer(&failed_response_, 1));
-    return;
-#endif
-
     response_builder_service::handle_fragmented_entries_response(
       state,
       batch,

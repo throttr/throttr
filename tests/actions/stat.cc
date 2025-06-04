@@ -22,10 +22,17 @@ class StatTestFixture : public ServiceTestFixture
 TEST_F(StatTestFixture, OnSuccess)
 {
   boost::asio::io_context _io_context;
+#ifdef ENABLED_FEATURE_UNIX_SOCKETS
+  boost::asio::local::stream_protocol::endpoint _endpoint(app_->state_->exposed_port_);
+  boost::asio::local::stream_protocol::socket _socket(_io_context);
+  _socket.connect(_endpoint);
+#else
   tcp::resolver _resolver(_io_context);
   const auto _endpoints = _resolver.resolve("127.0.0.1", std::to_string(app_->state_->exposed_port_));
+
   tcp::socket _socket(_io_context);
   boost::asio::connect(_socket, _endpoints);
+#endif
   const std::string _key = "consumer/stat_test";
 
   const auto _insert = request_insert_builder(100, ttl_types::seconds, 120, _key);
@@ -54,21 +61,22 @@ TEST_F(StatTestFixture, OnSuccess)
 
   ASSERT_EQ(static_cast<uint8_t>(_stat_response[0]), 1);
 
+#ifdef ENABLED_FEATURE_METRIC
   uint64_t _rpm = 0;
   uint64_t _wpm = 0;
   uint64_t _reads_total = 0;
   uint64_t _writes_total = 0;
-
   std::memcpy(&_rpm, _stat_response.data() + 1, sizeof(uint64_t));
   std::memcpy(&_wpm, _stat_response.data() + 1 + sizeof(uint64_t), sizeof(uint64_t));
   std::memcpy(&_reads_total, _stat_response.data() + 1 + sizeof(uint64_t) * 2, sizeof(uint64_t));
   std::memcpy(&_writes_total, _stat_response.data() + 1 + sizeof(uint64_t) * 3, sizeof(uint64_t));
-
-  // Verificar que haya al menos 3 lecturas y 2 escrituras
-  ASSERT_GE(_rpm, 3);
+  S
+    // Verificar que haya al menos 3 lecturas y 2 escrituras
+    ASSERT_GE(_rpm, 3);
   ASSERT_GE(_wpm, 2);
   ASSERT_EQ(_reads_total, _rpm);
   ASSERT_EQ(_writes_total, _wpm);
+#endif
   boost::system::error_code _ec;
   _socket.close(_ec);
 }

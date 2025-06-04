@@ -7,6 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 option(BUILD_TESTS "Build tests cases" ON)
 option(ENABLE_FEATURE_METRICS "Enable metrics feature" ON)
 option(ENABLE_STATIC_LINKING "Enable static linking feature" OFF)
+option(ENABLE_UNIX_SOCKETS "Enable unix sockets feature" OFF)
 
 if (ENABLE_STATIC_LINKING)
     set(Boost_USE_STATIC_LIBS ON)
@@ -24,10 +25,19 @@ if (ENABLE_FEATURE_METRICS)
     )
 endif ()
 
+if (ENABLE_UNIX_SOCKETS)
+    add_definitions(
+            -DENABLED_FEATURE_UNIX_SOCKETS
+    )
+endif ()
+
 set(RUNTIME_VALUE_SIZE "UINT16" CACHE STRING "Set value type for Throttr (UINT8, UINT16, UINT32, UINT64)")
 set_property(CACHE RUNTIME_VALUE_SIZE PROPERTY STRINGS UINT8 UINT16 UINT32 UINT64)
 
 message(STATUS "Using RUNTIME_VALUE_SIZE = ${RUNTIME_VALUE_SIZE}")
+message(STATUS "Using ENABLE_FEATURE_METRICS = ${ENABLE_FEATURE_METRICS}")
+message(STATUS "Using ENABLE_STATIC_LINKING = ${ENABLE_STATIC_LINKING}")
+message(STATUS "Using ENABLE_UNIX_SOCKETS = ${ENABLE_UNIX_SOCKETS}")
 
 set(CMAKE_CXX_FLAGS "-Wall -Wextra")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g --coverage -fprofile-arcs -ftest-coverage")

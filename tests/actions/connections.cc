@@ -15,7 +15,6 @@
 
 #include "../service_test_fixture.hpp"
 
-#ifdef ENABLED_FEATURE_METRICS
 class ConnectionsTestFixture : public ServiceTestFixture
 {
 };
@@ -82,4 +81,3 @@ TEST_F(ConnectionsTestFixture, OnSuccessSingleFragment)
   ASSERT_EQ(_offset, 1 + 8 + 8 + 8 + 235);
   ASSERT_LE(_offset, _response.size());
 }
-#endif

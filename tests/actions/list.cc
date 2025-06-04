@@ -166,10 +166,17 @@ TEST_F(ListTestFixture, OnSuccessMultipleFragments)
   const auto _list_buffer = request_list_builder();
 
   boost::asio::io_context _io_context;
+#ifdef ENABLED_FEATURE_UNIX_SOCKETS
+  boost::asio::local::stream_protocol::endpoint _endpoint(app_->state_->exposed_port_);
+  boost::asio::local::stream_protocol::socket _socket(_io_context);
+  _socket.connect(_endpoint);
+#else
   tcp::resolver _resolver(_io_context);
   const auto _endpoints = _resolver.resolve("127.0.0.1", std::to_string(app_->state_->exposed_port_));
+
   tcp::socket _socket(_io_context);
   boost::asio::connect(_socket, _endpoints);
+#endif
   boost::asio::write(_socket, boost::asio::buffer(_list_buffer.data(), _list_buffer.size()));
 
   uint8_t _status = 0;

@@ -38,12 +38,27 @@ namespace throttr
      * @param port
      * @param state
      */
-    server(boost::asio::io_context &io_context, const short port, const std::shared_ptr<state> &state) :
+    server(
+      boost::asio::io_context &io_context,
+#ifdef ENABLED_FEATURE_UNIX_SOCKETS
+      const std::string &port,
+#else
+      const short port,
+#endif
+      const std::shared_ptr<state> &state) :
+#ifdef ENABLED_FEATURE_UNIX_SOCKETS
+        acceptor_(io_context, boost::asio::local::stream_protocol::endpoint(port)),
+#else
         acceptor_(io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
+#endif
         socket_(io_context),
         state_(state)
     {
+#ifdef ENABLED_FEATURE_UNIX_SOCKETS
+      state->exposed_port_ = port;
+#else
       state->exposed_port_ = acceptor_.local_endpoint().port();
+#endif
       state->acceptor_ready_ = true;
 #ifdef ENABLED_FEATURE_METRICS
       state->metrics_collector_->schedule_timer(state);
@@ -70,6 +85,17 @@ namespace throttr
         });
     }
 
+#ifdef ENABLED_FEATURE_UNIX_SOCKETS
+    /**
+     * Acceptor
+     */
+    boost::asio::local::stream_protocol::acceptor acceptor_;
+
+    /**
+     * Socket
+     */
+    boost::asio::local::stream_protocol::socket socket_;
+#else
     /**
      * Acceptor
      */
@@ -79,6 +105,7 @@ namespace throttr
      * Socket
      */
     boost::asio::ip::tcp::socket socket_;
+#endif
 
     /**
      * State

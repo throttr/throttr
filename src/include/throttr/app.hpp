@@ -37,7 +37,11 @@ namespace throttr
     /**
      * Port
      */
+#ifdef ENABLED_FEATURE_UNIX_SOCKETS
+    std::string port_;
+#else
     short port_;
+#endif
 
     /**
      * Threads
@@ -55,7 +59,13 @@ namespace throttr
      * @param port
      * @param threads
      */
-    explicit app(short port, int threads);
+    explicit app(
+#ifdef ENABLED_FEATURE_UNIX_SOCKETS
+      const std::string &port,
+#else
+      short port,
+#endif
+      int threads);
 
     /**
      * Serve

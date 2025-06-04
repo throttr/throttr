@@ -28,7 +28,11 @@ public:
   static connection create_dummy_session(const std::shared_ptr<state> &state)
   {
     boost::asio::io_context ioc;
+#ifdef ENABLED_FEATURE_UNIX_SOCKETS
+    boost::asio::local::stream_protocol::socket socket(ioc);
+#else
     tcp::socket socket(ioc);
+#endif
     return connection(std::move(socket), state);
   }
 };
