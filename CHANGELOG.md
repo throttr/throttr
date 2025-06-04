@@ -2,6 +2,7 @@
 
 - Now entry containers are more thread safe.
 - Now SET operation over existing key updates the buffer, ttl and ttl type, ideally to make HOT SWAP.
+- Now Buffer and Counters are Thread Safe.
 
 ### v5.0.2
 

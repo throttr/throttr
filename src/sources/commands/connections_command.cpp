@@ -29,7 +29,7 @@ namespace throttr
     const request_types type,
     const std::span<const std::byte> view,
     std::vector<boost::asio::const_buffer> &batch,
-    std::vector<std::uint8_t> &write_buffer,
+    std::vector<std::byte> &write_buffer,
     const std::shared_ptr<connection> &conn)
   {
     boost::ignore_unused(type, view, conn);

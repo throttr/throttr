@@ -60,7 +60,7 @@ namespace throttr
       const std::shared_ptr<state> &state,
       std::vector<boost::asio::const_buffer> *batch,
       const entry_wrapper *entry,
-      std::vector<std::uint8_t> &write_buffer,
+      std::vector<std::byte> &write_buffer,
       bool measure);
 
     /**
@@ -77,7 +77,7 @@ namespace throttr
       const std::shared_ptr<state> &state,
       std::vector<boost::asio::const_buffer> *batch,
       const entry_wrapper *entry,
-      std::vector<std::uint8_t> &write_buffer,
+      std::vector<std::byte> &write_buffer,
       bool measure);
 
     /**
@@ -94,7 +94,7 @@ namespace throttr
       const std::shared_ptr<state> &state,
       std::vector<boost::asio::const_buffer> *batch,
       const connection *conn,
-      std::vector<std::uint8_t> &write_buffer,
+      std::vector<std::byte> &write_buffer,
       bool measure);
 
     /**
@@ -107,7 +107,7 @@ namespace throttr
     void handle_fragmented_connections_response(
       const std::shared_ptr<state> &state,
       std::vector<boost::asio::const_buffer> &batch,
-      std::vector<std::uint8_t> &write_buffer);
+      std::vector<std::byte> &write_buffer);
 
     /**
      * Handle fragmented entries response
@@ -121,7 +121,7 @@ namespace throttr
     static void handle_fragmented_entries_response(
       const std::shared_ptr<state> &state,
       std::vector<boost::asio::const_buffer> &batch,
-      std::vector<std::uint8_t> &write_buffer,
+      std::vector<std::byte> &write_buffer,
       const std::size_t max_fragment_size,
       const std::function<std::size_t(std::vector<boost::asio::const_buffer> *, const entry_wrapper *, bool)> &serialize_entry);
 
@@ -135,7 +135,7 @@ namespace throttr
     static void handle_fragmented_channels_response(
       const std::shared_ptr<state> &state,
       std::vector<boost::asio::const_buffer> &batch,
-      std::vector<std::uint8_t> &write_buffer);
+      std::vector<std::byte> &write_buffer);
   };
 } // namespace throttr
 

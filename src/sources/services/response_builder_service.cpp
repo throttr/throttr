@@ -19,18 +19,15 @@
 #include <throttr/connection.hpp>
 #include <throttr/state.hpp>
 #include <throttr/storage.hpp>
+#include <throttr/utils.hpp>
 
 namespace throttr
 {
-  inline void push_total_fragments(
-    std::vector<boost::asio::const_buffer> &batch,
-    std::vector<std::uint8_t> &write_buffer,
-    const uint64_t total)
+  inline void
+  push_total_fragments(std::vector<boost::asio::const_buffer> &batch, std::vector<std::byte> &write_buffer, const uint64_t total)
   {
     const auto _offset = write_buffer.size();
-    std::uint8_t total_bytes[sizeof(total)]; // NOSONAR
-    std::memcpy(total_bytes, &total, sizeof(total));
-    write_buffer.insert(write_buffer.end(), total_bytes, total_bytes + sizeof(total));
+    append_uint64_t(write_buffer, total);
     batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(total)));
   }
 
@@ -38,7 +35,7 @@ namespace throttr
     const std::shared_ptr<state> &state,
     std::vector<boost::asio::const_buffer> *batch,
     const entry_wrapper *entry,
-    std::vector<std::uint8_t> &write_buffer,
+    std::vector<std::byte> &write_buffer,
     const bool measure)
   {
     boost::ignore_unused(state);
@@ -47,7 +44,7 @@ namespace throttr
       return entry->key_.size() + sizeof(value_type) + 11;
 
     const auto _offset = write_buffer.size();
-    write_buffer.push_back(static_cast<std::uint8_t>(entry->key_.size()));
+    write_buffer.push_back(static_cast<std::byte>(entry->key_.size()));
     batch->emplace_back(boost::asio::buffer(&write_buffer[_offset], 1));
     batch->emplace_back(boost::asio::buffer(&entry->entry_.type_, sizeof(entry->entry_.type_)));
     batch->emplace_back(boost::asio::buffer(&entry->entry_.ttl_type_, sizeof(entry->entry_.ttl_type_)));
@@ -56,10 +53,9 @@ namespace throttr
     {
       const auto _expires_at =
         std::chrono::duration_cast<std::chrono::nanoseconds>(entry->entry_.expires_at_.time_since_epoch()).count();
-      std::uint8_t expires_at_bytes[sizeof(_expires_at)];               // NOSONAR
-      std::memcpy(expires_at_bytes, &_expires_at, sizeof(_expires_at)); // NOSONAR Copiar _expires_at en bytes
+
       const auto _off = write_buffer.size();
-      write_buffer.insert(write_buffer.end(), expires_at_bytes, expires_at_bytes + sizeof(_expires_at));
+      append_uint64_t(write_buffer, _expires_at);
       batch->emplace_back(boost::asio::buffer(&write_buffer[_off], sizeof(_expires_at)));
     }
 
@@ -72,13 +68,12 @@ namespace throttr
       }
       else
       {
-        _bytes_used = static_cast<value_type>(entry->entry_.buffer_.size());
+        const auto _buffer = entry->entry_.buffer_.load(std::memory_order_acquire);
+        _bytes_used = static_cast<value_type>(_buffer->size());
       }
-      std::uint8_t bytes_used_bytes[sizeof(_bytes_used)];               // NOSONAR
-      std::memcpy(bytes_used_bytes, &_bytes_used, sizeof(_bytes_used)); // Copiar _bytes_used en bytes
-      const auto _off = write_buffer.size();
-      write_buffer.insert(write_buffer.end(), bytes_used_bytes, bytes_used_bytes + sizeof(_bytes_used));
-      batch->emplace_back(boost::asio::buffer(&write_buffer[_off], sizeof(_bytes_used)));
+      const auto _scoped_offset = write_buffer.size();
+      append_uint64_t(write_buffer, _bytes_used);
+      batch->emplace_back(boost::asio::buffer(&write_buffer[_scoped_offset], sizeof(_bytes_used)));
     }
 
     return 0;
@@ -88,7 +83,7 @@ namespace throttr
     const std::shared_ptr<state> &state,
     std::vector<boost::asio::const_buffer> *batch,
     const entry_wrapper *entry,
-    std::vector<std::uint8_t> &write_buffer,
+    std::vector<std::byte> &write_buffer,
     const bool measure)
   {
     boost::ignore_unused(state);
@@ -97,7 +92,7 @@ namespace throttr
       return entry->key_.size() + 1 + 8 * 4;
 
     const auto _offset = write_buffer.size();
-    write_buffer.push_back(static_cast<std::uint8_t>(entry->key_.size()));
+    write_buffer.push_back(static_cast<std::byte>(entry->key_.size()));
     batch->emplace_back(boost::asio::buffer(&write_buffer[_offset], 1));
 
     for (const auto &_metric = *entry->metrics_; uint64_t _v :
@@ -106,11 +101,8 @@ namespace throttr
                                                   _metric.reads_accumulator_.load(std::memory_order_relaxed),
                                                   _metric.writes_accumulator_.load(std::memory_order_relaxed)})
     {
-      std::uint8_t _v_bytes[sizeof(_v)]; // NOSONAR
-      std::memcpy(_v_bytes, &_v, sizeof(_v));
-
       const auto _off = write_buffer.size();
-      write_buffer.insert(write_buffer.end(), _v_bytes, _v_bytes + sizeof(_v));
+      append_uint64_t(write_buffer, _v);
       batch->emplace_back(boost::asio::buffer(&write_buffer[_off], sizeof(_v)));
     }
 
@@ -121,7 +113,7 @@ namespace throttr
     const std::shared_ptr<state> &state,
     std::vector<boost::asio::const_buffer> *batch,
     const connection *conn,
-    std::vector<std::uint8_t> &write_buffer,
+    std::vector<std::byte> &write_buffer,
     bool measure)
   {
     boost::ignore_unused(state);
@@ -132,9 +124,9 @@ namespace throttr
     const auto _push = [&](const void *ptr, const std::size_t size) // NOSONAR
     {
       const auto _offset = write_buffer.size();
-      const auto *_bytes = static_cast<const std::uint8_t *>(ptr);
+      const auto *_bytes = static_cast<const std::byte *>(ptr);
       write_buffer.insert(write_buffer.end(), _bytes, _bytes + size);
-      batch->emplace_back(boost::asio::buffer(&write_buffer[_offset], size));
+      batch->emplace_back(boost::asio::buffer(reinterpret_cast<const void *>(&write_buffer[_offset]), size)); // NOSONAR
     };
 
     // UUID (16 bytes)
@@ -157,7 +149,7 @@ namespace throttr
 #ifdef ENABLED_FEATURE_METRICS
     const auto &_metrics = *conn->metrics_;
 
-    for (uint64_t _val :
+    for (const uint64_t _val :
          {conn->connected_at_,
           _metrics.network_.read_bytes_.accumulator_.load(std::memory_order_relaxed),
           _metrics.network_.write_bytes_.accumulator_.load(std::memory_order_relaxed),
@@ -166,7 +158,9 @@ namespace throttr
           _metrics.memory_.allocated_bytes_.accumulator_.load(std::memory_order_relaxed),
           _metrics.memory_.consumed_bytes_.accumulator_.load(std::memory_order_relaxed)})
     {
-      _push(&_val, sizeof(_val));
+      const auto _offset = write_buffer.size();
+      append_uint64_t(write_buffer, _val);
+      batch->emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(uint64_t)));
     }
 
     constexpr std::array monitored_request_types =
@@ -193,7 +187,9 @@ namespace throttr
     {
       const auto &metric = conn->metrics_->commands_[static_cast<std::size_t>(type)];
       const uint64_t _value = metric.accumulator_.load(std::memory_order_relaxed);
-      _push(&_value, sizeof(_value));
+      const auto _offset = write_buffer.size();
+      append_uint64_t(write_buffer, _value);
+      batch->emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(uint64_t)));
     }
 
 #else
@@ -208,7 +204,7 @@ namespace throttr
   void response_builder_service::handle_fragmented_connections_response(
     const std::shared_ptr<state> &state,
     std::vector<boost::asio::const_buffer> &batch,
-    std::vector<std::uint8_t> &write_buffer)
+    std::vector<std::byte> &write_buffer)
   {
 #ifndef ENABLED_FEATURE_METRICS
     batch.emplace_back(boost::asio::buffer(&failed_response_, 1));
@@ -255,12 +251,7 @@ namespace throttr
       for (const uint64_t _connection_count = _frag.size(); uint64_t val : {_fragment_index, _connection_count})
       {
         const auto _offset = write_buffer.size();
-
-        // Convert value to bytes using std::array
-        std::array<std::uint8_t, sizeof(val)> _value_bytes;
-        std::memcpy(_value_bytes.data(), &val, sizeof(val));
-
-        write_buffer.insert(write_buffer.end(), _value_bytes.begin(), _value_bytes.end());
+        append_uint64_t(write_buffer, val);
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(val)));
       }
 
@@ -275,7 +266,7 @@ namespace throttr
   void response_builder_service::handle_fragmented_entries_response(
     const std::shared_ptr<state> &state,
     std::vector<boost::asio::const_buffer> &batch,
-    std::vector<std::uint8_t> &write_buffer,
+    std::vector<std::byte> &write_buffer,
     const std::size_t max_fragment_size,
     const std::function<std::size_t(std::vector<boost::asio::const_buffer> *, const entry_wrapper *, bool)> &serialize_entry)
   {
@@ -320,13 +311,8 @@ namespace throttr
     // Insert fragment count
     {
       const auto _offset = write_buffer.size();
-      uint64_t _fragment_count = _fragments.size();
-
-      // Convert to bytes and insert into the buffer
-      std::array<std::uint8_t, sizeof(_fragment_count)> _fragment_count_bytes;
-      std::memcpy(_fragment_count_bytes.data(), &_fragment_count, sizeof(_fragment_count));
-      write_buffer.insert(write_buffer.end(), _fragment_count_bytes.begin(), _fragment_count_bytes.end());
-
+      const uint64_t _fragment_count = _fragments.size();
+      append_uint64_t(write_buffer, _fragment_count);
       batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_fragment_count)));
     }
 
@@ -337,12 +323,10 @@ namespace throttr
       uint64_t _key_count = _fragment.size();
 
       // Convert _fragment_index and _key_count to bytes and insert into the buffer
-      for (uint64_t _value : {_fragment_index, _key_count}) // LCOV_EXCL_LINE Note: Partially tested.
+      for (const uint64_t _value : {_fragment_index, _key_count}) // LCOV_EXCL_LINE Note: Partially tested.
       {
         const auto _offset = write_buffer.size();
-        std::array<std::uint8_t, sizeof(_value)> _value_bytes;
-        std::memcpy(_value_bytes.data(), &_value, sizeof(_value));
-        write_buffer.insert(write_buffer.end(), _value_bytes.begin(), _value_bytes.end());
+        append_uint64_t(write_buffer, _value);
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_value)));
       }
 
@@ -365,7 +349,7 @@ namespace throttr
   void response_builder_service::handle_fragmented_channels_response(
     const std::shared_ptr<state> &state,
     std::vector<boost::asio::const_buffer> &batch,
-    std::vector<std::uint8_t> &write_buffer)
+    std::vector<std::byte> &write_buffer)
   {
 #ifndef ENABLED_FEATURE_METRICS
     batch.emplace_back(boost::asio::buffer(&failed_response_, 1));
@@ -433,12 +417,7 @@ namespace throttr
       for (const uint64_t _channel_count = _frag.size(); uint64_t _val : {_fragment_index, _channel_count})
       {
         const auto _offset = write_buffer.size();
-
-        // Convert value to bytes using std::array
-        std::array<std::uint8_t, sizeof(_val)> _value_bytes;
-        std::memcpy(_value_bytes.data(), &_val, sizeof(_val));
-
-        write_buffer.insert(write_buffer.end(), _value_bytes.begin(), _value_bytes.end());
+        append_uint64_t(write_buffer, _val);
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_val)));
       }
 
@@ -449,26 +428,22 @@ namespace throttr
         const auto _size = static_cast<std::uint8_t>(_chan.size());
 
         const auto _offset = write_buffer.size();
-        write_buffer.push_back(_size);
+        write_buffer.push_back(std::byte{_size});
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], 1));
 
-        for (uint64_t _metric : {_read, _write, _count})
+        for (const uint64_t _metric : {_read, _write, _count})
         {
-          // Convert metric to bytes using std::array
-          std::array<std::uint8_t, sizeof(_metric)> _metric_bytes;
-          std::memcpy(_metric_bytes.data(), &_metric, sizeof(_metric));
-
-          const auto _off = write_buffer.size();
-          write_buffer.insert(write_buffer.end(), _metric_bytes.begin(), _metric_bytes.end());
-          batch.emplace_back(boost::asio::buffer(&write_buffer[_off], sizeof(_metric)));
+          const auto _scoped_offset = write_buffer.size();
+          append_uint64_t(write_buffer, _metric);
+          batch.emplace_back(boost::asio::buffer(&write_buffer[_scoped_offset], sizeof(_metric)));
         }
       }
 
-      for (const auto &_chan : _frag)
+      for (const auto &_channel : _frag)
       {
         const auto _offset = write_buffer.size();
-        write_buffer.insert(write_buffer.end(), _chan.begin(), _chan.end());
-        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], _chan.size()));
+        std::ranges::transform(_channel, std::back_inserter(write_buffer), [](char c) { return static_cast<std::byte>(c); });
+        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], _channel.size()));
       }
     }
   }

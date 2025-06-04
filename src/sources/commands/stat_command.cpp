@@ -28,7 +28,7 @@ namespace throttr
     const request_types type,
     const std::span<const std::byte> view,
     std::vector<boost::asio::const_buffer> &batch,
-    std::vector<std::uint8_t> &write_buffer,
+    std::vector<std::byte> &write_buffer,
     const std::shared_ptr<connection> &conn)
   {
 
@@ -63,9 +63,7 @@ namespace throttr
     auto _append_uint64 = [&write_buffer, &batch](const uint64_t value)
     {
       const auto _offset = write_buffer.size();
-      std::uint8_t value_bytes[sizeof(uint64_t)];         // NOSONAR
-      std::memcpy(value_bytes, &value, sizeof(uint64_t)); // Copiar los bytes de 'value' al buffer
-      write_buffer.insert(write_buffer.end(), value_bytes, value_bytes + sizeof(uint64_t));
+      append_uint64_t(write_buffer, value);
       batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(uint64_t)));
     };
 

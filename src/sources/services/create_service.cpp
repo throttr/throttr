@@ -57,7 +57,8 @@ namespace throttr
             _it_existing,
             [&](entry_wrapper &item)
             {
-              item.entry_.buffer_.assign(value.begin(), value.end());
+              const auto _safe_buffer = std::make_shared<std::vector<std::byte>>(value.begin(), value.end());
+              item.entry_.buffer_.store(_safe_buffer, std::memory_order_release);
               item.entry_.expires_at_ = _expires_at;
               item.entry_.ttl_type_ = ttl_type;
 
@@ -96,10 +97,8 @@ namespace throttr
     }
     else
     {
-      _entry.buffer_ = std::vector(
-        value.data(),               // NOSONAR
-        value.data() + value.size() // NOSONAR
-      );
+      _entry.buffer_
+        .store(std::make_shared<std::vector<std::byte>>(value.data(), value.data() + value.size()), std::memory_order_release);
     }
 
     const auto _entry_ptr = entry_wrapper{_key, _entry};
@@ -155,13 +154,14 @@ namespace throttr
     }
     else
     {
+      auto _buffer = _entry_ptr.entry_.buffer_.load(std::memory_order_relaxed);
       fmt::println(
         "{:%Y-%m-%d %H:%M:%S} REQUEST SET key={} from={} value={}ttl_type={} ttl={} "
         "RESPONSE ok={}",
         std::chrono::system_clock::now(),
         span_to_hex(key),
         to_string(id),
-        span_to_hex(_entry_ptr.entry_.buffer_),
+        span_to_hex(*_buffer),
         to_string(ttl_type),
         span_to_hex(ttl),
         _inserted);

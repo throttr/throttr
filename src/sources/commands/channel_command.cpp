@@ -29,7 +29,7 @@ namespace throttr
     const request_types type,
     const std::span<const std::byte> view,
     std::vector<boost::asio::const_buffer> &batch,
-    std::vector<std::uint8_t> &write_buffer,
+    std::vector<std::byte> &write_buffer,
     const std::shared_ptr<connection> &conn)
   {
 
@@ -68,9 +68,7 @@ namespace throttr
     {
       const auto _offset = write_buffer.size();
       const uint64_t _count = std::distance(_range.first, _range.second);
-      std::uint8_t _count_bytes[sizeof(_count)];          // NOSONAR
-      std::memcpy(_count_bytes, &_count, sizeof(_count)); // Copiar los bytes de _count a _count_bytes
-      write_buffer.insert(write_buffer.end(), _count_bytes, _count_bytes + sizeof(_count));
+      append_uint64_t(write_buffer, _count);
       batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_count)));
     }
 
@@ -79,16 +77,16 @@ namespace throttr
       const auto &_sub = *it;
 
       {
-        write_buffer.insert(write_buffer.end(), _sub.connection_id_.begin(), _sub.connection_id_.end());
-        batch.emplace_back(boost::asio::buffer(write_buffer.data() + write_buffer.size() - 16, 16));
+        const auto _offset = write_buffer.size();
+        const auto *id_data = reinterpret_cast<const std::byte *>(_sub.connection_id_.data()); // NOSONAR
+        write_buffer.insert(write_buffer.end(), id_data, id_data + 16);
+        batch.emplace_back(boost::asio::buffer(reinterpret_cast<const void *>(&write_buffer[_offset]), 16)); // NOSONAR
       }
 
       {
         const auto _offset = write_buffer.size();
-        std::uint8_t ts_bytes[sizeof(_sub.subscribed_at_)];                       // NOSONAR
-        std::memcpy(ts_bytes, &_sub.subscribed_at_, sizeof(_sub.subscribed_at_)); // Copiar los bytes de subscribed_at_
-        write_buffer.insert(write_buffer.end(), ts_bytes, ts_bytes + sizeof(ts_bytes));
-        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(ts_bytes)));
+        append_uint64_t(write_buffer, _sub.subscribed_at_);
+        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_sub.subscribed_at_)));
       }
 
       const uint64_t _read = _sub.metrics_->read_bytes_.accumulator_.load(std::memory_order_relaxed);
@@ -97,9 +95,7 @@ namespace throttr
       for (uint64_t metric : {_read, _write})
       {
         const auto _offset = write_buffer.size();
-        std::uint8_t _metric_bytes[sizeof(metric)];          // NOSONAR
-        std::memcpy(_metric_bytes, &metric, sizeof(metric)); // Copiar los bytes de metric al buffer temporal
-        write_buffer.insert(write_buffer.end(), _metric_bytes, _metric_bytes + sizeof(metric));
+        append_uint64_t(write_buffer, metric);
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(metric)));
       }
     }

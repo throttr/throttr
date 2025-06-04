@@ -29,7 +29,7 @@ namespace throttr
     const request_types type,
     const std::span<const std::byte> view,
     std::vector<boost::asio::const_buffer> &batch,
-    std::vector<std::uint8_t> &write_buffer,
+    std::vector<std::byte> &write_buffer,
     const std::shared_ptr<connection> &conn)
   {
     boost::ignore_unused(state, type, view);
@@ -38,9 +38,9 @@ namespace throttr
 
     {
       const auto _offset = write_buffer.size();
-      const auto *id_data = conn->id_.data();
-      write_buffer.insert(write_buffer.end(), id_data, id_data + conn->id_.size());
-      batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], conn->id_.size()));
+      const auto *id_data = reinterpret_cast<const std::byte *>(conn->id_.data()); // NOSONAR
+      write_buffer.insert(write_buffer.end(), id_data, id_data + 16);
+      batch.emplace_back(boost::asio::buffer(reinterpret_cast<const void *>(&write_buffer[_offset]), 16)); // NOSONAR
     }
 
     // LCOV_EXCL_START
