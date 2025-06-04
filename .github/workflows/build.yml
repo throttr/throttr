@@ -40,5 +40,5 @@ jobs:
           build-args: |
             TYPE=${{ matrix.type }}
             SIZE=${{ matrix.size }}
-            SOCKETS=${{ matrix.sockets == 'SOCKETS_BASED' && 'ON' || 'OFF' }}
+            SOCKETS=${{ matrix.sockets == 'UNIX_BASED' && 'ON' || 'OFF' }}
             METRICS=${{ matrix.metrics == 'METRICS_ENABLED' && 'ON' || 'OFF' }}
