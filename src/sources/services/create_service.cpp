@@ -16,6 +16,7 @@
 #include <throttr/services/create_service.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/endian/conversion.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <throttr/entry.hpp>
 #include <throttr/state.hpp>
@@ -35,6 +36,8 @@ namespace throttr
     const bool as_insert) // NOSONAR
   {
     boost::ignore_unused(as_insert, id);
+
+    using namespace boost::endian;
 
     const auto _now = std::chrono::steady_clock::now();
     const auto _now_ns = _now.time_since_epoch().count();
@@ -94,7 +97,7 @@ namespace throttr
     {
       value_type _parsed_value = 0;
       std::memcpy(&_parsed_value, value.data(), sizeof(value_type));
-      _entry.counter_.store(_parsed_value, std::memory_order_relaxed);
+      _entry.counter_.store(little_to_native(_parsed_value), std::memory_order_relaxed);
     }
     else
     {

@@ -64,6 +64,7 @@ TEST_F(PublishTestFixture, OnSuccess)
 
   value_type _size = 0;
   std::memcpy(&_size, _header.data() + 1, sizeof(value_type));
+  _size = boost::endian::little_to_native(_size);
 
   std::vector<std::byte> _payload(_size);
   boost::asio::read(_subscriber, boost::asio::buffer(_payload.data(), _payload.size()));

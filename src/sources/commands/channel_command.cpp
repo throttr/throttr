@@ -16,6 +16,7 @@
 #include <throttr/commands/channel_command.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/endian/conversion.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <throttr/connection.hpp>
 #include <throttr/services/response_builder_service.hpp>
@@ -34,6 +35,7 @@ namespace throttr
   {
 
     boost::ignore_unused(type, conn);
+    using namespace boost::endian;
 
     const auto _request = request_channel::from_buffer(view);
 
@@ -63,7 +65,7 @@ namespace throttr
     {
       const auto _offset = write_buffer.size();
       const uint64_t _count = std::distance(_range.first, _range.second);
-      append_uint64_t(write_buffer, _count);
+      append_uint64_t(write_buffer, native_to_little(_count));
       batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_count)));
     }
 
@@ -80,7 +82,7 @@ namespace throttr
 
       {
         const auto _offset = write_buffer.size();
-        append_uint64_t(write_buffer, _sub.subscribed_at_);
+        append_uint64_t(write_buffer, native_to_little(_sub.subscribed_at_));
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_sub.subscribed_at_)));
       }
 
@@ -95,7 +97,7 @@ namespace throttr
       for (uint64_t metric : {_read, _write})
       {
         const auto _offset = write_buffer.size();
-        append_uint64_t(write_buffer, metric);
+        append_uint64_t(write_buffer, native_to_little(metric));
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(metric)));
       }
     }

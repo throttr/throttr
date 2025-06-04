@@ -35,6 +35,7 @@ TEST_F(QueryTestFixture, OnSuccess)
 
   value_type _quota_remaining = 0;
   std::memcpy(&_quota_remaining, _response.data() + 1, sizeof(_quota_remaining));
+  _quota_remaining = boost::endian::little_to_native(_quota_remaining);
   ASSERT_EQ(_quota_remaining, 10);
 }
 
@@ -76,6 +77,7 @@ TEST_F(QueryTestFixture, OnSuccessUntilExpired)
   value_type _success_response_quota;
   std::memcpy(&_success_response_quota, _success_query_response.data() + 1,
               sizeof(value_type)); // 2 bytes
+  _success_response_quota = boost::endian::little_to_native(_success_response_quota);
   ASSERT_EQ(_success_response_quota, 32);
 
   const auto _success_response_ttl_type = static_cast<uint8_t>(_success_query_response[sizeof(value_type) + 1]);
@@ -84,6 +86,7 @@ TEST_F(QueryTestFixture, OnSuccessUntilExpired)
   value_type _success_response_ttl;
 
   std::memcpy(&_success_response_ttl, _success_query_response.data() + sizeof(value_type) + 2, sizeof(value_type));
+  _success_response_ttl = boost::endian::little_to_native(_success_response_ttl);
   ASSERT_GT(_success_response_ttl, 0);
 
   std::this_thread::sleep_for(std::chrono::milliseconds(3100));

@@ -12,8 +12,8 @@ jobs:
       matrix:
         type: [debug, release]
         size: [UINT8, UINT16, UINT32, UINT64]
-        sockets: [ON, OFF]
-        metrics: [ON, OFF]
+        sockets: [UNIX_BASED, TCP_BASED]
+        metrics: [METRICS_ENABLED, METRICS_DISABLED]
         platform: [linux/amd64, linux/arm64]
 
     runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-22.04-arm' || 'ubuntu-latest' }}
@@ -36,9 +36,9 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           push: ${{ github.ref_type == 'tag' && true || false }}
-          tags: ghcr.io/throttr/throttr:${{ env.VERSION }}-${{ matrix.type }}-${{ matrix.size }}-${{ matrix.platform == 'linux/arm64' && 'arm64' || 'amd64' }}-${{ matrix.sockets == 'ON' && 'unix' || 'tcp' }}-${{ matrix.metrics == 'ON' && 'with-metrics' || 'without-metrics' }}
+          tags: ghcr.io/throttr/throttr:${{ env.VERSION }}-${{ matrix.type }}-${{ matrix.size }}-${{ matrix.platform == 'linux/arm64' && 'ARM64' || 'AMD64' }}-${{ matrix.sockets == 'UNIX_BASED' && 'UNIX' || 'TCP' }}-${{ matrix.metrics == 'METRICS_ENABLED' && 'metrics-enabled' || 'metrics-disabled' }}
           build-args: |
             TYPE=${{ matrix.type }}
             SIZE=${{ matrix.size }}
-            SOCKETS=${{ matrix.sockets }}
-            METRICS=${{ matrix.metrics }}
+            SOCKETS=${{ matrix.sockets == 'UNIX_BASED' && 'ON' || 'OFF' }}
+            METRICS=${{ matrix.metrics == 'METRICS_ENABLED' && 'ON' || 'OFF' }}

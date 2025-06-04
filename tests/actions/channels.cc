@@ -14,7 +14,6 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include "../service_test_fixture.hpp"
-#include <boost/uuid/uuid_io.hpp>
 #include <fmt/core.h>
 
 class ChannelsTestFixture : public ServiceTestFixture
@@ -66,14 +65,14 @@ TEST_F(ChannelsTestFixture, OnSuccess)
   ASSERT_EQ(_header_response[0], std::byte{0x01});                                   // success
   const auto *_count_ptr = reinterpret_cast<const uint64_t *>(&_header_response[1]); // NOSONAR
   const uint64_t _fragment_count = *_count_ptr;
-  ASSERT_GT(_fragment_count, 0);
+  ASSERT_GT(boost::endian::little_to_native(_fragment_count), 0);
 
   // Leer primer fragmento: index (8), count (8), [1-byte size, 8+8+8], luego nombre
   std::vector<std::byte> _fragment_header(16);
   boost::asio::read(_socket2, boost::asio::buffer(_fragment_header));
 
   const auto *_chan_count_ptr = reinterpret_cast<const uint64_t *>(&_fragment_header[8]); // NOSONAR
-  ASSERT_GT(*_chan_count_ptr, 0);
+  ASSERT_GT(boost::endian::little_to_native(*_chan_count_ptr), 0);
 
   // Leer canal: 1 + 8 + 8 + 8 = 25 bytes por canal
   std::vector<std::byte> _channel_entry(25);

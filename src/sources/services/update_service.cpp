@@ -16,6 +16,7 @@
 #include <throttr/services/update_service.hpp>
 
 #include <boost/core/ignore_unused.hpp>
+#include <boost/endian/conversion.hpp>
 #include <throttr/state.hpp>
 #include <throttr/utils.hpp>
 
@@ -26,19 +27,21 @@ namespace throttr
     boost::ignore_unused(state);
 
     using enum change_types;
+    using namespace boost::endian;
 
     switch (request.change_)
     {
       case patch:
-        entry.counter_.store(request.value_, std::memory_order_relaxed);
+        entry.counter_.store(little_to_native(request.value_), std::memory_order_relaxed);
         break;
       case increase:
-        entry.counter_.fetch_add(request.value_, std::memory_order_relaxed);
+        entry.counter_.fetch_add(little_to_native(request.value_), std::memory_order_relaxed);
         break;
       case decrease:
-        if (entry.counter_.load(std::memory_order_relaxed) >= request.value_) // LCOV_EXCL_LINE note: Partially covered.
+        if (entry.counter_.load(std::memory_order_relaxed) >= little_to_native(request.value_)) // LCOV_EXCL_LINE note: Partially
+                                                                                                // covered.
         {
-          entry.counter_.fetch_sub(request.value_, std::memory_order_relaxed);
+          entry.counter_.fetch_sub(little_to_native(request.value_), std::memory_order_relaxed);
         }
         else
         {
@@ -57,28 +60,29 @@ namespace throttr
     std::span<const std::byte> key)
   {
     using namespace std::chrono;
+    using namespace boost::endian;
 
     std::uint64_t _duration_ns = 0;
 
     switch (entry.ttl_type_)
     {
       case ttl_types::nanoseconds:
-        _duration_ns = request.value_;
+        _duration_ns = little_to_native(request.value_);
         break;
       case ttl_types::milliseconds:
-        _duration_ns = std::chrono::duration_cast<nanoseconds>(milliseconds(request.value_)).count();
+        _duration_ns = std::chrono::duration_cast<nanoseconds>(milliseconds(little_to_native(request.value_))).count();
         break;
       case ttl_types::seconds:
-        _duration_ns = std::chrono::duration_cast<nanoseconds>(seconds(request.value_)).count();
+        _duration_ns = std::chrono::duration_cast<nanoseconds>(seconds(little_to_native(request.value_))).count();
         break;
       case ttl_types::microseconds:
-        _duration_ns = std::chrono::duration_cast<nanoseconds>(microseconds(request.value_)).count();
+        _duration_ns = std::chrono::duration_cast<nanoseconds>(microseconds(little_to_native(request.value_))).count();
         break;
       case ttl_types::minutes:
-        _duration_ns = std::chrono::duration_cast<nanoseconds>(minutes(request.value_)).count();
+        _duration_ns = std::chrono::duration_cast<nanoseconds>(minutes(little_to_native(request.value_))).count();
         break;
       case ttl_types::hours:
-        _duration_ns = std::chrono::duration_cast<nanoseconds>(hours(request.value_)).count();
+        _duration_ns = std::chrono::duration_cast<nanoseconds>(hours(little_to_native(request.value_))).count();
         break;
     }
 

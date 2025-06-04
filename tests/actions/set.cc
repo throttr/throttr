@@ -66,12 +66,14 @@ TEST_F(SetTestFixture, OnSuccessRetry)
   // ttl
   value_type _ttl;
   std::memcpy(&_ttl, _get_response.data() + 2, sizeof(_ttl));
+  _ttl = boost::endian::little_to_native(_ttl);
   ASSERT_LE(_ttl, 60);
   ASSERT_GE(_ttl, 50);
 
   // value_size
   value_type _value_size;
   std::memcpy(&_value_size, _get_response.data() + 2 + sizeof(_ttl), sizeof(_value_size));
+  _value_size = boost::endian::little_to_native(_value_size);
   ASSERT_EQ(_value_size, _value.size());
 
   // value

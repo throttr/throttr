@@ -61,18 +61,21 @@ TEST_F(StatsTestFixture, OnSuccessSingleFragment)
   uint64_t _fragment_count;
   std::memcpy(&_fragment_count, _response.data() + _offset, sizeof(_fragment_count));
   _offset += sizeof(_fragment_count);
+  _fragment_count = boost::endian::little_to_native(_fragment_count);
   ASSERT_EQ(_fragment_count, 1);
 
   // Fragment ID
   uint64_t _fragment_id;
   std::memcpy(&_fragment_id, _response.data() + _offset, sizeof(_fragment_id));
   _offset += sizeof(_fragment_id);
+  _fragment_id = boost::endian::little_to_native(_fragment_id);
   ASSERT_EQ(_fragment_id, 1);
 
   // Key count
   uint64_t _key_count;
   std::memcpy(&_key_count, _response.data() + _offset, sizeof(_key_count));
   _offset += sizeof(_key_count);
+  _key_count = boost::endian::little_to_native(_key_count);
   ASSERT_EQ(_key_count, 2);
 
   // Key 1 metrics
@@ -83,6 +86,7 @@ TEST_F(StatsTestFixture, OnSuccessSingleFragment)
   {
     uint64_t _metric;
     std::memcpy(&_metric, _response.data() + _offset, sizeof(_metric));
+    _metric = boost::endian::little_to_native(_metric);
     ASSERT_GE(_metric, 0);
     _offset += sizeof(_metric);
   }
@@ -95,6 +99,7 @@ TEST_F(StatsTestFixture, OnSuccessSingleFragment)
   {
     uint64_t _metric;
     std::memcpy(&_metric, _response.data() + _offset, sizeof(_metric));
+    _metric = boost::endian::little_to_native(_metric);
     ASSERT_GE(_metric, 0);
     _offset += sizeof(_metric);
   }
@@ -151,6 +156,7 @@ TEST_F(StatsTestFixture, OnSuccessMultipleFragments)
 
   uint64_t _fragment_count = 0;
   boost::asio::read(_socket, boost::asio::buffer(&_fragment_count, 8));
+  _fragment_count = boost::endian::little_to_native(_fragment_count);
   ASSERT_GE(_fragment_count, 2);
 
   std::vector<std::byte> _full_response;
@@ -181,13 +187,16 @@ TEST_F(StatsTestFixture, OnSuccessMultipleFragments)
 
     std::vector<size_t> _fragment_key_sizes;
 
+    _key_count = boost::endian::little_to_native(_key_count);
+
     for (uint64_t _k = 0; _k < _key_count; ++_k)
     {
       std::array<std::byte, 33> _meta{}; // 1 + 4*8
       boost::asio::read(_socket, boost::asio::buffer(_meta));
       _full_response.insert(_full_response.end(), _meta.begin(), _meta.end());
 
-      const auto _key_size = static_cast<size_t>(_meta[0]);
+      auto _key_size = static_cast<size_t>(_meta[0]);
+      _key_size = boost::endian::little_to_native(_key_size);
       _fragment_key_sizes.push_back(_key_size);
       _all_key_sizes.push_back(_key_size);
 
@@ -196,6 +205,7 @@ TEST_F(StatsTestFixture, OnSuccessMultipleFragments)
       {
         uint64_t _metric;
         std::memcpy(&_metric, _meta.data() + 1 + j * 8, 8);
+        _metric = boost::endian::little_to_native(_metric);
         ASSERT_GE(_metric, 0);
       }
     }
