@@ -58,7 +58,7 @@ namespace throttr
       const std::shared_ptr<state> &state,
       entry &entry,
       const request_update &request,
-      const std::chrono::steady_clock::time_point &now,
+      const std::uint64_t now,
       std::span<const std::byte> key);
   };
 } // namespace throttr

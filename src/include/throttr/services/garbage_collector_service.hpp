@@ -42,7 +42,7 @@ namespace throttr
      * @param proposed
      * @return
      */
-    void schedule_timer(const std::shared_ptr<state> &state, std::chrono::steady_clock::time_point proposed);
+    void schedule_timer(const std::shared_ptr<state> &state, uint64_t proposed);
 
     /**
      * Run

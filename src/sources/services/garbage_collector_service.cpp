@@ -20,15 +20,13 @@
 
 namespace throttr
 {
-  void garbage_collector_service::schedule_timer(
-    const std::shared_ptr<state> &state,
-    const std::chrono::steady_clock::time_point proposed)
+  void garbage_collector_service::schedule_timer(const std::shared_ptr<state> &state, const uint64_t proposed)
   {
 #ifndef NDEBUG
     fmt::println("{:%Y-%m-%d %H:%M:%S} GARBAGE COLLECTION SCHEDULED", std::chrono::system_clock::now());
 #endif
 
-    const auto _now = std::chrono::steady_clock::now();
+    const uint64_t _now = std::chrono::steady_clock::now().time_since_epoch().count();
     if (proposed <= _now) // LCOV_EXCL_LINE Note: Partially tested.
     {
       run(state);
@@ -36,7 +34,7 @@ namespace throttr
     }
 
     const auto _delay = proposed - _now;
-    state->expiration_timer_.expires_after(_delay);
+    state->expiration_timer_.expires_after(std::chrono::nanoseconds(_delay));
     state->expiration_timer_.async_wait(
       [_self = shared_from_this(), _state = state->shared_from_this()](const boost::system::error_code &ec)
       {
@@ -52,17 +50,21 @@ namespace throttr
     fmt::println("{:%Y-%m-%d %H:%M:%S} GARBAGE COLLECTION STARTED", std::chrono::system_clock::now());
 #endif
 
-    const auto _now = std::chrono::steady_clock::now();
+    const uint64_t _now = std::chrono::steady_clock::now().time_since_epoch().count();
     auto &_index = state->storage_.get<tag_by_key>();
 
     std::vector<request_key> _to_expire;
     std::vector<request_key> _to_erase;
-    std::chrono::steady_clock::time_point _next_expiration = std::chrono::steady_clock::time_point::max();
+    std::uint64_t _next_expiration = std::numeric_limits<std::uint64_t>::max();
     for (const auto &_item : _index) // LCOV_EXCL_LINE Note: Partially tested.
     {
+      const auto _expires_ns = _item.entry_.expires_at_.load(std::memory_order_acquire);
+
       if (_item.expired_) // LCOV_EXCL_LINE Note: Partially tested.
       {
-        if (_now - _item.entry_.expires_at_ > std::chrono::seconds(10)) // LCOV_EXCL_LINE Note: Partially tested.
+
+        if (constexpr auto _grace_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::seconds(10)).count();
+            _now - _expires_ns > _grace_ns) // LCOV_EXCL_LINE Note: Partially tested.
         {
           _to_erase.emplace_back(_item.key());
         }
@@ -74,7 +76,7 @@ namespace throttr
       }
       else
       {
-        _next_expiration = std::min(_next_expiration, _item.entry_.expires_at_);
+        _next_expiration = std::min(_next_expiration, _expires_ns);
       }
     }
 
@@ -118,11 +120,14 @@ namespace throttr
     for (auto &_candidate_index = state->storage_.get<tag_by_key>(); // LCOV_EXCL_LINE Note: Partially tested.
          const auto &_item : _candidate_index)                       // LCOV_EXCL_LINE Note: Partially tested.
     {
-      const auto &_expires_at = _item.entry_.expires_at_;
-      std::chrono::steady_clock::time_point _candidate;
+      const auto _expires_at = _item.entry_.expires_at_.load(std::memory_order_acquire);
+      uint64_t _candidate;
 
       if (_item.expired_) // LCOV_EXCL_LINE Note: Partially tested.
-        _candidate = _expires_at + std::chrono::seconds(10);
+      {
+        constexpr auto _grace_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::seconds(10)).count();
+        _candidate = _expires_at + _grace_ns;
+      }
       else
         _candidate = _expires_at;
 
@@ -133,7 +138,7 @@ namespace throttr
     fmt::println("{:%Y-%m-%d %H:%M:%S} GARBAGE COLLECTION COMPLETED", std::chrono::system_clock::now());
 #endif
 
-    if (_next_expiration != std::chrono::steady_clock::time_point::max()) // LCOV_EXCL_LINE Note: Partially tested.
+    if (_next_expiration != std::numeric_limits<std::uint64_t>::max()) // LCOV_EXCL_LINE Note: Partially tested.
       schedule_timer(state, _next_expiration);
   }
 } // namespace throttr

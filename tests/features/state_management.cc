@@ -67,8 +67,8 @@ test_ttl_change(
   const request_update _request{_header.attribute_, _header.change_, _header.value_, _key};
 
   _entry.ttl_type_ = _ttl_type;
-  const auto _now = steady_clock::now();
-  const auto _before = _entry.expires_at_;
+  const auto _now = steady_clock::now().time_since_epoch().count();
+  const auto _before = _entry.expires_at_.load(std::memory_order_relaxed);
 
   const auto _key_bytes = std::vector<
     std::byte>{reinterpret_cast<const std::byte *>(_key.data()), reinterpret_cast<const std::byte *>(_key.data() + _key.size())};
@@ -79,13 +79,19 @@ test_ttl_change(
   switch (_change_type)
   {
     case change_types::patch:
-      EXPECT_GE(_entry.expires_at_, _now + _expected);
+      EXPECT_GE(
+        _entry.expires_at_.load(std::memory_order_relaxed),
+        _now + std::chrono::duration_cast<std::chrono::nanoseconds>(_expected).count());
       break;
     case change_types::increase:
-      EXPECT_GE(_entry.expires_at_, _before + _expected);
+      EXPECT_GE(
+        _entry.expires_at_.load(std::memory_order_relaxed),
+        _before + std::chrono::duration_cast<std::chrono::nanoseconds>(_expected).count());
       break;
     case change_types::decrease:
-      EXPECT_LE(_entry.expires_at_, _before - _expected);
+      EXPECT_LE(
+        _entry.expires_at_.load(std::memory_order_relaxed),
+        _before - std::chrono::duration_cast<std::chrono::nanoseconds>(_expected).count());
       break;
   }
 }
@@ -98,7 +104,7 @@ TEST(StateManagementTest, TTLChange)
   boost::asio::io_context _ioc;
   auto _state = std::make_shared<state>(_ioc);
   entry _entry;
-  _entry.expires_at_ = steady_clock::now();
+  _entry.expires_at_.store(steady_clock::now().time_since_epoch().count(), std::memory_order_relaxed);
   const std::vector _key = {std::byte{0x01}, std::byte{0x02}, std::byte{0x03}, std::byte{0x04}};
 
   {
@@ -130,70 +136,114 @@ TEST(StateManagementTest, TTLChange)
     for (const auto &[t, c, e] : cases)
       test_ttl_change<seconds>(_state, _entry, _key, t, c, e);
   }
+
+  {
+    std::vector cases{
+      std::make_tuple(ttl_types::microseconds, change_types::patch, microseconds(32)),
+      std::make_tuple(ttl_types::microseconds, change_types::increase, microseconds(64)),
+      std::make_tuple(ttl_types::microseconds, change_types::decrease, microseconds(16)),
+    };
+    for (const auto &[t, c, e] : cases)
+      test_ttl_change<microseconds>(_state, _entry, _key, t, c, e);
+  }
+
+  {
+    std::vector cases{
+      std::make_tuple(ttl_types::hours, change_types::patch, hours(32)),
+      std::make_tuple(ttl_types::hours, change_types::increase, hours(64)),
+      std::make_tuple(ttl_types::hours, change_types::decrease, hours(16)),
+    };
+    for (const auto &[t, c, e] : cases)
+      test_ttl_change<hours>(_state, _entry, _key, t, c, e);
+  }
+
+  {
+    std::vector cases{
+      std::make_tuple(ttl_types::minutes, change_types::patch, minutes(32)),
+      std::make_tuple(ttl_types::minutes, change_types::increase, minutes(64)),
+      std::make_tuple(ttl_types::minutes, change_types::decrease, minutes(16)),
+    };
+    for (const auto &[t, c, e] : cases)
+      test_ttl_change<minutes>(_state, _entry, _key, t, c, e);
+  }
 }
 
 TEST(StateManagementTest, CalculateExpirationPointNanoseconds)
 {
-  const auto _now = std::chrono::steady_clock::now();
-  value_type _expiration_value = 32;
+  const auto _now_tp = std::chrono::steady_clock::now();
+  const auto _now_ns = _now_tp.time_since_epoch().count();
+
+  constexpr value_type _expiration_value = 32;
   std::vector<std::byte> _expiration_bytes(sizeof(value_type));
   std::memcpy(_expiration_bytes.data(), &_expiration_value, sizeof(value_type));
-  const auto _expires = get_expiration_point(_now, ttl_types::nanoseconds, _expiration_bytes);
+  const auto _expires_ns = get_expiration_point(_now_ns, ttl_types::nanoseconds, _expiration_bytes);
 
-  const auto _diff = std::chrono::duration_cast<std::chrono::nanoseconds>(_expires - _now).count();
+  const auto _diff = static_cast<int64_t>(_expires_ns - _now_ns);
   ASSERT_NEAR(_diff, 32, 16);
 }
 
 TEST(StateManagementTest, CalculateExpirationPointSeconds)
 {
-  const auto _now = std::chrono::steady_clock::now();
+  const auto _now_tp = std::chrono::steady_clock::now();
+  const auto _now_ns = _now_tp.time_since_epoch().count();
+
   value_type _expiration_value = 3;
   std::vector<std::byte> _expiration_bytes(sizeof(value_type));
   std::memcpy(_expiration_bytes.data(), &_expiration_value, sizeof(value_type));
 
-  const auto _expires = get_expiration_point(_now, ttl_types::seconds, _expiration_bytes);
+  const auto _expires_ns = get_expiration_point(_now_ns, ttl_types::seconds, _expiration_bytes);
 
-  const auto _diff = std::chrono::duration_cast<std::chrono::seconds>(_expires - _now).count();
-  ASSERT_NEAR(_diff, 3, 1);
+  const auto _diff_ns = static_cast<int64_t>(_expires_ns - _now_ns);
+  const auto _diff_sec = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::nanoseconds(_diff_ns)).count();
+
+  ASSERT_NEAR(_diff_sec, 3, 1);
 }
 
 TEST(StateManagementTest, CalculateTTLRemainingNanosecondsNotExpired)
 {
-  const auto _now = std::chrono::steady_clock::now();
-  const auto _expires = _now + std::chrono::nanoseconds(256);
+  const auto _now_tp = std::chrono::steady_clock::now();
+  const auto _now_ns = _now_tp.time_since_epoch().count();
 
-  const auto _ttl = get_ttl(_expires, ttl_types::nanoseconds);
+  const auto _expires_ns = _now_ns + 256;
+
+  const auto _ttl = get_ttl(_expires_ns, ttl_types::nanoseconds);
   ASSERT_GE(_ttl, 0);
 }
 
 TEST(StateManagementTest, CalculateTTLRemainingSecondsNotExpired)
 {
-  const auto _now = std::chrono::steady_clock::now();
-  const auto _expires = _now + std::chrono::seconds(10);
+  const auto _now_tp = std::chrono::steady_clock::now();
+  const auto _now_ns = _now_tp.time_since_epoch().count();
 
-  const auto _ttl = get_ttl(_expires, ttl_types::seconds);
+  const auto _expires_ns = _now_ns + std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::seconds(10)).count();
+
+  const auto _ttl = get_ttl(_expires_ns, ttl_types::seconds);
   ASSERT_GE(_ttl, 0);
 }
 
 TEST(StateManagementTest, CalculateTTLRemainingNanosecondsExpired)
 {
-  const auto _now = std::chrono::steady_clock::now();
-  const auto _expires = _now - std::chrono::nanoseconds(100);
+  const auto _now_tp = std::chrono::steady_clock::now();
+  const auto _now_ns = _now_tp.time_since_epoch().count();
+
+  const auto _expires_ns = _now_ns - 100;
 
   std::this_thread::sleep_for(std::chrono::nanoseconds(1000));
 
-  const auto _quota = get_ttl(_expires, ttl_types::nanoseconds);
+  const auto _quota = get_ttl(_expires_ns, ttl_types::nanoseconds);
   ASSERT_EQ(_quota, 0);
 }
 
 TEST(StateManagementTest, CalculateTTLRemainingSecondsExpired)
 {
-  const auto _now = std::chrono::steady_clock::now();
-  const auto _expires = _now - std::chrono::seconds(1);
+  const auto _now_tp = std::chrono::steady_clock::now();
+  const auto _now_ns = _now_tp.time_since_epoch().count();
+
+  const auto _expires_ns = _now_ns - std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::seconds(1)).count();
 
   std::this_thread::sleep_for(std::chrono::seconds(2));
 
-  const auto _quota = get_ttl(_expires, ttl_types::seconds);
+  const auto _quota = get_ttl(_expires_ns, ttl_types::seconds);
   ASSERT_EQ(_quota, 0);
 }
 
@@ -240,22 +290,24 @@ TEST_F(StateManagementTestFixture, ScheduleExpiration_ReprogramsIfNextEntryExist
   auto &_storage = state_->storage_;
   auto &_index = _storage.get<tag_by_key>();
 
-  const auto _now = steady_clock::now();
+  const std::uint64_t now_ns = steady_clock::now().time_since_epoch().count();
+  const std::uint64_t expires1_ns = now_ns;
+  const std::uint64_t expires2_ns = now_ns + duration_cast<nanoseconds>(seconds(5)).count();
 
   entry _entry1;
   _entry1.type_ = entry_types::counter;
   _entry1.buffer_.store(std::make_shared<std::vector<std::byte>>(1, std::byte{1}), std::memory_order_release);
-  _entry1.expires_at_ = _now;
+  _entry1.expires_at_.store(expires1_ns, std::memory_order_release);
 
   entry _entry2;
   _entry2.type_ = entry_types::counter;
   _entry2.buffer_.store(std::make_shared<std::vector<std::byte>>(1, std::byte{1}), std::memory_order_release);
-  _entry2.expires_at_ = _now + seconds(5);
+  _entry2.expires_at_.store(expires2_ns, std::memory_order_release);
 
   _index.insert(entry_wrapper{to_bytes("c1r1"), std::move(_entry1)});
   _index.insert(entry_wrapper{to_bytes("c2r2"), std::move(_entry2)});
 
-  state_->garbage_collector_->schedule_timer(state_, _now);
+  state_->garbage_collector_->schedule_timer(state_, now_ns);
 
   ioc_.restart();
   ioc_.run_for(seconds(30));

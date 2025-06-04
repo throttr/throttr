@@ -57,7 +57,7 @@ namespace throttr
       return;
     }
     const auto _it = _find.value();
-    const value_type _ttl = get_ttl(_it->entry_.expires_at_, _it->entry_.ttl_type_);
+    const value_type _ttl = get_ttl(_it->entry_.expires_at_.load(std::memory_order_relaxed), _it->entry_.ttl_type_);
 
     // status_
     batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
