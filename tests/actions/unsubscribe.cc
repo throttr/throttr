@@ -24,11 +24,17 @@ class UnsubscribeTestFixture : public ServiceTestFixture
 TEST_F(UnsubscribeTestFixture, OnSuccess)
 {
   boost::asio::io_context _io_context;
+#ifdef ENABLED_FEATURE_UNIX_SOCKETS
+  boost::asio::local::stream_protocol::endpoint _endpoint(app_->state_->exposed_port_);
+  boost::asio::local::stream_protocol::socket _socket(_io_context);
+  _socket.connect(_endpoint);
+#else
   tcp::resolver _resolver(_io_context);
   const auto _endpoints = _resolver.resolve("127.0.0.1", std::to_string(app_->state_->exposed_port_));
 
   tcp::socket _socket(_io_context);
   boost::asio::connect(_socket, _endpoints);
+#endif
 
   // SUBSCRIBE
   const auto _subscribe_buffer = request_subscribe_builder("metrics");
@@ -53,11 +59,17 @@ TEST_F(UnsubscribeTestFixture, OnSuccess)
 TEST_F(UnsubscribeTestFixture, OnFailed)
 {
   boost::asio::io_context _io_context;
+#ifdef ENABLED_FEATURE_UNIX_SOCKETS
+  boost::asio::local::stream_protocol::endpoint _endpoint(app_->state_->exposed_port_);
+  boost::asio::local::stream_protocol::socket _socket(_io_context);
+  _socket.connect(_endpoint);
+#else
   tcp::resolver _resolver(_io_context);
   const auto _endpoints = _resolver.resolve("127.0.0.1", std::to_string(app_->state_->exposed_port_));
 
   tcp::socket _socket(_io_context);
   boost::asio::connect(_socket, _endpoints);
+#endif
 
   // UNSUBSCRIBE without SUBSCRIBE
   const auto _unsubscribe_buffer = request_unsubscribe_builder("metrics");

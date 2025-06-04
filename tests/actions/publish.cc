@@ -24,6 +24,13 @@ class PublishTestFixture : public ServiceTestFixture
 TEST_F(PublishTestFixture, OnSuccess)
 {
   boost::asio::io_context _io_context;
+#ifdef ENABLED_FEATURE_UNIX_SOCKETS
+  boost::asio::local::stream_protocol::endpoint _endpoint(app_->state_->exposed_port_);
+  boost::asio::local::stream_protocol::socket _subscriber(_io_context);
+  _subscriber.connect(_endpoint);
+  boost::asio::local::stream_protocol::socket _publisher(_io_context);
+  _publisher.connect(_endpoint);
+#else
   tcp::resolver _resolver(_io_context);
   const auto _endpoints = _resolver.resolve("127.0.0.1", std::to_string(app_->state_->exposed_port_));
 
@@ -32,6 +39,7 @@ TEST_F(PublishTestFixture, OnSuccess)
 
   tcp::socket _publisher(_io_context);
   boost::asio::connect(_publisher, _endpoints);
+#endif
 
   const auto _subscribe_buffer = request_subscribe_builder("news");
   boost::asio::write(_subscriber, boost::asio::buffer(_subscribe_buffer.data(), _subscribe_buffer.size()));

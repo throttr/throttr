@@ -21,14 +21,21 @@ class ConnectionTestFixture : public ServiceTestFixture
 {
 };
 
+#ifdef ENABLED_FEATURE_METRICS
 TEST_F(ConnectionTestFixture, OnSuccess)
 {
   boost::asio::io_context _io_context;
+#ifdef ENABLED_FEATURE_UNIX_SOCKETS
+  boost::asio::local::stream_protocol::endpoint _endpoint(app_->state_->exposed_port_);
+  boost::asio::local::stream_protocol::socket _socket(_io_context);
+  _socket.connect(_endpoint);
+#else
   tcp::resolver _resolver(_io_context);
   const auto _endpoints = _resolver.resolve("127.0.0.1", std::to_string(app_->state_->exposed_port_));
 
   tcp::socket _socket(_io_context);
   boost::asio::connect(_socket, _endpoints);
+#endif
 
   // WHOAMI
   const auto _whoami_buffer = request_whoami_builder();
@@ -86,11 +93,17 @@ TEST_F(ConnectionTestFixture, OnSuccess)
 TEST_F(ConnectionTestFixture, OnFailed)
 {
   boost::asio::io_context _io_context;
+#ifdef ENABLED_FEATURE_UNIX_SOCKETS
+  boost::asio::local::stream_protocol::endpoint _endpoint(app_->state_->exposed_port_);
+  boost::asio::local::stream_protocol::socket _socket(_io_context);
+  _socket.connect(_endpoint);
+#else
   tcp::resolver _resolver(_io_context);
   const auto _endpoints = _resolver.resolve("127.0.0.1", std::to_string(app_->state_->exposed_port_));
 
   tcp::socket _socket(_io_context);
   boost::asio::connect(_socket, _endpoints);
+#endif
 
   const auto _fake_uuid = boost::uuids::random_generator()();
   std::array<std::byte, 16> _uuid;
@@ -108,3 +121,4 @@ TEST_F(ConnectionTestFixture, OnFailed)
   boost::system::error_code _ec;
   _socket.close(_ec);
 }
+#endif

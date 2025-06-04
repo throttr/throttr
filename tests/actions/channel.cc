@@ -21,14 +21,28 @@ class ChannelTestFixture : public ServiceTestFixture
 {
 };
 
+#ifdef ENABLED_FEATURE_METRICS
 TEST_F(ChannelTestFixture, OnSuccess)
 {
   boost::asio::io_context _io_context;
 
-  tcp::resolver _resolver1(_io_context);
-  auto _endpoints1 = _resolver1.resolve("127.0.0.1", std::to_string(app_->state_->exposed_port_));
+#ifdef ENABLED_FEATURE_UNIX_SOCKETS
+  boost::asio::local::stream_protocol::endpoint _endpoint(app_->state_->exposed_port_);
+  boost::asio::local::stream_protocol::socket _socket1(_io_context);
+  _socket1.connect(_endpoint);
+
+  boost::asio::local::stream_protocol::socket _socket2(_io_context);
+  _socket2.connect(_endpoint);
+#else
+  tcp::resolver _resolver(_io_context);
+  const auto _endpoints = _resolver.resolve("127.0.0.1", std::to_string(app_->state_->exposed_port_));
+
   tcp::socket _socket1(_io_context);
-  boost::asio::connect(_socket1, _endpoints1);
+  boost::asio::connect(_socket1, _endpoints);
+
+  tcp::socket _socket2(_io_context);
+  boost::asio::connect(_socket2, _endpoints);
+#endif
 
   auto _subscribe_buffer = request_subscribe_builder("metrics");
   boost::asio::write(_socket1, boost::asio::buffer(_subscribe_buffer.data(), _subscribe_buffer.size()));
@@ -38,11 +52,6 @@ TEST_F(ChannelTestFixture, OnSuccess)
   ASSERT_EQ(_subscribe_response[0], std::byte{0x01});
 
   // 🔌 Conexión 2: CHANNEL request
-  tcp::resolver _resolver2(_io_context);
-  auto _endpoints2 = _resolver2.resolve("127.0.0.1", std::to_string(app_->state_->exposed_port_));
-  tcp::socket _socket2(_io_context);
-  boost::asio::connect(_socket2, _endpoints2);
-
   std::string _chan = "metrics";
   std::vector<std::byte> _channel_request = {std::byte{0x17}, std::byte{static_cast<std::uint8_t>(_chan.size())}};
   _channel_request.insert(
@@ -76,10 +85,17 @@ TEST_F(ChannelTestFixture, OnFailed)
   boost::asio::io_context _io_context;
 
   // 🔌 Conexión directa sin suscribirse a nada
+#ifdef ENABLED_FEATURE_UNIX_SOCKETS
+  boost::asio::local::stream_protocol::endpoint _endpoint(app_->state_->exposed_port_);
+  boost::asio::local::stream_protocol::socket _socket(_io_context);
+  _socket.connect(_endpoint);
+#else
   tcp::resolver _resolver(_io_context);
-  auto _endpoints = _resolver.resolve("127.0.0.1", std::to_string(app_->state_->exposed_port_));
+  const auto _endpoints = _resolver.resolve("127.0.0.1", std::to_string(app_->state_->exposed_port_));
+
   tcp::socket _socket(_io_context);
   boost::asio::connect(_socket, _endpoints);
+#endif
 
   // Enviar CHANNEL request a un canal inexistente
   std::string _chan = "nope-channel";
@@ -101,3 +117,4 @@ TEST_F(ChannelTestFixture, OnFailed)
   boost::system::error_code _ec;
   _socket.close(_ec);
 }
+#endif

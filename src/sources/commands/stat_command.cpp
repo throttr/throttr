@@ -34,11 +34,11 @@ namespace throttr
 
     boost::ignore_unused(type, conn);
 
-    const auto _request = request_stat::from_buffer(view);
 #ifndef ENABLED_FEATURE_METRICS
-    batch.emplace_back(boost::asio::buffer(&failed_response_, 1));
+    batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
     return;
-#endif
+#else
+    const auto _request = request_stat::from_buffer(view);
 
     const request_key _key{
       std::string_view(reinterpret_cast<const char *>(_request.key_.data()), _request.key_.size())}; // NOSONAR
@@ -87,5 +87,6 @@ namespace throttr
       metrics.writes_accumulator_.load());
 #endif
     // LCOV_EXCL_STOP
+#endif
   }
 } // namespace throttr

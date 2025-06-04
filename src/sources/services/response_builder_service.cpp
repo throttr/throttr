@@ -94,6 +94,7 @@ namespace throttr
     write_buffer.push_back(static_cast<std::byte>(entry->key_.size()));
     batch->emplace_back(boost::asio::buffer(&write_buffer[_offset], 1));
 
+#ifdef ENABLED_FEATURE_METRICS
     for (const auto &_metric = *entry->metrics_; uint64_t _v :
                                                  {_metric.reads_per_minute_.load(std::memory_order_relaxed),
                                                   _metric.writes_per_minute_.load(std::memory_order_relaxed),
@@ -104,6 +105,7 @@ namespace throttr
       append_uint64_t(write_buffer, _v);
       batch->emplace_back(boost::asio::buffer(&write_buffer[_off], sizeof(_v)));
     }
+#endif
 
     return 0;
   }
@@ -206,7 +208,7 @@ namespace throttr
     std::vector<std::byte> &write_buffer)
   {
 #ifndef ENABLED_FEATURE_METRICS
-    batch.emplace_back(boost::asio::buffer(&failed_response_, 1));
+    batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
     return;
 #endif
     batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
@@ -351,9 +353,9 @@ namespace throttr
     std::vector<std::byte> &write_buffer)
   {
 #ifndef ENABLED_FEATURE_METRICS
-    batch.emplace_back(boost::asio::buffer(&failed_response_, 1));
+    batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
     return;
-#endif
+#else
 
     batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
 
@@ -445,5 +447,6 @@ namespace throttr
         batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], _channel.size()));
       }
     }
+#endif
   }
 } // namespace throttr

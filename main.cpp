@@ -32,13 +32,22 @@ int main(const int argc, const char* argv[]) {
     }
 
     _options.add_options()
+#ifdef ENABLED_FEATURE_UNIX_SOCKETS
+        ("socket", boost::program_options::value<std::string>()->default_value("throttr.sock"), "Assigned socket path.")
+#else
         ("port", boost::program_options::value<short>()->default_value(9000), "Assigned port.")
+#endif
         ("threads", boost::program_options::value<int>()->default_value(default_threads), "Assigned threads.");
 
     boost::program_options::variables_map _vm;
     store(parse_command_line(argc, argv, _options), _vm);
 
-    const auto _port = _vm["port"].as<short>();
+#ifdef ENABLED_FEATURE_UNIX_SOCKETS
+    const auto _port = _vm["socket"].as<std::string>();
+  std::remove(_port.c_str());
+#else
+  const auto _port = _vm["port"].as<short>();
+#endif
     const auto _threads = _vm["threads"].as<int>();
 
     const auto _app = std::make_shared<throttr::app>(_port, _threads);

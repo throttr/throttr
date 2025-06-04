@@ -36,6 +36,12 @@ namespace throttr
     const std::shared_ptr<connection> &conn)
   {
     boost::ignore_unused(type, view, conn);
+
+#ifndef ENABLED_FEATURE_METRICS
+    batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
+    return;
+#else
+
     std::scoped_lock _lock(state->subscriptions_->mutex_, state->connections_mutex_);
 
     batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
@@ -173,5 +179,6 @@ namespace throttr
       to_string(conn->id_));
 #endif
     // LCOV_EXCL_STOP
+#endif
   }
 } // namespace throttr

@@ -21,6 +21,7 @@
 #include <gtest/gtest.h>
 
 #include <boost/asio.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <thread>
 #include <throttr/app.hpp>
 #include <throttr/state.hpp>
@@ -51,7 +52,13 @@ protected:
    */
   void SetUp() override
   {
+#ifdef ENABLED_FEATURE_UNIX_SOCKETS
+    boost::uuids::uuid _uuid = boost::uuids::random_generator()();
+    auto _uuid_string = to_string(_uuid);
+    app_ = std::make_shared<app>(_uuid_string, threads_);
+#else
     app_ = std::make_shared<app>(0, threads_);
+#endif
 
     server_thread_ = std::make_unique<std::jthread>([this]() { app_->serve(); });
 
@@ -84,12 +91,17 @@ protected:
   [[nodiscard]] std::vector<std::byte> send_and_receive(const std::vector<std::byte> &message, const int length = 1) const
   {
     boost::asio::io_context _io_context;
+
+#ifdef ENABLED_FEATURE_UNIX_SOCKETS
+    boost::asio::local::stream_protocol::endpoint _endpoint(app_->state_->exposed_port_);
+    boost::asio::local::stream_protocol::socket _socket(_io_context);
+    _socket.connect(_endpoint);
+#else
     tcp::resolver _resolver(_io_context);
-
     const auto _endpoints = _resolver.resolve("127.0.0.1", std::to_string(app_->state_->exposed_port_));
-
     tcp::socket _socket(_io_context);
     boost::asio::connect(_socket, _endpoints);
+#endif
 
     boost::asio::write(_socket, boost::asio::buffer(message.data(), message.size()));
 

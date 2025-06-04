@@ -35,7 +35,7 @@ namespace throttr
     boost::ignore_unused(type, view, conn);
 
 #ifndef ENABLED_FEATURE_METRICS
-    batch.emplace_back(boost::asio::buffer(&failed_response_, 1));
+    batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
     return;
 #endif
     state->response_builder_->handle_fragmented_connections_response(state, batch, write_buffer);

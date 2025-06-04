@@ -1,10 +1,12 @@
 ARG TYPE="release"
 ARG SIZE="UINT16"
+ARG SOCKETS="ON"
 
 FROM ghcr.io/throttr/builder-alpine:1.87.0-${TYPE} AS builder
 
 ARG TYPE
 ARG SIZE
+ARG SOCKETS
 
 COPY src/ src/
 COPY tests/ tests/
@@ -18,6 +20,7 @@ RUN mkdir -p build && \
       -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
       -DBUILD_TESTS=ON \
       -DRUNTIME_VALUE_SIZE="$SIZE" \
+      -DENABLE_UNIX_SOCKETS="$SOCKETS" \
       -DENABLE_STATIC_LINKING=ON && \
     make -j4 && \
     mv throttr /usr/bin/throttr && \

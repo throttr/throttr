@@ -63,7 +63,11 @@ namespace throttr
     /**
      * Port exposed
      */
+#ifdef ENABLED_FEATURE_UNIX_SOCKETS
+    std::string exposed_port_;
+#else
     std::uint16_t exposed_port_;
+#endif
 
     /**
      * Storage

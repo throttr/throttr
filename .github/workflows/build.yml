@@ -12,6 +12,7 @@ jobs:
       matrix:
         type: [debug, release]
         size: [UINT8, UINT16, UINT32, UINT64]
+        sockets: [ON, OFF]
         platform: [linux/amd64, linux/arm64]
 
     runs-on: ${{ matrix.platform == 'linux/arm64' && 'ubuntu-22.04-arm' || 'ubuntu-latest' }}
@@ -34,7 +35,8 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           push: ${{ github.ref_type == 'tag' && true || false }}
-          tags: ghcr.io/throttr/throttr:${{ env.VERSION }}-${{ matrix.type }}-${{ matrix.size }}-${{ matrix.platform == 'linux/arm64' && 'arm64' || 'amd64' }}
+          tags: ghcr.io/throttr/throttr:${{ env.VERSION }}-${{ matrix.type }}-${{ matrix.size }}-${{ matrix.platform == 'linux/arm64' && 'arm64' || 'amd64' }}-${{ matrix.sockets == 'ON' && 'unix' || 'tcp' }}
           build-args: |
             TYPE=${{ matrix.type }}
             SIZE=${{ matrix.size }}
+            SOCKETS=${{ matrix.sockets }}
