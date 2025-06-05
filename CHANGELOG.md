@@ -1,3 +1,8 @@
+### v5.0.4
+
+- Now we have AMD64/ARM64 packages.
+- Now we have big-endian support on this project side.
+
 ### v5.0.3
 
 - Now entry containers are more thread safe.
