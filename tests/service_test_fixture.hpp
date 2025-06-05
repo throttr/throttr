@@ -54,7 +54,7 @@ protected:
   void SetUp() override
   {
 #ifdef ENABLED_FEATURE_UNIX_SOCKETS
-    boost::uuids::uuid _uuid = boost::uuids::random_generator()();
+    const boost::uuids::uuid _uuid = boost::uuids::random_generator()();
     auto _uuid_string = to_string(_uuid);
     app_ = std::make_shared<app>(_uuid_string, threads_);
 #else
@@ -82,6 +82,20 @@ protected:
     }
   }
 
+  [[nodiscard]] transport_socket make_connection(boost::asio::io_context &io_context) const
+  {
+    transport_socket _socket(io_context);
+#ifdef ENABLED_FEATURE_UNIX_SOCKETS
+    const transport_endpoint _endpoint(app_->state_->exposed_port_);
+    _socket.connect(_endpoint);
+#else
+    tcp::resolver _resolver(io_context);
+    const auto _endpoints = _resolver.resolve("127.0.0.1", std::to_string(app_->state_->exposed_port_));
+    boost::asio::connect(_socket, _endpoints);
+#endif
+    return _socket;
+  }
+
   /**
    * Send and receive
    *
@@ -92,23 +106,10 @@ protected:
   [[nodiscard]] std::vector<std::byte> send_and_receive(const std::vector<std::byte> &message, const int length = 1) const
   {
     boost::asio::io_context _io_context;
-
-#ifdef ENABLED_FEATURE_UNIX_SOCKETS
-    boost::asio::local::stream_protocol::endpoint _endpoint(app_->state_->exposed_port_);
-    boost::asio::local::stream_protocol::socket _socket(_io_context);
-    _socket.connect(_endpoint);
-#else
-    tcp::resolver _resolver(_io_context);
-    const auto _endpoints = _resolver.resolve("127.0.0.1", std::to_string(app_->state_->exposed_port_));
-    tcp::socket _socket(_io_context);
-    boost::asio::connect(_socket, _endpoints);
-#endif
-
+    auto _socket = make_connection(_io_context);
     boost::asio::write(_socket, boost::asio::buffer(message.data(), message.size()));
-
     std::vector<std::byte> _response(length);
     boost::asio::read(_socket, boost::asio::buffer(_response.data(), _response.size()));
-
     return _response;
   }
 };

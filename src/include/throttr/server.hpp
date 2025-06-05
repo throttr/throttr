@@ -22,6 +22,7 @@
 #include <boost/intrusive_ptr.hpp>
 #include <throttr/connection.hpp>
 #include <throttr/state.hpp>
+#include <throttr/transport.hpp>
 
 namespace throttr
 {
@@ -46,13 +47,7 @@ namespace throttr
       const short port,
 #endif
       const std::shared_ptr<state> &state) :
-#ifdef ENABLED_FEATURE_UNIX_SOCKETS
-        acceptor_(io_context, boost::asio::local::stream_protocol::endpoint(port)),
-#else
-        acceptor_(io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
-#endif
-        socket_(io_context),
-        state_(state)
+        acceptor_(io_context, make_endpoint(port)), socket_(io_context), state_(state)
     {
 #ifdef ENABLED_FEATURE_UNIX_SOCKETS
       state->exposed_port_ = port;
@@ -60,10 +55,33 @@ namespace throttr
       state->exposed_port_ = acceptor_.local_endpoint().port();
 #endif
       state->acceptor_ready_ = true;
+
 #ifdef ENABLED_FEATURE_METRICS
       state->metrics_collector_->schedule_timer(state);
 #endif
+
       do_accept();
+    }
+
+    /**
+     * Make endpoint
+     *
+     * @param port
+     * @return transport_endpoint
+     */
+    static transport_endpoint make_endpoint(
+#ifdef ENABLED_FEATURE_UNIX_SOCKETS
+      const std::string &port
+#else
+      const short port
+#endif
+    )
+    {
+#ifdef ENABLED_FEATURE_UNIX_SOCKETS
+      return {port};
+#else
+      return {boost::asio::ip::tcp::v4(), static_cast<boost::asio::ip::port_type>(port)};
+#endif
     }
 
   private:
@@ -85,27 +103,15 @@ namespace throttr
         });
     }
 
-#ifdef ENABLED_FEATURE_UNIX_SOCKETS
     /**
      * Acceptor
      */
-    boost::asio::local::stream_protocol::acceptor acceptor_;
+    transport_acceptor acceptor_;
 
     /**
      * Socket
      */
-    boost::asio::local::stream_protocol::socket socket_;
-#else
-    /**
-     * Acceptor
-     */
-    boost::asio::ip::tcp::acceptor acceptor_;
-
-    /**
-     * Socket
-     */
-    boost::asio::ip::tcp::socket socket_;
-#endif
+    transport_socket socket_;
 
     /**
      * State

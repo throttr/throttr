@@ -13,17 +13,19 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include <throttr/connection.hpp>
+#ifndef THROTTR_TRANSPORT_HPP
+#define THROTTR_TRANSPORT_HPP
 
-namespace throttr
-{
-  void connection::close()
-  {
-    boost::system::error_code ec;
-#ifndef ENABLED_FEATURE_UNIX_SOCKETS
-    socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+#ifdef ENABLED_FEATURE_UNIX_SOCKETS
+#include <boost/asio/local/stream_protocol.hpp>
+using transport_acceptor = boost::asio::local::stream_protocol::acceptor;
+using transport_socket = boost::asio::local::stream_protocol::socket;
+using transport_endpoint = boost::asio::local::stream_protocol::endpoint;
+#else
+#include <boost/asio/ip/tcp.hpp>
+using transport_acceptor = boost::asio::ip::tcp::acceptor;
+using transport_socket = boost::asio::ip::tcp::socket;
+using transport_endpoint = boost::asio::ip::tcp::endpoint;
 #endif
-    socket_.close(ec);
-  }
 
-} // namespace throttr
+#endif // THROTTR_TRANSPORT_HPP

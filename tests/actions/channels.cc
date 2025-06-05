@@ -25,16 +25,8 @@ TEST_F(ChannelsTestFixture, OnSuccess)
   boost::asio::io_context _io_context;
 
   // Conexión 1: Suscribirse al canal "metrics"
-#ifdef ENABLED_FEATURE_UNIX_SOCKETS
-  boost::asio::local::stream_protocol::endpoint _endpoint(app_->state_->exposed_port_);
-  boost::asio::local::stream_protocol::socket _socket1(_io_context);
-  _socket1.connect(_endpoint);
-#else
-  tcp::resolver _resolver1(_io_context);
-  auto _endpoints1 = _resolver1.resolve("127.0.0.1", std::to_string(app_->state_->exposed_port_));
-  tcp::socket _socket1(_io_context);
-  boost::asio::connect(_socket1, _endpoints1);
-#endif
+  auto _socket1 = make_connection(_io_context);
+  auto _socket2 = make_connection(_io_context);
 
   auto _subscribe_buffer = request_subscribe_builder("metrics");
   boost::asio::write(_socket1, boost::asio::buffer(_subscribe_buffer.data(), _subscribe_buffer.size()));
@@ -42,17 +34,6 @@ TEST_F(ChannelsTestFixture, OnSuccess)
   std::vector<std::byte> _subscribe_response(1);
   boost::asio::read(_socket1, boost::asio::buffer(_subscribe_response.data(), _subscribe_response.size()));
   ASSERT_EQ(_subscribe_response[0], std::byte{0x01});
-
-  // Conexión 2: Ejecutar comando CHANNELS
-#ifdef ENABLED_FEATURE_UNIX_SOCKETS
-  boost::asio::local::stream_protocol::socket _socket2(_io_context);
-  _socket2.connect(_endpoint);
-#else
-  tcp::resolver _resolver2(_io_context);
-  auto _endpoints2 = _resolver2.resolve("127.0.0.1", std::to_string(app_->state_->exposed_port_));
-  tcp::socket _socket2(_io_context);
-  boost::asio::connect(_socket2, _endpoints2);
-#endif
 
   // CHANNELS opcode = 0x16 (ejemplo)
   std::vector<std::byte> _channels_request = {std::byte{0x16}};

@@ -19,13 +19,7 @@
 
 namespace throttr
 {
-  connection::connection(
-#ifdef ENABLED_FEATURE_UNIX_SOCKETS
-    boost::asio::local::stream_protocol::socket socket,
-#else
-    boost::asio::ip::tcp::socket socket,
-#endif
-    const std::shared_ptr<state> &state) :
+  connection::connection(transport_socket socket, const std::shared_ptr<state> &state) :
       id_(state->id_generator_()), socket_(std::move(socket)), state_(state)
   {
     // LCOV_EXCL_START

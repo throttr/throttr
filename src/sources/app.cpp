@@ -33,11 +33,7 @@ namespace throttr
 
   int app::serve()
   {
-#ifdef ENABLED_FEATURE_UNIX_SOCKETS
     server _server(ioc_, port_, state_);
-#else
-    server _server(ioc_, port_, state_);
-#endif
 
     std::vector<std::jthread> _threads;
     _threads.reserve(threads_);
