@@ -18,6 +18,8 @@
 #ifndef THROTTR_PROGRAM_OPTIONS_HPP
 #define THROTTR_PROGRAM_OPTIONS_HPP
 
+#include <string>
+
 namespace throttr
 {
   struct program_options
