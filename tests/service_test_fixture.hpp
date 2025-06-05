@@ -53,14 +53,11 @@ protected:
    */
   void SetUp() override
   {
-#ifdef ENABLED_FEATURE_UNIX_SOCKETS
-    const boost::uuids::uuid _uuid = boost::uuids::random_generator()();
-    auto _uuid_string = to_string(_uuid);
-    app_ = std::make_shared<app>(_uuid_string, threads_);
-#else
-    app_ = std::make_shared<app>(0, threads_);
-#endif
-
+    program_options _program_options{
+      .socket_ = to_string(boost::uuids::random_generator()()),
+      .port_ = 0,
+    };
+    app_ = std::make_shared<app>(_program_options, threads_);
     server_thread_ = std::make_unique<std::jthread>([this]() { app_->serve(); });
 
     while (!app_->state_->acceptor_ready_)
@@ -86,7 +83,7 @@ protected:
   {
     transport_socket _socket(io_context);
 #ifdef ENABLED_FEATURE_UNIX_SOCKETS
-    const transport_endpoint _endpoint(app_->state_->exposed_port_);
+    const transport_endpoint _endpoint(app_->program_options_.socket_);
     _socket.connect(_endpoint);
 #else
     tcp::resolver _resolver(io_context);

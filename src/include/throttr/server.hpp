@@ -21,6 +21,7 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/intrusive_ptr.hpp>
 #include <throttr/connection.hpp>
+#include <throttr/program_options.hpp>
 #include <throttr/state.hpp>
 #include <throttr/transport.hpp>
 
@@ -36,22 +37,13 @@ namespace throttr
      * Constructor
      *
      * @param io_context
-     * @param port
+     * @param program_options
      * @param state
      */
-    server(
-      boost::asio::io_context &io_context,
-#ifdef ENABLED_FEATURE_UNIX_SOCKETS
-      const std::string &port,
-#else
-      const short port,
-#endif
-      const std::shared_ptr<state> &state) :
-        acceptor_(io_context, make_endpoint(port)), socket_(io_context), state_(state)
+    server(boost::asio::io_context &io_context, const program_options &program_options, const std::shared_ptr<state> &state) :
+        acceptor_(io_context, make_endpoint(program_options)), socket_(io_context), state_(state)
     {
-#ifdef ENABLED_FEATURE_UNIX_SOCKETS
-      state->exposed_port_ = port;
-#else
+#ifndef ENABLED_FEATURE_UNIX_SOCKETS
       state->exposed_port_ = acceptor_.local_endpoint().port();
 #endif
       state->acceptor_ready_ = true;
@@ -66,21 +58,15 @@ namespace throttr
     /**
      * Make endpoint
      *
-     * @param port
+     * @param program_options
      * @return transport_endpoint
      */
-    static transport_endpoint make_endpoint(
-#ifdef ENABLED_FEATURE_UNIX_SOCKETS
-      const std::string &port
-#else
-      const short port
-#endif
-    )
+    static transport_endpoint make_endpoint(const program_options &program_options)
     {
 #ifdef ENABLED_FEATURE_UNIX_SOCKETS
-      return {port};
+      return {program_options.socket_};
 #else
-      return {boost::asio::ip::tcp::v4(), static_cast<boost::asio::ip::port_type>(port)};
+      return {boost::asio::ip::tcp::v4(), static_cast<boost::asio::ip::port_type>(program_options.port_)};
 #endif
     }
 

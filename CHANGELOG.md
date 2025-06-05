@@ -1,3 +1,7 @@
+### v5.0.6
+
+- Now the program options are refactorized (macro usage reduced).
+
 ### v5.0.5
 
 - Now all the transport protocol is inside transport.hpp.

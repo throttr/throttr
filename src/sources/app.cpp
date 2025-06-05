@@ -20,20 +20,18 @@
 
 namespace throttr
 {
-  app::app(
-#ifdef ENABLED_FEATURE_UNIX_SOCKETS
-    const std::string &port,
-#else
-    const short port,
-#endif
-    const int threads) :
-      ioc_(threads), port_(port), threads_(threads)
+  app::app(const program_options &program_options, const int threads) :
+      ioc_(threads), program_options_(program_options), threads_(threads)
   {
   }
 
   int app::serve()
   {
-    server _server(ioc_, port_, state_);
+#ifdef ENABLED_FEATURE_UNIX_SOCKETS
+    std::remove(program_options_.socket_.c_str());
+#endif
+
+    server _server(ioc_, program_options_, state_);
 
     std::vector<std::jthread> _threads;
     _threads.reserve(threads_);
@@ -61,7 +59,7 @@ namespace throttr
   {
     ioc_.stop();
 #ifdef ENABLED_FEATURE_UNIX_SOCKETS
-    std::remove(port_.c_str());
+    std::remove(program_options_.socket_.c_str());
 #endif
   }
 } // namespace throttr
