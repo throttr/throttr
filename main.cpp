@@ -44,9 +44,9 @@ int main(const int argc, const char* argv[]) {
 
 #ifdef ENABLED_FEATURE_UNIX_SOCKETS
     const auto _port = _vm["socket"].as<std::string>();
-  std::remove(_port.c_str());
+    std::remove(_port.c_str());
 #else
-  const auto _port = _vm["port"].as<short>();
+    const auto _port = _vm["port"].as<short>();
 #endif
     const auto _threads = _vm["threads"].as<int>();
 

@@ -1,3 +1,8 @@
+### v5.0.5
+
+- Now all the transport protocol is inside transport.hpp.
+- Now tests doesn't use macros everywhere.
+
 ### v5.0.4
 
 - Now we have AMD64/ARM64 packages.

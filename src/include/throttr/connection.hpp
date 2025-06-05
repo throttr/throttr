@@ -18,8 +18,6 @@
 #ifndef THROTTR_CONNECTION_HPP
 #define THROTTR_CONNECTION_HPP
 
-#include <boost/asio/ip/tcp.hpp>
-#include <boost/asio/local/stream_protocol.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <deque>
 #include <memory>
@@ -27,6 +25,7 @@
 #include <throttr/connection_allocator.hpp>
 #include <throttr/connection_metrics.hpp>
 #include <throttr/message.hpp>
+#include <throttr/transport.hpp>
 
 namespace throttr
 {
@@ -64,13 +63,7 @@ namespace throttr
      * @param socket
      * @param state
      */
-    explicit connection(
-#ifdef ENABLED_FEATURE_UNIX_SOCKETS
-      boost::asio::local::stream_protocol::socket socket,
-#else
-      boost::asio::ip::tcp::socket socket,
-#endif
-      const std::shared_ptr<state> &state);
+    explicit connection(transport_socket socket, const std::shared_ptr<state> &state);
 
     /**
      * Destructor
@@ -174,17 +167,10 @@ namespace throttr
      */
     void close();
 
-#ifdef ENABLED_FEATURE_UNIX_SOCKETS
     /**
      * Socket
      */
-    boost::asio::local::stream_protocol::socket socket_;
-#else
-    /**
-     * Socket
-     */
-    boost::asio::ip::tcp::socket socket_;
-#endif
+    transport_socket socket_;
 
     /**
      * State

@@ -37,6 +37,7 @@ jobs:
           mkdir -p dist
           cp build/throttr dist/
           cp LICENSE dist/
+          strip --strip-all throttr
           cd dist && zip throttr-${{ matrix.type }}-${{ matrix.size }}-amd64-${{ matrix.sockets == 'UNIX_BASED' && 'UNIX' || 'TCP' }}-${{ matrix.metrics == 'METRICS_ENABLED' && 'metrics-enabled' || 'metrics-disabled' }}.zip throttr LICENSE
 
       - name: Upload release asset
