@@ -26,6 +26,7 @@ RUN mkdir -p build && \
       -DENABLE_FEATURE_METRICS="$METRICS" \
       -DENABLE_STATIC_LINKING=ON && \
     make -j4 && \
+    strip --strip-all throttr  && \
     mv throttr /usr/bin/throttr && \
     ctest --output-on-failure -V && \
     adduser --system --no-create-home --shell /bin/false throttr
