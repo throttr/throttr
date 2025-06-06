@@ -58,10 +58,9 @@ namespace throttr
 
     uint64_t _total_requests = 0;
     uint64_t _total_requests_per_minute = 0;
+    push_u64(static_cast<uint64_t>(_now));
 #ifdef ENABLED_FEATURE_METRICS
     const auto &metrics = state->metrics_collector_->commands_;
-
-    push_u64(static_cast<uint64_t>(_now));
     for (const auto &m : metrics)
     {
       _total_requests += m.accumulator_.load(std::memory_order_relaxed);
