@@ -15,24 +15,45 @@
 
 #pragma once
 
-#ifndef THROTTR_PROGRAM_OPTIONS_HPP
-#define THROTTR_PROGRAM_OPTIONS_HPP
+#ifndef THROTTR_PROGRAM_PARAMETERS_HPP
+#define THROTTR_PROGRAM_PARAMETERS_HPP
 
 #include <string>
 
 namespace throttr
 {
-  struct program_options
+  struct program_parameters
   {
     /**
      * Socket
      */
     std::string socket_ = "EMPTY";
+
     /**
      * Port
      */
     short port_ = 0;
+
+    /**
+     * Threads
+     */
+    int threads_ = 1;
+
+    /**
+     * As master
+     */
+    bool as_master_ = true;
+
+    /**
+     * Master host
+     */
+    std::string master_host_ = "localhost";
+
+    /**
+     * Master port
+     */
+    short master_port_ = 0;
   };
 } // namespace throttr
 
-#endif // THROTTR_PROGRAM_OPTIONS_HPP
+#endif // THROTTR_PROGRAM_PARAMETERS_HPP

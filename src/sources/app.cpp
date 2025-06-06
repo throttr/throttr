@@ -20,8 +20,7 @@
 
 namespace throttr
 {
-  app::app(const program_options &program_options, const int threads) :
-      ioc_(threads), program_options_(program_options), threads_(threads)
+  app::app(const program_parameters &program_options) : ioc_(program_options.threads_), program_options_(program_options)
   {
   }
 
@@ -34,10 +33,10 @@ namespace throttr
     server _server(ioc_, program_options_, state_);
 
     std::vector<std::jthread> _threads;
-    _threads.reserve(threads_);
+    _threads.reserve(program_options_.threads_);
 
     // LCOV_EXCL_START
-    for (auto _i = threads_; _i > 0; --_i)
+    for (auto _i = program_options_.threads_; _i > 0; --_i)
     {
       _threads.emplace_back([self = shared_from_this()] { self->ioc_.run(); });
     }

@@ -53,11 +53,11 @@ protected:
    */
   void SetUp() override
   {
-    program_options _program_options{
+    program_parameters _program_options{
       .socket_ = to_string(boost::uuids::random_generator()()),
       .port_ = 0,
     };
-    app_ = std::make_shared<app>(_program_options, threads_);
+    app_ = std::make_shared<app>(_program_options);
     server_thread_ = std::make_unique<std::jthread>([this]() { app_->serve(); });
 
     while (!app_->state_->acceptor_ready_)

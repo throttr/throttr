@@ -21,8 +21,9 @@
 int
 main(const int argc, const char *argv[])
 {
-
-  boost::program_options::options_description _options("Options");
+  using namespace boost::program_options;
+  using namespace throttr;
+  options_description _options("Options");
 
   int default_threads = 1;
   if (const char *env_threads = std::getenv("THREADS"))
@@ -37,22 +38,28 @@ main(const int argc, const char *argv[])
     }
   }
 
-  _options.add_options()(
-    "socket", boost::program_options::value<std::string>()->default_value("throttr.sock"), "Assigned socket path.");
-  _options.add_options()("port", boost::program_options::value<short>()->default_value(9000), "Assigned port.");
-  _options.add_options()("threads", boost::program_options::value<int>()->default_value(default_threads), "Assigned threads.");
+  auto _push_option = _options.add_options();
 
-  boost::program_options::variables_map _vm;
+  _push_option("socket", value<std::string>()->default_value("throttr.sock"));
+  _push_option("port", value<short>()->default_value(9000));
+  _push_option("threads", value<int>()->default_value(default_threads));
+  _push_option("as_master", value<bool>()->default_value(true));
+  _push_option("master_host", value<std::string>()->default_value("127.0.0.1"));
+  _push_option("master_port", value<short>()->default_value(9000));
+
+  variables_map _vm;
   store(parse_command_line(argc, argv, _options), _vm);
 
-  throttr::program_options _program_options{
+  program_parameters _program_options{
     .socket_ = _vm["socket"].as<std::string>(),
     .port_ = _vm["port"].as<short>(),
+    .threads_ = _vm["threads"].as<int>(),
+    .as_master_ = _vm["as_master"].as<bool>(),
+    .master_host_ = _vm["master_host"].as<std::string>(),
+    .master_port_ = _vm["master_port"].as<short>(),
   };
 
-  const auto _threads = _vm["threads"].as<int>();
-
-  const auto _app = std::make_shared<throttr::app>(_program_options, _threads);
+  const auto _app = std::make_shared<app>(_program_options);
 
   return _app->serve();
 }
