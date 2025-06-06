@@ -61,7 +61,7 @@ namespace throttr
      * @param program_options
      * @return transport_endpoint
      */
-    static transport_endpoint make_endpoint(const program_options &program_options)
+    static local_transport_endpoint make_endpoint(const program_options &program_options)
     {
 #ifdef ENABLED_FEATURE_UNIX_SOCKETS
       return {program_options.socket_};
@@ -82,7 +82,7 @@ namespace throttr
         {
           if (!error) // LCOV_EXCL_LINE Note: Partially tested.
           {
-            std::make_shared<connection>(std::move(socket_), state_)->start();
+            std::make_shared<connection<local_transport_socket>>(std::move(socket_), state_)->start();
           }
 
           do_accept();
@@ -92,12 +92,12 @@ namespace throttr
     /**
      * Acceptor
      */
-    transport_acceptor acceptor_;
+    local_transport_acceptor acceptor_;
 
     /**
      * Socket
      */
-    transport_socket socket_;
+    local_transport_socket socket_;
 
     /**
      * State

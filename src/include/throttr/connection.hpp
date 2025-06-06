@@ -20,12 +20,13 @@
 
 #include <boost/uuid/uuid.hpp>
 #include <deque>
+#include <fmt/chrono.h>
 #include <memory>
 #include <span>
 #include <throttr/connection_allocator.hpp>
 #include <throttr/connection_metrics.hpp>
 #include <throttr/message.hpp>
-#include <throttr/transport.hpp>
+#include <throttr/state.hpp>
 
 namespace throttr
 {
@@ -37,7 +38,7 @@ namespace throttr
   /**
    * Connection
    */
-  class connection : public std::enable_shared_from_this<connection>
+  template<typename Transport> class connection : public std::enable_shared_from_this<connection<Transport>>
   {
   public:
     /**
@@ -63,7 +64,7 @@ namespace throttr
      * @param socket
      * @param state
      */
-    explicit connection(transport_socket socket, const std::shared_ptr<state> &state);
+    explicit connection(Transport socket, const std::shared_ptr<state> &state);
 
     /**
      * Destructor
@@ -170,7 +171,7 @@ namespace throttr
     /**
      * Socket
      */
-    transport_socket socket_;
+    Transport socket_;
 
     /**
      * State
@@ -200,5 +201,7 @@ namespace throttr
     void write_next();
   };
 } // namespace throttr
+
+#include <throttr/connection.ipp>
 
 #endif // THROTTR_CONNECTION_HPP

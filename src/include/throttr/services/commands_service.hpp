@@ -25,11 +25,6 @@
 namespace throttr
 {
   /**
-   * Fordward connection
-   */
-  class connection;
-
-  /**
    * Commands service
    */
   class commands_service : public std::enable_shared_from_this<commands_service>

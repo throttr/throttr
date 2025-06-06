@@ -79,11 +79,11 @@ protected:
     }
   }
 
-  [[nodiscard]] transport_socket make_connection(boost::asio::io_context &io_context) const
+  [[nodiscard]] local_transport_socket make_connection(boost::asio::io_context &io_context) const
   {
-    transport_socket _socket(io_context);
+    local_transport_socket _socket(io_context);
 #ifdef ENABLED_FEATURE_UNIX_SOCKETS
-    const transport_endpoint _endpoint(app_->program_options_.socket_);
+    const local_transport_endpoint _endpoint(app_->program_options_.socket_);
     _socket.connect(_endpoint);
 #else
     tcp::resolver _resolver(io_context);

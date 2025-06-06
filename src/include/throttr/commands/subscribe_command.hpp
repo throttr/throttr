@@ -29,11 +29,6 @@ namespace throttr
   /**
    * Forward state
    */
-  class connection;
-
-  /**
-   * Forward state
-   */
   class state;
 
   /**

@@ -21,6 +21,7 @@
 #include <throttr/utils.hpp>
 
 #include <throttr/connection.hpp>
+#include <throttr/services/response_builder_service.hpp>
 
 namespace throttr
 {

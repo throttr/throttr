@@ -18,6 +18,7 @@
 #include <boost/asio.hpp>
 #include <thread>
 #include <throttr/app.hpp>
+#include <throttr/services/garbage_collector_service.hpp>
 #include <throttr/services/update_service.hpp>
 #include <throttr/state.hpp>
 #include <throttr/time.hpp>

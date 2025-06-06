@@ -19,7 +19,7 @@
 #include <boost/endian/conversion.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <throttr/connection.hpp>
-#include <throttr/services/response_builder_service.hpp>
+#include <throttr/services/subscriptions_service.hpp>
 #include <throttr/state.hpp>
 #include <throttr/utils.hpp>
 

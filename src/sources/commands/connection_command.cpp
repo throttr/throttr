@@ -59,7 +59,7 @@ namespace throttr
       return;
     }
 
-    const connection *_conn = _it->second;
+    const auto *_conn = _it->second;
     batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
     response_builder_service::write_connections_entry_to_buffer(state, &batch, _conn, write_buffer, false);
 

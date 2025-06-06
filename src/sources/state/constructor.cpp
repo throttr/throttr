@@ -13,6 +13,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+#include <throttr/services/find_service.hpp>
+#include <throttr/services/garbage_collector_service.hpp>
+#include <throttr/services/response_builder_service.hpp>
+#include <throttr/services/subscriptions_service.hpp>
 #include <throttr/state.hpp>
 
 namespace throttr
@@ -22,7 +26,16 @@ namespace throttr
 #ifdef ENABLED_FEATURE_METRICS
       metrics_timer_(ioc),
 #endif
-      strand_(ioc.get_executor())
+      strand_(ioc.get_executor()),
+      commands_(std::make_shared<commands_service>()),
+      subscriptions_(std::make_shared<subscriptions_service>()),
+      messages_(std::make_shared<messages_service>()),
+      finder_(std::make_shared<find_service>()),
+      response_builder_(std::make_shared<response_builder_service>()),
+      garbage_collector_(std::make_shared<garbage_collector_service>()),
+#ifdef ENABLED_FEATURE_METRICS
+      metrics_collector_(std::make_shared<metrics_collector_service>())
+#endif
   {
     started_at_ =
       std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();

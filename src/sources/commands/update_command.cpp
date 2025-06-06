@@ -20,6 +20,7 @@
 #include <boost/core/ignore_unused.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <throttr/connection.hpp>
+#include <throttr/services/find_service.hpp>
 #include <throttr/state.hpp>
 #include <throttr/utils.hpp>
 
