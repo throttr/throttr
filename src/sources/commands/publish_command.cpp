@@ -74,9 +74,6 @@ namespace throttr
       const_cast<subscription &>(_sub).metrics_->read_bytes_.mark(_payload.size()); // NOSONAR
 #endif
 
-      if (_sub_id == id) // LCOV_EXCL_LINE Note: Partially tested.
-        continue;
-
       const auto _conn_it = state->connections_.find(_sub_id);
       // LCOV_EXCL_START Note: This means that the subscribed connection was disconnected.
       if (_conn_it == state->connections_.end())
@@ -84,13 +81,13 @@ namespace throttr
         // LCOV_EXCL_STOP
 
 #ifdef ENABLED_FEATURE_METRICS
-      if (_conn_it->second->id_ == id)
+      if (_conn_it->second->id_ == id) // LCOV_EXCL_LINE
         _conn_it->second->metrics_->network_.published_bytes_.mark(_payload.size());
-
-      _conn_it->second->metrics_->network_.received_bytes_.mark(_payload.size());
+      else
+        _conn_it->second->metrics_->network_.received_bytes_.mark(_payload.size());
 #endif
 
-      if (_conn_it->second->id_ != id)
+      if (_conn_it->second->id_ != id) // LCOV_EXCL_LINE
         _conn_it->second->send(_message);
     }
 
