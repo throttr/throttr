@@ -20,7 +20,7 @@
 
 namespace throttr
 {
-  app::app(const program_options &program_options, const int threads) :
+  app::app(program_options &program_options, const int threads) :
       ioc_(threads), program_options_(program_options), threads_(threads)
   {
   }
