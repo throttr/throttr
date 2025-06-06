@@ -25,11 +25,6 @@
 namespace throttr
 {
   /**
-   * Fordward connection
-   */
-  class connection;
-
-  /**
    * Commands service
    */
   class commands_service : public std::enable_shared_from_this<commands_service>
@@ -41,7 +36,7 @@ namespace throttr
       std::span<const std::byte>,
       std::vector<boost::asio::const_buffer> &,
       std::vector<std::byte> &,
-      const std::shared_ptr<connection> &);
+      boost::uuids::uuid);
 
     /**
      * Commands

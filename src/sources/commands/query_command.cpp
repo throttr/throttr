@@ -19,6 +19,7 @@
 #include <boost/endian/conversion.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <throttr/connection.hpp>
+#include <throttr/services/find_service.hpp>
 #include <throttr/state.hpp>
 #include <throttr/time.hpp>
 #include <throttr/utils.hpp>
@@ -31,9 +32,9 @@ namespace throttr
     const std::span<const std::byte> view,
     std::vector<boost::asio::const_buffer> &batch,
     std::vector<std::byte> &write_buffer,
-    const std::shared_ptr<connection> &conn)
+    const boost::uuids::uuid id)
   {
-    boost::ignore_unused(conn);
+    boost::ignore_unused(id);
 
     using namespace boost::endian;
 
@@ -54,7 +55,7 @@ namespace throttr
         std::chrono::system_clock::now(),
         _as_query ? "QUERY" : "GET",
         _key.key_,
-        to_string(conn->id_));
+        to_string(id));
 #endif
       // LCOV_EXCL_STOP
       return;
@@ -121,7 +122,7 @@ namespace throttr
         "ttl_type={} ttl={}",
         std::chrono::system_clock::now(),
         _key.key_,
-        to_string(conn->id_),
+        to_string(id),
         _quota,
         to_string(_it->entry_.ttl_type_),
         _ttl);
@@ -134,7 +135,7 @@ namespace throttr
         "ttl_type={} ttl={}",
         std::chrono::system_clock::now(),
         _key.key_,
-        to_string(conn->id_),
+        to_string(id),
         span_to_hex(std::span(_buffer->data(), _buffer->size())),
         to_string(_it->entry_.ttl_type_),
         _ttl);

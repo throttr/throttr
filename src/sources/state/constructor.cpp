@@ -13,6 +13,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+#include <throttr/services/find_service.hpp>
+#include <throttr/services/garbage_collector_service.hpp>
+#include <throttr/services/response_builder_service.hpp>
+#include <throttr/services/subscriptions_service.hpp>
 #include <throttr/state.hpp>
 
 namespace throttr
@@ -22,7 +26,16 @@ namespace throttr
 #ifdef ENABLED_FEATURE_METRICS
       metrics_timer_(ioc),
 #endif
-      strand_(ioc.get_executor())
+      strand_(ioc.get_executor()),
+      commands_(std::make_shared<commands_service>()),                   // NOSONAR Note: Forward declaration.
+      subscriptions_(std::make_shared<subscriptions_service>()),         // NOSONAR Note: Forward declaration.
+      messages_(std::make_shared<messages_service>()),                   // NOSONAR Note: Forward declaration.
+      finder_(std::make_shared<find_service>()),                         // NOSONAR Note: Forward declaration.
+      response_builder_(std::make_shared<response_builder_service>()),   // NOSONAR Note: Forward declaration.
+      garbage_collector_(std::make_shared<garbage_collector_service>()) // NOSONAR Note: Forward declaration.
+#ifdef ENABLED_FEATURE_METRICS
+      ,metrics_collector_(std::make_shared<metrics_collector_service>()) // NOSONAR Note: Forward declaration.
+#endif
   {
     started_at_ =
       std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();

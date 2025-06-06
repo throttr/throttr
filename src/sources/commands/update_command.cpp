@@ -20,6 +20,7 @@
 #include <boost/core/ignore_unused.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <throttr/connection.hpp>
+#include <throttr/services/find_service.hpp>
 #include <throttr/state.hpp>
 #include <throttr/utils.hpp>
 
@@ -31,10 +32,10 @@ namespace throttr
     const std::span<const std::byte> view,
     std::vector<boost::asio::const_buffer> &batch,
     std::vector<std::byte> &write_buffer,
-    const std::shared_ptr<connection> &conn)
+    const boost::uuids::uuid id)
   {
 
-    boost::ignore_unused(type, write_buffer, conn);
+    boost::ignore_unused(type, write_buffer, id);
 
     const auto _request = request_update::from_buffer(view);
     const request_key _key{
@@ -86,7 +87,7 @@ namespace throttr
       _key.key_,
       to_string(_request.attribute_),
       to_string(_request.change_),
-      to_string(conn->id_),
+      to_string(id),
       _request.value_,
       _modified);
 #endif

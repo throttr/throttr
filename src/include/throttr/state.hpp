@@ -18,6 +18,8 @@
 #ifndef THROTTR_STATE_HPP
 #define THROTTR_STATE_HPP
 
+#include "transport.hpp"
+
 #include <atomic>
 #include <boost/asio/buffer.hpp>
 #include <boost/asio/steady_timer.hpp>
@@ -27,22 +29,50 @@
 #include <deque>
 #include <memory>
 #include <throttr/protocol_wrapper.hpp>
-#include <throttr/services/commands_service.hpp>
-#include <throttr/services/find_service.hpp>
-#include <throttr/services/garbage_collector_service.hpp>
-#include <throttr/services/messages_service.hpp>
-#include <throttr/services/metrics_collector_service.hpp>
-#include <throttr/services/response_builder_service.hpp>
-#include <throttr/services/subscriptions_service.hpp>
 #include <throttr/storage.hpp>
+
 #include <vector>
 
 namespace throttr
 {
+  template<typename Transport> class connection;
+
   /**
-   * Forward connection
+   * Forward response builder service
    */
-  class connection;
+  class response_builder_service;
+
+  /**
+   * Forward command service
+   */
+  class commands_service;
+
+  /**
+   * Forward subscriptions service
+   */
+  class subscriptions_service;
+
+  /**
+   * Forward messages service
+   */
+  class messages_service;
+
+  /**
+   * Forward find service
+   */
+  class find_service;
+
+  /**
+   * Forward garbage collector service
+   */
+  class garbage_collector_service;
+
+#ifdef ENABLED_FEATURE_METRICS
+  /**
+   * Forward metrics collector service
+   */
+  class metrics_collector_service;
+#endif
 
   /**
    * State
@@ -87,7 +117,7 @@ namespace throttr
     /**
      * Connections container
      */
-    std::unordered_map<boost::uuids::uuid, connection *, std::hash<boost::uuids::uuid>> connections_;
+    std::unordered_map<boost::uuids::uuid, connection<local_transport_socket> *, std::hash<boost::uuids::uuid>> connections_;
 
     /**
      * Connections mutex
@@ -134,38 +164,38 @@ namespace throttr
     /**
      * Commands service
      */
-    std::shared_ptr<commands_service> commands_ = std::make_shared<commands_service>();
+    std::shared_ptr<commands_service> commands_;
 
     /**
      * Subscriptions service
      */
-    std::shared_ptr<subscriptions_service> subscriptions_ = std::make_shared<subscriptions_service>();
+    std::shared_ptr<subscriptions_service> subscriptions_;
 
     /**
      * Messages service
      */
-    std::shared_ptr<messages_service> messages_ = std::make_shared<messages_service>();
+    std::shared_ptr<messages_service> messages_;
 
     /**
      * Find service
      */
-    std::shared_ptr<find_service> finder_ = std::make_shared<find_service>();
+    std::shared_ptr<find_service> finder_;
 
     /**
      * Response builder service
      */
-    std::shared_ptr<response_builder_service> response_builder_ = std::make_shared<response_builder_service>();
+    std::shared_ptr<response_builder_service> response_builder_;
 
     /**
      * Garbage collector service
      */
-    std::shared_ptr<garbage_collector_service> garbage_collector_ = std::make_shared<garbage_collector_service>();
+    std::shared_ptr<garbage_collector_service> garbage_collector_;
 
 #ifdef ENABLED_FEATURE_METRICS
     /**
      * Metrics collector service
      */
-    std::shared_ptr<metrics_collector_service> metrics_collector_ = std::make_shared<metrics_collector_service>();
+    std::shared_ptr<metrics_collector_service> metrics_collector_;
 #endif
 
     /**
@@ -180,14 +210,14 @@ namespace throttr
      *
      * @param connection
      */
-    void join(connection *connection);
+    void join(connection<local_transport_socket> *connection);
 
     /**
      * Leave
      *
      * @param connection
      */
-    void leave(const connection *connection);
+    void leave(const connection<local_transport_socket> *connection);
   };
 } // namespace throttr
 

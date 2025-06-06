@@ -22,7 +22,8 @@
 #include <boost/endian/conversion.hpp>
 #include <boost/uuid/uuid_io.hpp>
 
-#include <throttr/services/response_builder_service.hpp>
+#include <throttr/services/metrics_collector_service.hpp>
+#include <throttr/services/subscriptions_service.hpp>
 #include <throttr/state.hpp>
 #include <throttr/utils.hpp>
 #include <throttr/version.hpp>
@@ -35,9 +36,9 @@ namespace throttr
     const std::span<const std::byte> view,
     std::vector<boost::asio::const_buffer> &batch,
     std::vector<std::byte> &write_buffer,
-    const std::shared_ptr<connection> &conn)
+    const boost::uuids::uuid id)
   {
-    boost::ignore_unused(type, view, conn);
+    boost::ignore_unused(type, view, id);
     using namespace boost::endian;
 
     std::scoped_lock _lock(state->subscriptions_->mutex_, state->connections_mutex_);
@@ -184,7 +185,7 @@ namespace throttr
       "{:%Y-%m-%d %H:%M:%S} REQUEST INFO from={} "
       "RESPONSE ok=true",
       std::chrono::system_clock::now(),
-      to_string(conn->id_));
+      to_string(id));
 #endif
     // LCOV_EXCL_STOP
   }

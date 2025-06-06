@@ -19,6 +19,7 @@
 #include <boost/endian/conversion.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <throttr/entry.hpp>
+#include <throttr/services/garbage_collector_service.hpp>
 #include <throttr/state.hpp>
 #include <throttr/time.hpp>
 #include <throttr/utils.hpp>

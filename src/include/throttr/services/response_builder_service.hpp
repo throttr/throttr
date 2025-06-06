@@ -19,9 +19,9 @@
 #include <functional>
 #include <memory>
 
-#include <throttr/protocol_wrapper.hpp>
-
 #include <boost/asio/buffer.hpp>
+#include <throttr/connection.hpp>
+#include <throttr/protocol_wrapper.hpp>
 
 namespace throttr
 {
@@ -29,11 +29,6 @@ namespace throttr
    * Forward state
    */
   class state;
-
-  /**
-   * Forward connection
-   */
-  class connection;
 
   /**
    * Forward connection
@@ -93,7 +88,7 @@ namespace throttr
     static std::size_t write_connections_entry_to_buffer(
       const std::shared_ptr<state> &state,
       std::vector<boost::asio::const_buffer> *batch,
-      const connection *conn,
+      const connection<local_transport_socket> *conn,
       std::vector<std::byte> &write_buffer,
       bool measure);
 

@@ -30,7 +30,7 @@ namespace throttr
     const std::span<const std::byte> view,
     std::vector<boost::asio::const_buffer> &batch,
     std::vector<std::byte> &write_buffer,
-    const std::shared_ptr<connection> &conn)
+    const boost::uuids::uuid id)
   {
     boost::ignore_unused(state, type, view);
 
@@ -38,7 +38,7 @@ namespace throttr
 
     {
       const auto _offset = write_buffer.size();
-      const auto *id_data = reinterpret_cast<const std::byte *>(conn->id_.data()); // NOSONAR
+      const auto *id_data = reinterpret_cast<const std::byte *>(id.data()); // NOSONAR
       write_buffer.insert(write_buffer.end(), id_data, id_data + 16);
       batch.emplace_back(boost::asio::buffer(reinterpret_cast<const void *>(&write_buffer[_offset]), 16)); // NOSONAR
     }
@@ -49,7 +49,7 @@ namespace throttr
       "{:%Y-%m-%d %H:%M:%S} REQUEST WHOAMI from={} "
       "RESPONSE ok=true",
       std::chrono::system_clock::now(),
-      to_string(conn->id_));
+      to_string(id));
 #endif
     // LCOV_EXCL_STOP
   }

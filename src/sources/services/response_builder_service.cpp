@@ -16,6 +16,7 @@
 #include <boost/core/ignore_unused.hpp>
 #include <boost/endian/conversion.hpp>
 #include <throttr/services/response_builder_service.hpp>
+#include <throttr/services/subscriptions_service.hpp>
 
 #include <throttr/connection.hpp>
 #include <throttr/state.hpp>
@@ -126,7 +127,7 @@ namespace throttr
   std::size_t response_builder_service::write_connections_entry_to_buffer(
     const std::shared_ptr<state> &state,
     std::vector<boost::asio::const_buffer> *batch,
-    const connection *conn,
+    const connection<local_transport_socket> *conn,
     std::vector<std::byte> &write_buffer,
     bool measure)
   {
@@ -236,8 +237,8 @@ namespace throttr
   {
     batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
 
-    std::vector<const connection *> _fragment;
-    std::vector<std::vector<const connection *>> _fragments;
+    std::vector<const connection<local_transport_socket> *> _fragment;
+    std::vector<std::vector<const connection<local_transport_socket> *>> _fragments;
     {
       std::size_t _current_fragment_size = 0;
       std::lock_guard _lock(state->connections_mutex_);

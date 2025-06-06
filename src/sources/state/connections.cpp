@@ -17,15 +17,17 @@
 
 #include <throttr/connection.hpp>
 
+#include <throttr/services/subscriptions_service.hpp>
+
 namespace throttr
 {
-  void state::join(connection *connection)
+  void state::join(connection<local_transport_socket> *connection)
   {
     std::lock_guard lock(connections_mutex_);
     connections_.try_emplace(connection->id_, connection);
   }
 
-  void state::leave(const connection *connection)
+  void state::leave(const connection<local_transport_socket> *connection)
   {
     std::scoped_lock _lock(connections_mutex_, subscriptions_->mutex_);
     auto &subs = subscriptions_->subscriptions_.get<by_connection_id>();
