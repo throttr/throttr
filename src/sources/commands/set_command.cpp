@@ -28,14 +28,14 @@ namespace throttr
     const std::span<const std::byte> view,
     std::vector<boost::asio::const_buffer> &batch,
     std::vector<std::byte> &write_buffer,
-    const std::shared_ptr<connection> &conn)
+    const boost::uuids::uuid id)
   {
-    boost::ignore_unused(type, batch, write_buffer, conn);
+    boost::ignore_unused(type, batch, write_buffer, id);
 
     const auto _request = request_set::from_buffer(view);
 
     const auto _inserted =
-      create_service::use(state, _request.key_, _request.value_, _request.ttl_type_, _request.ttl_, entry_types::raw, conn->id_);
+      create_service::use(state, _request.key_, _request.value_, _request.ttl_type_, _request.ttl_, entry_types::raw, id);
     batch.emplace_back(boost::asio::buffer(_inserted ? &state::success_response_ : &state::failed_response_, 1));
   }
 } // namespace throttr

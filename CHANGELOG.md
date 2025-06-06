@@ -1,6 +1,8 @@
 ### v5.0.6
 
 - Now the program options are refactorized (macro usage reduced).
+- INFO request missing current timestamp issue fixed.
+- Now we have less dependency to connection class and will be used as connection<T>, being T different socket type.
 
 ### v5.0.5
 

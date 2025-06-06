@@ -41,7 +41,7 @@ namespace throttr
       std::span<const std::byte>,
       std::vector<boost::asio::const_buffer> &,
       std::vector<std::byte> &,
-      const std::shared_ptr<connection> &);
+      boost::uuids::uuid);
 
     /**
      * Commands

@@ -31,7 +31,7 @@ namespace throttr
     const std::span<const std::byte> view,
     std::vector<boost::asio::const_buffer> &batch,
     std::vector<std::byte> &write_buffer,
-    const std::shared_ptr<connection> &conn)
+    const boost::uuids::uuid id)
   {
     boost::ignore_unused(type, batch, write_buffer);
 
@@ -65,10 +65,6 @@ namespace throttr
 
     _message->buffers_.emplace_back(boost::asio::buffer(_buffer));
 
-#ifdef ENABLED_FEATURE_METRICS
-    conn->metrics_->network_.published_bytes_.mark(_payload.size());
-#endif
-
     for (auto _it = _range.first; _it != _range.second; ++_it) // LCOV_EXCL_LINE Note: Partially tested.
     {
       const auto &_sub = *_it;
@@ -78,13 +74,8 @@ namespace throttr
       const_cast<subscription &>(_sub).metrics_->read_bytes_.mark(_payload.size()); // NOSONAR
 #endif
 
-      if (_sub_id == conn->id_) // LCOV_EXCL_LINE Note: Partially tested.
-      {
-#ifdef ENABLED_FEATURE_METRICS
-        const_cast<subscription &>(_sub).metrics_->write_bytes_.mark(_payload.size()); // NOSONAR
-#endif
+      if (_sub_id == id) // LCOV_EXCL_LINE Note: Partially tested.
         continue;
-      }
 
       const auto _conn_it = state->connections_.find(_sub_id);
       // LCOV_EXCL_START Note: This means that the subscribed connection was disconnected.
@@ -93,10 +84,14 @@ namespace throttr
         // LCOV_EXCL_STOP
 
 #ifdef ENABLED_FEATURE_METRICS
+      if (_conn_it->second->id_ == id)
+        _conn_it->second->metrics_->network_.published_bytes_.mark(_payload.size());
+
       _conn_it->second->metrics_->network_.received_bytes_.mark(_payload.size());
 #endif
 
-      _conn_it->second->send(_message);
+      if (_conn_it->second->id_ != id)
+        _conn_it->second->send(_message);
     }
 
     // LCOV_EXCL_START
@@ -106,7 +101,7 @@ namespace throttr
       "RESPONSE ok=true",
       std::chrono::system_clock::now(),
       _channel,
-      to_string(conn->id_),
+      to_string(id),
       span_to_hex(_payload));
 #endif
     // LCOV_EXCL_STOP

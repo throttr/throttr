@@ -29,10 +29,10 @@ namespace throttr
     const std::span<const std::byte> view,
     std::vector<boost::asio::const_buffer> &batch,
     std::vector<std::byte> &write_buffer,
-    const std::shared_ptr<connection> &conn)
+    const boost::uuids::uuid id)
   {
 
-    boost::ignore_unused(type, write_buffer, conn);
+    boost::ignore_unused(type, write_buffer, id);
 
     const auto _request = request_purge::from_buffer(view);
     const request_key _key{
@@ -61,7 +61,7 @@ namespace throttr
       "{:%Y-%m-%d %H:%M:%S} REQUEST PURGE key={} from={} RESPONSE ok={}",
       std::chrono::system_clock::now(),
       _key.key_,
-      to_string(conn->id_),
+      to_string(id),
       _erased);
 #endif
     // LCOV_EXCL_STOP

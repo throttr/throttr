@@ -30,9 +30,9 @@ namespace throttr
     const std::span<const std::byte> view,
     std::vector<boost::asio::const_buffer> &batch,
     std::vector<std::byte> &write_buffer,
-    const std::shared_ptr<connection> &conn)
+    const boost::uuids::uuid id)
   {
-    boost::ignore_unused(type, conn);
+    boost::ignore_unused(type, id);
 
     const auto _request = request_connection::from_buffer(view);
     const auto &_uuid = _request.id_;
@@ -53,7 +53,7 @@ namespace throttr
         "RESPONSE ok=false",
         std::chrono::system_clock::now(),
         span_to_hex(_request.id_),
-        to_string(conn->id_));
+        to_string(id));
 #endif
       // LCOV_EXCL_STOP
       return;
@@ -70,7 +70,7 @@ namespace throttr
       "RESPONSE ok=true",
       std::chrono::system_clock::now(),
       span_to_hex(_request.id_),
-      to_string(conn->id_));
+      to_string(id));
 #endif
     // LCOV_EXCL_STOP
   }

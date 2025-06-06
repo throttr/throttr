@@ -50,7 +50,7 @@ namespace throttr
       metrics_->commands_[static_cast<std::size_t>(_type)].mark();
 #endif
       state_->commands_->commands_[static_cast<std::size_t>(
-        _type)](state_, _type, _view, message_->buffers_, message_->write_buffer_, shared_from_this());
+        _type)](state_, _type, _view, message_->buffers_, message_->write_buffer_, this->id_);
       // LCOV_EXCL_STOP
     }
 

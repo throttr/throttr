@@ -30,10 +30,10 @@ namespace throttr
     const std::span<const std::byte> view,
     std::vector<boost::asio::const_buffer> &batch,
     std::vector<std::byte> &write_buffer,
-    const std::shared_ptr<connection> &conn)
+    const boost::uuids::uuid id)
   {
 
-    boost::ignore_unused(type, view, conn);
+    boost::ignore_unused(type, view, id);
 
     response_builder_service::handle_fragmented_entries_response(
       state,
@@ -50,7 +50,7 @@ namespace throttr
       "{:%Y-%m-%d %H:%M:%S} REQUEST STATS id={} "
       "RESPONSE ok=true",
       std::chrono::system_clock::now(),
-      to_string(conn->id_));
+      to_string(id));
 #endif
     // LCOV_EXCL_STOP
   }

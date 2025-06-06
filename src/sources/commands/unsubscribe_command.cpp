@@ -31,7 +31,7 @@ namespace throttr
     const std::span<const std::byte> view,
     std::vector<boost::asio::const_buffer> &batch,
     std::vector<std::byte> &write_buffer,
-    const std::shared_ptr<connection> &conn)
+    const boost::uuids::uuid id)
   {
     boost::ignore_unused(type, write_buffer);
     std::scoped_lock _lock(state->subscriptions_->mutex_);
@@ -41,7 +41,7 @@ namespace throttr
     const auto _channel =
       std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size()); // NOSONAR
 
-    if (!state->subscriptions_->is_subscribed(conn->id_, _channel)) // LCOV_EXCL_LINE Note: Partially tested.
+    if (!state->subscriptions_->is_subscribed(id, _channel)) // LCOV_EXCL_LINE Note: Partially tested.
     {
       batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
 
@@ -56,14 +56,14 @@ namespace throttr
         "RESPONSE ok=false",
         std::chrono::system_clock::now(),
         span_to_hex(_channel_bytes),
-        to_string(conn->id_));
+        to_string(id));
 #endif
       // LCOV_EXCL_STOP
       return;
     }
 
     auto &index = state->subscriptions_->subscriptions_.get<by_connection_id>();
-    auto [begin, end] = index.equal_range(conn->id_);
+    auto [begin, end] = index.equal_range(id);
 
     std::vector<decltype(index.begin())> _to_erase;
 
@@ -91,7 +91,7 @@ namespace throttr
       "RESPONSE ok=true",
       std::chrono::system_clock::now(),
       span_to_hex(_channel_bytes),
-      to_string(conn->id_));
+      to_string(id));
 #endif
     // LCOV_EXCL_STOP
   }

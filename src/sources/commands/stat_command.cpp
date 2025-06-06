@@ -30,10 +30,10 @@ namespace throttr
     const std::span<const std::byte> view,
     std::vector<boost::asio::const_buffer> &batch,
     std::vector<std::byte> &write_buffer,
-    const std::shared_ptr<connection> &conn)
+    const boost::uuids::uuid id)
   {
 
-    boost::ignore_unused(type, conn);
+    boost::ignore_unused(type, id);
     using namespace boost::endian;
 
     const auto _request = request_stat::from_buffer(view);
@@ -49,7 +49,7 @@ namespace throttr
         "{:%Y-%m-%d %H:%M:%S} REQUEST STAT key={} from={} RESPONSE ok=false",
         std::chrono::system_clock::now(),
         _key.key_,
-        to_string(conn->id_));
+        to_string(id));
 #endif
       batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
       return;
@@ -87,7 +87,7 @@ namespace throttr
       "write_total={}",
       std::chrono::system_clock::now(),
       _key.key_,
-      to_string(conn->id_),
+      to_string(id),
 #ifdef ENABLED_FEATURE_METRICS
       metrics.reads_per_minute_.load(),
       metrics.writes_per_minute_.load(),

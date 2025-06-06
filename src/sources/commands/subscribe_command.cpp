@@ -31,7 +31,7 @@ namespace throttr
     const std::span<const std::byte> view,
     std::vector<boost::asio::const_buffer> &batch,
     std::vector<std::byte> &write_buffer,
-    const std::shared_ptr<connection> &conn)
+    const boost::uuids::uuid id)
   {
     boost::ignore_unused(type, write_buffer);
     std::scoped_lock _lock(state->subscriptions_->mutex_);
@@ -40,7 +40,7 @@ namespace throttr
     const std::string _channel{
       std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size())}; // NOSONAR
 
-    auto [_it, _inserted] = state->subscriptions_->subscriptions_.insert(subscription{conn->id_, _channel});
+    auto [_it, _inserted] = state->subscriptions_->subscriptions_.insert(subscription{id, _channel});
 
     batch.emplace_back(boost::asio::buffer(_inserted ? &state::success_response_ : &state::failed_response_, 1));
 
@@ -53,7 +53,7 @@ namespace throttr
       "RESPONSE ok={}",
       std::chrono::system_clock::now(),
       _channel_view,
-      to_string(conn->id_),
+      to_string(id),
       _inserted);
 #endif
     // LCOV_EXCL_STOP

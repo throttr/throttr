@@ -31,10 +31,10 @@ namespace throttr
     const std::span<const std::byte> view,
     std::vector<boost::asio::const_buffer> &batch,
     std::vector<std::byte> &write_buffer,
-    const std::shared_ptr<connection> &conn)
+    const boost::uuids::uuid id)
   {
 
-    boost::ignore_unused(type, conn);
+    boost::ignore_unused(type, id);
     using namespace boost::endian;
 
     const auto _request = request_channel::from_buffer(view);
@@ -53,7 +53,7 @@ namespace throttr
         "RESPONSE ok=false",
         std::chrono::system_clock::now(),
         span_to_hex(_request.channel_),
-        to_string(conn->id_));
+        to_string(id));
 #endif
       // LCOV_EXCL_STOP
       batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
@@ -109,7 +109,7 @@ namespace throttr
       "RESPONSE ok=true",
       std::chrono::system_clock::now(),
       span_to_hex(_request.channel_),
-      to_string(conn->id_));
+      to_string(id));
 #endif
     // LCOV_EXCL_STOP
   }
