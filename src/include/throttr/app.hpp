@@ -56,7 +56,7 @@ namespace throttr
      * @param program_options
      * @param threads
      */
-    explicit app(program_options &program_options, int threads);
+    explicit app(const program_options &program_options, int threads);
 
     /**
      * Serve
