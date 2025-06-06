@@ -21,7 +21,7 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/intrusive_ptr.hpp>
 #include <throttr/connection.hpp>
-#include <throttr/program_options.hpp>
+#include <throttr/program_parameters.hpp>
 #include <throttr/state.hpp>
 #include <throttr/transport.hpp>
 
@@ -40,7 +40,7 @@ namespace throttr
      * @param program_options
      * @param state
      */
-    server(boost::asio::io_context &io_context, const program_options &program_options, const std::shared_ptr<state> &state) :
+    server(boost::asio::io_context &io_context, const program_parameters &program_options, const std::shared_ptr<state> &state) :
         acceptor_(io_context, make_endpoint(program_options)), socket_(io_context), state_(state)
     {
 #ifndef ENABLED_FEATURE_UNIX_SOCKETS
@@ -61,7 +61,7 @@ namespace throttr
      * @param program_options
      * @return transport_endpoint
      */
-    static local_transport_endpoint make_endpoint(const program_options &program_options)
+    static local_transport_endpoint make_endpoint(const program_parameters &program_options)
     {
 #ifdef ENABLED_FEATURE_UNIX_SOCKETS
       return {program_options.socket_};

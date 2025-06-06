@@ -18,7 +18,7 @@
 #ifndef THROTTR_APP_HPP
 #define THROTTR_APP_HPP
 
-#include <throttr/program_options.hpp>
+#include <throttr/program_parameters.hpp>
 #include <throttr/server.hpp>
 #include <throttr/state.hpp>
 
@@ -38,12 +38,7 @@ namespace throttr
     /**
      * Program options
      */
-    program_options program_options_;
-
-    /**
-     * Threads
-     */
-    int threads_;
+    program_parameters program_options_;
 
     /**
      * State
@@ -56,7 +51,7 @@ namespace throttr
      * @param program_options
      * @param threads
      */
-    explicit app(const program_options &program_options, int threads);
+    explicit app(const program_parameters &program_options);
 
     /**
      * Serve
