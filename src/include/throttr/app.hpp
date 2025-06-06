@@ -18,6 +18,7 @@
 #ifndef THROTTR_APP_HPP
 #define THROTTR_APP_HPP
 
+#include <throttr/program_options.hpp>
 #include <throttr/server.hpp>
 #include <throttr/state.hpp>
 
@@ -35,13 +36,9 @@ namespace throttr
     boost::asio::io_context ioc_;
 
     /**
-     * Port
+     * Program options
      */
-#ifdef ENABLED_FEATURE_UNIX_SOCKETS
-    std::string port_;
-#else
-    short port_;
-#endif
+    program_options program_options_;
 
     /**
      * Threads
@@ -56,16 +53,10 @@ namespace throttr
     /**
      * Construct
      *
-     * @param port
+     * @param program_options
      * @param threads
      */
-    explicit app(
-#ifdef ENABLED_FEATURE_UNIX_SOCKETS
-      const std::string &port,
-#else
-      short port,
-#endif
-      int threads);
+    explicit app(const program_options &program_options, int threads);
 
     /**
      * Serve

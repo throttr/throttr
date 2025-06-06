@@ -13,44 +13,48 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include <throttr/app.hpp>
 #include <boost/program_options/options_description.hpp>
-#include <boost/program_options/variables_map.hpp>
 #include <boost/program_options/parsers.hpp>
+#include <boost/program_options/variables_map.hpp>
+#include <throttr/app.hpp>
 
-int main(const int argc, const char* argv[]) {
+int
+main(const int argc, const char *argv[])
+{
 
-    boost::program_options::options_description _options("Options");
+  boost::program_options::options_description _options("Options");
 
-    int default_threads = 1;
-    if (const char* env_threads = std::getenv("THREADS")) {
-        try {
-            default_threads = std::max(1, std::stoi(env_threads));
-        } catch (...) {
-            default_threads = 1;
-        }
+  int default_threads = 1;
+  if (const char *env_threads = std::getenv("THREADS"))
+  {
+    try
+    {
+      default_threads = std::max(1, std::stoi(env_threads));
     }
+    catch (...)
+    {
+      default_threads = 1;
+    }
+  }
 
-    _options.add_options()
-#ifdef ENABLED_FEATURE_UNIX_SOCKETS
-        ("socket", boost::program_options::value<std::string>()->default_value("throttr.sock"), "Assigned socket path.")
-#else
-        ("port", boost::program_options::value<short>()->default_value(9000), "Assigned port.")
-#endif
-        ("threads", boost::program_options::value<int>()->default_value(default_threads), "Assigned threads.");
+  _options.add_options()(
+    "socket",
+    boost::program_options::value<std::string>()->default_value("throttr.sock"),
 
-    boost::program_options::variables_map _vm;
-    store(parse_command_line(argc, argv, _options), _vm);
+    "Assigned socket path.")("port", boost::program_options::value<short>()->default_value(9000), "Assigned port.")(
+    "threads", boost::program_options::value<int>()->default_value(default_threads), "Assigned threads.");
 
-#ifdef ENABLED_FEATURE_UNIX_SOCKETS
-    const auto _port = _vm["socket"].as<std::string>();
-    std::remove(_port.c_str());
-#else
-    const auto _port = _vm["port"].as<short>();
-#endif
-    const auto _threads = _vm["threads"].as<int>();
+  boost::program_options::variables_map _vm;
+  store(parse_command_line(argc, argv, _options), _vm);
 
-    const auto _app = std::make_shared<throttr::app>(_port, _threads);
+  throttr::program_options _program_options{
+    .socket_ = _vm["socket"].as<std::string>(),
+    .port_ = _vm["port"].as<short>(),
+  };
 
-    return _app->serve();
+  const auto _threads = _vm["threads"].as<int>();
+
+  const auto _app = std::make_shared<throttr::app>(_program_options, _threads);
+
+  return _app->serve();
 }

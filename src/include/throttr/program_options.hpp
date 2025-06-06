@@ -13,12 +13,26 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include <gtest/gtest.h>
+#pragma once
 
-#include <throttr/protocol_wrapper.hpp>
-#include <throttr/version.hpp>
+#ifndef THROTTR_PROGRAM_OPTIONS_HPP
+#define THROTTR_PROGRAM_OPTIONS_HPP
 
-TEST(Throttr, Version)
+#include <string>
+
+namespace throttr
 {
-  ASSERT_EQ(throttr::get_version(), "5.0.6");
-}
+  struct program_options
+  {
+    /**
+     * Socket
+     */
+    std::string socket_ = "EMPTY";
+    /**
+     * Port
+     */
+    short port_ = 0;
+  };
+} // namespace throttr
+
+#endif // THROTTR_PROGRAM_OPTIONS_HPP
