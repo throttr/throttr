@@ -137,6 +137,7 @@ namespace throttr
     fragment_container _fragment;
     std::vector<fragment_container> _fragments;
     std::size_t _current_fragment_size = 0;
+    constexpr std::size_t _max_fragment_size = 2048; // LCOV_EXCL_LINE
 
     auto _fragmenter = [&](auto &connections, auto &mutex)
     {
@@ -144,9 +145,8 @@ namespace throttr
       for (const auto &[_id, _conn] : connections)
       {
         const std::size_t _conn_size = write_connections_entry_to_buffer(state, nullptr, _conn, write_buffer, true);
-        if (constexpr std::size_t _max_fragment_size = 2048; // LCOV_EXCL_LINE
-            _current_fragment_size + _conn_size > _max_fragment_size) // LCOV_EXCL_LINE
         // LCOV_EXCL_START
+        if (_current_fragment_size + _conn_size > _max_fragment_size)
         {
           _fragments.push_back(std::move(_fragment));
           std::get<0>(_fragment).clear();
