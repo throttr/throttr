@@ -20,6 +20,7 @@
 #include <throttr/commands/channels_command.hpp>
 #include <throttr/commands/connection_command.hpp>
 #include <throttr/commands/connections_command.hpp>
+#include <throttr/commands/event_command.hpp>
 #include <throttr/commands/info_command.hpp>
 #include <throttr/commands/insert_command.hpp>
 #include <throttr/commands/list_command.hpp>
@@ -57,5 +58,6 @@ namespace throttr
     commands_[static_cast<std::size_t>(request_types::channels)] = &channels_command::call;
     commands_[static_cast<std::size_t>(request_types::channel)] = &channel_command::call;
     commands_[static_cast<std::size_t>(request_types::info)] = &info_command::call;
+    commands_[static_cast<std::size_t>(request_types::event)] = &event_command::call;
   }
 } // namespace throttr

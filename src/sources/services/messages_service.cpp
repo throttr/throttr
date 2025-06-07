@@ -13,6 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+#include <iostream>
 #include <throttr/protocol_wrapper.hpp>
 #include <throttr/services/messages_service.hpp>
 
@@ -173,6 +174,20 @@ namespace throttr
     return buffer.size() >= request_whoami_header_size ? request_whoami_header_size : 0;
   }
 
+  static std::size_t get_event_size(const std::span<const std::byte> &buffer)
+  {
+    // LCOV_EXCL_START
+    if (buffer.size() < request_event_header_size)
+      return 0;
+    // LCOV_EXCL_STOP
+    value_type _value_size = 0;
+    for (std::size_t i = 0; i < sizeof(value_type); ++i)
+    {
+      _value_size |= static_cast<value_type>(std::to_integer<uint8_t>(buffer[1 + i])) << (8 * i); // NOSONAR
+    }
+    return request_event_header_size + _value_size;
+  }
+
   static std::size_t invalid_size(const std::span<const std::byte> &)
   {
     // LCOV_EXCL_START
@@ -201,5 +216,6 @@ namespace throttr
     message_types_[static_cast<std::size_t>(request_types::channels)] = &get_channels_size;
     message_types_[static_cast<std::size_t>(request_types::channel)] = &get_channel_size;
     message_types_[static_cast<std::size_t>(request_types::info)] = &get_info_size;
+    message_types_[static_cast<std::size_t>(request_types::event)] = &get_event_size;
   }
 } // namespace throttr
