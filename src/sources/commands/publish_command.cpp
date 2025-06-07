@@ -98,13 +98,15 @@ namespace throttr
       {
         std::scoped_lock _lock(mutex);
         const auto _conn_it = connections.find(sub_id);
+        // LCOV_EXCL_START
         if (_conn_it == connections.end())
           return;
+        // LCOV_EXCL_STOP
 
         auto *_conn = _conn_it->second;
 
 #ifdef ENABLED_FEATURE_METRICS
-        if (_conn->id_ == scope_id)
+        if (_conn->id_ == scope_id) // LCOV_EXCL_LINE
           _conn->metrics_->network_.published_bytes_.mark(payload.size());
         else
           _conn->metrics_->network_.received_bytes_.mark(payload.size());

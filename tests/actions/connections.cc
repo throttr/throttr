@@ -21,14 +21,17 @@ class ConnectionsTestFixture : public ServiceTestFixture
 
 TEST_F(ConnectionsTestFixture, OnSuccessSingleFragment)
 {
+  boost::asio::io_context _io_context;
+  const auto _tcp_connection = make_tcp_connection(_io_context);
+  const auto _unix_connection = make_connection(_io_context);
   const auto _conn_buffer = request_connections_builder();
   const auto _response = send_and_receive(
     _conn_buffer,
-    1 +   // status
-      8 + // fragment count
-      8 + // fragment id
-      8 + // connection count
-      235 // una conexión con ENABLED_FEATURE_METRICS
+    1 +         // status
+      8 +       // fragment count
+      8 +       // fragment id
+      8 +       // connection count
+      (235 * 3) // una conexión con ENABLED_FEATURE_METRICS
   );
 
   size_t _offset = 1;
@@ -49,7 +52,7 @@ TEST_F(ConnectionsTestFixture, OnSuccessSingleFragment)
   uint64_t _connection_count;
   std::memcpy(&_connection_count, _response.data() + _offset, sizeof(_connection_count));
   _offset += sizeof(_connection_count);
-  ASSERT_GE(_connection_count, 1);
+  ASSERT_GE(_connection_count, 3);
 
   ASSERT_LE(_offset + 227, _response.size());
 

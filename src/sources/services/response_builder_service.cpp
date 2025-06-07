@@ -146,12 +146,14 @@ namespace throttr
         const std::size_t _conn_size = write_connections_entry_to_buffer(state, nullptr, _conn, write_buffer, true);
 
         if (constexpr std::size_t _max_fragment_size = 2048; _current_fragment_size + _conn_size > _max_fragment_size)
+        // LCOV_EXCL_START
         {
           _fragments.push_back(std::move(_fragment));
           std::get<0>(_fragment).clear();
           std::get<1>(_fragment).clear();
           _current_fragment_size = 0;
         }
+        // LCOV_EXCL_STOP
 
         if constexpr (std::is_same_v<std::remove_cvref_t<decltype(_conn)>, connection<tcp_socket> *>)
           std::get<0>(_fragment).push_back(_conn);

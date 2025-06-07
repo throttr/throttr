@@ -87,6 +87,15 @@ protected:
     return _socket;
   }
 
+  [[nodiscard]] tcp_socket make_tcp_connection(boost::asio::io_context &io_context) const
+  {
+    tcp_socket _socket(io_context);
+    tcp::resolver _resolver(io_context);
+    const auto _endpoints = _resolver.resolve("127.0.0.1", std::to_string(app_->state_->exposed_port_));
+    boost::asio::connect(_socket, _endpoints);
+    return _socket;
+  }
+
   /**
    * Send and receive
    *
