@@ -33,12 +33,13 @@ namespace throttr
     // LCOV_EXCL_START
     if (socket_.is_open())
     {
-#ifndef ENABLED_FEATURE_UNIX_SOCKETS
-      const boost::asio::ip::tcp::no_delay no_delay_option(true);
-      socket_.set_option(no_delay_option);
-      ip_ = socket_.remote_endpoint().address().to_string();
-      port_ = socket_.remote_endpoint().port();
-#endif
+      if constexpr (std::is_same_v<Transport, tcp_socket>)
+      {
+        const boost::asio::ip::tcp::no_delay no_delay_option(true);
+        socket_.set_option(no_delay_option);
+        ip_ = socket_.remote_endpoint().address().to_string();
+        port_ = socket_.remote_endpoint().port();
+      }
       connected_at_ =
         std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     }
@@ -221,9 +222,10 @@ namespace throttr
   template<typename Transport> void connection<Transport>::close()
   {
     boost::system::error_code ec;
-#ifndef ENABLED_FEATURE_UNIX_SOCKETS
-    socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
-#endif
+    if constexpr (std::is_same_v<Transport, tcp_socket>)
+    {
+      socket_.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+    }
     socket_.close(ec);
   }
 

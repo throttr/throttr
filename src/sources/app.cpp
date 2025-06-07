@@ -26,9 +26,7 @@ namespace throttr
 
   int app::serve()
   {
-#ifdef ENABLED_FEATURE_UNIX_SOCKETS
     std::remove(program_options_.socket_.c_str());
-#endif
 
     server _server(ioc_, program_options_, state_);
 
@@ -57,8 +55,6 @@ namespace throttr
   void app::stop()
   {
     ioc_.stop();
-#ifdef ENABLED_FEATURE_UNIX_SOCKETS
     std::remove(program_options_.socket_.c_str());
-#endif
   }
 } // namespace throttr

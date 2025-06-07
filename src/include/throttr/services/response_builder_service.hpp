@@ -16,6 +16,7 @@
 #ifndef THROTTR_SERVICES_RESPONSE_BUILDER_HPP
 #define THROTTR_SERVICES_RESPONSE_BUILDER_HPP
 
+#include <boost/endian/conversion.hpp>
 #include <functional>
 #include <memory>
 
@@ -85,12 +86,112 @@ namespace throttr
      * @param measure
      * @return
      */
+    template<typename Socket>
     static std::size_t write_connections_entry_to_buffer(
       const std::shared_ptr<state> &state,
       std::vector<boost::asio::const_buffer> *batch,
-      const connection<local_transport_socket> *conn,
+      const connection<Socket> *conn,
       std::vector<std::byte> &write_buffer,
-      bool measure);
+      bool measure)
+    {
+      boost::ignore_unused(state);
+
+      if (measure)
+        return 227;
+
+      using namespace boost::endian;
+
+      const auto _push = [&](const void *ptr, const std::size_t size) // NOSONAR
+      {
+        const auto _offset = write_buffer.size();
+        const auto *_bytes = static_cast<const std::byte *>(ptr);
+        write_buffer.insert(write_buffer.end(), _bytes, _bytes + size);
+        batch->emplace_back(boost::asio::buffer(reinterpret_cast<const void *>(&write_buffer[_offset]), size)); // NOSONAR
+      };
+
+      // UUID (16 bytes)
+      _push(conn->id_.data(), 16);
+
+      // IP version (1 byte)
+      const std::uint8_t _ip_version = conn->ip_.contains(':') ? 0x06 : 0x04;
+      _push(&_ip_version, 1);
+
+      // IP padded to 16 bytes
+      std::array<std::uint8_t, 16> _ip_bytes = {};
+      const auto &_ip_str = conn->ip_;
+      const auto _len = std::min<std::size_t>(_ip_str.size(), 16);
+      std::memcpy(_ip_bytes.data(), _ip_str.data(), _len);
+      _push(_ip_bytes.data(), 16);
+
+      // Port (2 bytes)
+      const uint16_t _port = native_to_little(conn->port_);
+      _push(&_port, sizeof(conn->port_));
+
+#ifdef ENABLED_FEATURE_METRICS
+      const auto &_metrics = *conn->metrics_;
+#else
+      constexpr uint64_t _empty = 0;
+#endif
+
+      for (const uint64_t _val :
+           {conn->connected_at_,
+#ifdef ENABLED_FEATURE_METRICS
+            _metrics.network_.read_bytes_.accumulator_.load(std::memory_order_relaxed),
+            _metrics.network_.write_bytes_.accumulator_.load(std::memory_order_relaxed),
+            _metrics.network_.published_bytes_.accumulator_.load(std::memory_order_relaxed),
+            _metrics.network_.received_bytes_.accumulator_.load(std::memory_order_relaxed),
+            _metrics.memory_.allocated_bytes_.accumulator_.load(std::memory_order_relaxed),
+            _metrics.memory_.consumed_bytes_.accumulator_.load(std::memory_order_relaxed)})
+#else
+            _empty,
+            _empty,
+            _empty,
+            _empty,
+            _empty,
+            _empty})
+#endif
+      {
+        const auto _offset = write_buffer.size();
+        append_uint64_t(write_buffer, native_to_little(_val));
+        batch->emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(uint64_t)));
+      }
+
+      constexpr std::array monitored_request_types =
+        {request_types::insert,
+         request_types::set,
+         request_types::query,
+         request_types::get,
+         request_types::update,
+         request_types::purge,
+         request_types::list,
+         request_types::info,
+         request_types::stat,
+         request_types::stats,
+         request_types::publish,
+         request_types::subscribe,
+         request_types::unsubscribe,
+         request_types::connections,
+         request_types::connection,
+         request_types::channels,
+         request_types::channel,
+         request_types::whoami};
+
+      for (request_types type : monitored_request_types)
+      {
+        boost::ignore_unused(type);
+#ifdef ENABLED_FEATURE_METRICS
+        const auto &metric = conn->metrics_->commands_[static_cast<std::size_t>(type)];
+        const uint64_t _value = metric.accumulator_.load(std::memory_order_relaxed);
+#else
+        constexpr uint64_t _value = 0;
+#endif
+        const auto _offset = write_buffer.size();
+        append_uint64_t(write_buffer, native_to_little(_value));
+        batch->emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(uint64_t)));
+      }
+
+      return 0;
+    }
 
     /**
      * Handle fragmented connections response

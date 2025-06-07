@@ -25,10 +25,10 @@ using namespace throttr;
 class BufferManagementTestFixture : public ::testing::Test
 {
 public:
-  static connection<local_transport_socket> create_dummy_session(const std::shared_ptr<state> &state)
+  static connection<tcp_socket> create_dummy_session(const std::shared_ptr<state> &state)
   {
     boost::asio::io_context ioc;
-    local_transport_socket socket(ioc);
+    tcp_socket socket(ioc);
     return connection(std::move(socket), state);
   }
 };

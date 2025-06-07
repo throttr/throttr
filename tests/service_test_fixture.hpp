@@ -79,17 +79,20 @@ protected:
     }
   }
 
-  [[nodiscard]] local_transport_socket make_connection(boost::asio::io_context &io_context) const
+  [[nodiscard]] unix_socket make_connection(boost::asio::io_context &io_context) const
   {
-    local_transport_socket _socket(io_context);
-#ifdef ENABLED_FEATURE_UNIX_SOCKETS
-    const local_transport_endpoint _endpoint(app_->program_options_.socket_);
+    unix_socket _socket(io_context);
+    const unix_endpoint _endpoint(app_->program_options_.socket_);
     _socket.connect(_endpoint);
-#else
+    return _socket;
+  }
+
+  [[nodiscard]] tcp_socket make_tcp_connection(boost::asio::io_context &io_context) const
+  {
+    tcp_socket _socket(io_context);
     tcp::resolver _resolver(io_context);
     const auto _endpoints = _resolver.resolve("127.0.0.1", std::to_string(app_->state_->exposed_port_));
     boost::asio::connect(_socket, _endpoints);
-#endif
     return _socket;
   }
 

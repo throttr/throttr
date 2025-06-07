@@ -23,6 +23,7 @@ TEST_F(StatTestFixture, OnSuccess)
 {
   boost::asio::io_context _io_context;
   auto _socket = make_connection(_io_context);
+  auto _tcp_socket = make_tcp_connection(_io_context);
   const std::string _key = "consumer/stat_test";
 
   const auto _insert = request_insert_builder(100, ttl_types::seconds, 120, _key);

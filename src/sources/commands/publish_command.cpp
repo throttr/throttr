@@ -74,21 +74,52 @@ namespace throttr
       const_cast<subscription &>(_sub).metrics_->read_bytes_.mark(_payload.size()); // NOSONAR
 #endif
 
-      const auto _conn_it = state->connections_.find(_sub_id);
-      // LCOV_EXCL_START Note: This means that the subscribed connection was disconnected.
-      if (_conn_it == state->connections_.end())
+      auto _is_tcp = false;
+      auto _is_unix = false;
+
+      {
+        std::scoped_lock _lock(state->tcp_connections_mutex_);
+        _is_tcp = state->tcp_connections_.contains(_sub_id);
+      }
+
+      {
+        std::scoped_lock _lock(state->unix_connections_mutex_);
+        _is_unix = state->unix_connections_.contains(_sub_id);
+      }
+
+      // LCOV_EXCL_START
+      // This is a strange condition, the subscription exists but the connection is gone...
+      if (!_is_tcp && !_is_unix)
         continue;
+      // LCOV_EXCL_STOP
+
+      auto _process =
+        [](auto &connections, auto &mutex, const auto &sub_id, const auto &scope_id, const auto &payload, const auto &message)
+      {
+        std::scoped_lock _lock(mutex);
+        const auto _conn_it = connections.find(sub_id);
+        // LCOV_EXCL_START
+        if (_conn_it == connections.end())
+          return;
         // LCOV_EXCL_STOP
 
+        auto *_conn = _conn_it->second;
+
 #ifdef ENABLED_FEATURE_METRICS
-      if (_conn_it->second->id_ == id) // LCOV_EXCL_LINE
-        _conn_it->second->metrics_->network_.published_bytes_.mark(_payload.size());
-      else
-        _conn_it->second->metrics_->network_.received_bytes_.mark(_payload.size());
+        if (_conn->id_ == scope_id) // LCOV_EXCL_LINE
+          _conn->metrics_->network_.published_bytes_.mark(payload.size());
+        else
+          _conn->metrics_->network_.received_bytes_.mark(payload.size());
 #endif
 
-      if (_conn_it->second->id_ != id) // LCOV_EXCL_LINE
-        _conn_it->second->send(_message);
+        if (_conn->id_ != scope_id) // LCOV_EXCL_LINE
+          _conn->send(message);
+      };
+
+      if (_is_tcp)
+        _process(state->tcp_connections_, state->tcp_connections_mutex_, _sub_id, id, _payload, _message);
+      else
+        _process(state->unix_connections_, state->unix_connections_mutex_, _sub_id, id, _payload, _message);
     }
 
     // LCOV_EXCL_START

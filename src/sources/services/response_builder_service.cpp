@@ -124,112 +124,6 @@ namespace throttr
     return 0;
   }
 
-  std::size_t response_builder_service::write_connections_entry_to_buffer(
-    const std::shared_ptr<state> &state,
-    std::vector<boost::asio::const_buffer> *batch,
-    const connection<local_transport_socket> *conn,
-    std::vector<std::byte> &write_buffer,
-    bool measure)
-  {
-    boost::ignore_unused(state);
-
-    if (measure)
-      return 227;
-
-    using namespace boost::endian;
-
-    const auto _push = [&](const void *ptr, const std::size_t size) // NOSONAR
-    {
-      const auto _offset = write_buffer.size();
-      const auto *_bytes = static_cast<const std::byte *>(ptr);
-      write_buffer.insert(write_buffer.end(), _bytes, _bytes + size);
-      batch->emplace_back(boost::asio::buffer(reinterpret_cast<const void *>(&write_buffer[_offset]), size)); // NOSONAR
-    };
-
-    // UUID (16 bytes)
-    _push(conn->id_.data(), 16);
-
-    // IP version (1 byte)
-    const std::uint8_t _ip_version = conn->ip_.contains(':') ? 0x06 : 0x04;
-    _push(&_ip_version, 1);
-
-    // IP padded to 16 bytes
-    std::array<std::uint8_t, 16> _ip_bytes = {};
-    const auto &_ip_str = conn->ip_;
-    const auto _len = std::min<std::size_t>(_ip_str.size(), 16);
-    std::memcpy(_ip_bytes.data(), _ip_str.data(), _len);
-    _push(_ip_bytes.data(), 16);
-
-    // Port (2 bytes)
-    const uint16_t _port = native_to_little(conn->port_);
-    _push(&_port, sizeof(conn->port_));
-
-#ifdef ENABLED_FEATURE_METRICS
-    const auto &_metrics = *conn->metrics_;
-#else
-    constexpr uint64_t _empty = 0;
-#endif
-
-    for (const uint64_t _val :
-         {conn->connected_at_,
-#ifdef ENABLED_FEATURE_METRICS
-          _metrics.network_.read_bytes_.accumulator_.load(std::memory_order_relaxed),
-          _metrics.network_.write_bytes_.accumulator_.load(std::memory_order_relaxed),
-          _metrics.network_.published_bytes_.accumulator_.load(std::memory_order_relaxed),
-          _metrics.network_.received_bytes_.accumulator_.load(std::memory_order_relaxed),
-          _metrics.memory_.allocated_bytes_.accumulator_.load(std::memory_order_relaxed),
-          _metrics.memory_.consumed_bytes_.accumulator_.load(std::memory_order_relaxed)})
-#else
-          _empty,
-          _empty,
-          _empty,
-          _empty,
-          _empty,
-          _empty})
-#endif
-    {
-      const auto _offset = write_buffer.size();
-      append_uint64_t(write_buffer, native_to_little(_val));
-      batch->emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(uint64_t)));
-    }
-
-    constexpr std::array monitored_request_types =
-      {request_types::insert,
-       request_types::set,
-       request_types::query,
-       request_types::get,
-       request_types::update,
-       request_types::purge,
-       request_types::list,
-       request_types::info,
-       request_types::stat,
-       request_types::stats,
-       request_types::publish,
-       request_types::subscribe,
-       request_types::unsubscribe,
-       request_types::connections,
-       request_types::connection,
-       request_types::channels,
-       request_types::channel,
-       request_types::whoami};
-
-    for (request_types type : monitored_request_types)
-    {
-      boost::ignore_unused(type);
-#ifdef ENABLED_FEATURE_METRICS
-      const auto &metric = conn->metrics_->commands_[static_cast<std::size_t>(type)];
-      const uint64_t _value = metric.accumulator_.load(std::memory_order_relaxed);
-#else
-      constexpr uint64_t _value = 0;
-#endif
-      const auto _offset = write_buffer.size();
-      append_uint64_t(write_buffer, native_to_little(_value));
-      batch->emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(uint64_t)));
-    }
-
-    return 0;
-  }
-
   void response_builder_service::handle_fragmented_connections_response(
     const std::shared_ptr<state> &state,
     std::vector<boost::asio::const_buffer> &batch,
@@ -237,53 +131,66 @@ namespace throttr
   {
     batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
 
-    std::vector<const connection<local_transport_socket> *> _fragment;
-    std::vector<std::vector<const connection<local_transport_socket> *>> _fragments;
+    using fragment_container =
+      std::tuple<std::vector<const connection<tcp_socket> *>, std::vector<const connection<unix_socket> *>>;
+
+    fragment_container _fragment;
+    std::vector<fragment_container> _fragments;
+    std::size_t _current_fragment_size = 0;
+    constexpr std::size_t _max_fragment_size = 2048; // LCOV_EXCL_LINE
+
+    auto _fragmenter = [&](auto &connections, auto &mutex)
     {
-      std::size_t _current_fragment_size = 0;
-      std::lock_guard _lock(state->connections_mutex_);
-      for (const auto &[_id, _conn] : state->connections_)
+      std::lock_guard _lock(mutex);
+      for (const auto &[_id, _conn] : connections)
       {
         const std::size_t _conn_size = write_connections_entry_to_buffer(state, nullptr, _conn, write_buffer, true);
-
         // LCOV_EXCL_START
-        // @Pending this should be tested but requires a mechanism to create a huge amount of connections
-        if (constexpr std::size_t _max_fragment_size = 2048; _current_fragment_size + _conn_size > _max_fragment_size)
+        if (_current_fragment_size + _conn_size > _max_fragment_size)
         {
           _fragments.push_back(std::move(_fragment));
-          _fragment.clear();
+          std::get<0>(_fragment).clear();
+          std::get<1>(_fragment).clear();
           _current_fragment_size = 0;
         }
         // LCOV_EXCL_STOP
-
-        _fragment.push_back(_conn);
+        if constexpr (std::is_same_v<std::remove_cvref_t<decltype(_conn)>, connection<tcp_socket> *>)
+          std::get<0>(_fragment).push_back(_conn);
+        else
+          std::get<1>(_fragment).push_back(_conn);
         _current_fragment_size += _conn_size;
       }
-    }
+    };
 
-    if (!_fragment.empty()) // LCOV_EXCL_LINE Note: Partially tested.
+    _fragmenter(state->tcp_connections_, state->tcp_connections_mutex_);
+    _fragmenter(state->unix_connections_, state->unix_connections_mutex_);
+
+    if (!std::get<0>(_fragment).empty() || !std::get<1>(_fragment).empty()) // LCOV_EXCL_LINE Note: Partially tested.
       _fragments.push_back(std::move(_fragment));
 
     push_total_fragments(batch, write_buffer, _fragments.size());
 
     std::size_t _index = 1;
-    for (const auto &_frag : _fragments)
+    for (const auto &[_tcp_fragment, _unix_fragment] : _fragments)
     {
       const uint64_t _fragment_index = _index;
       ++_index;
 
-      // Convert _fragment_index and _connection_count to bytes
-      for (const uint64_t _connection_count = _frag.size(); uint64_t val : {_fragment_index, _connection_count})
+      for (const auto _connection_count = _tcp_fragment.size() + _unix_fragment.size();
+           const uint64_t _val : {_fragment_index, _connection_count})
       {
         const auto _offset = write_buffer.size();
-        append_uint64_t(write_buffer, boost::endian::native_to_little(val));
-        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(val)));
+        append_uint64_t(write_buffer, boost::endian::native_to_little(_val));
+        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_val)));
       }
 
-      // Serialize connections in the fragment
-      for (const auto *_conn : _frag)
+      for (const auto *_conn : _tcp_fragment)
       {
-        write_connections_entry_to_buffer(state, &batch, _conn, write_buffer, false);
+        write_connections_entry_to_buffer<tcp_socket>(state, &batch, _conn, write_buffer, false);
+      }
+      for (const auto *_conn : _unix_fragment)
+      {
+        write_connections_entry_to_buffer<unix_socket>(state, &batch, _conn, write_buffer, false);
       }
     }
   }

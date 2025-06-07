@@ -41,7 +41,7 @@ namespace throttr
     boost::ignore_unused(type, view, id);
     using namespace boost::endian;
 
-    std::scoped_lock _lock(state->subscriptions_->mutex_, state->connections_mutex_);
+    std::scoped_lock _lock(state->subscriptions_->mutex_);
 
     batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
 
@@ -107,13 +107,38 @@ namespace throttr
     uint64_t _total_read_per_minute = 0;
     uint64_t _total_write_per_minute = 0;
 #ifdef ENABLED_FEATURE_METRICS
-    for (const auto &_connection : state->connections_) // NOSONAR
+    auto _accumulate_metrics = [](
+                                 const auto &connections,
+                                 auto &mutex,
+                                 auto &total_read,
+                                 auto &total_write,
+                                 auto &total_read_per_minute,
+                                 auto &total_write_per_minute)
     {
-      _total_read += _connection.second->metrics_->network_.read_bytes_.accumulator_.load(std::memory_order_relaxed);
-      _total_write += _connection.second->metrics_->network_.write_bytes_.accumulator_.load(std::memory_order_relaxed);
-      _total_read_per_minute += _connection.second->metrics_->network_.read_bytes_.per_minute_.load(std::memory_order_relaxed);
-      _total_write_per_minute += _connection.second->metrics_->network_.write_bytes_.per_minute_.load(std::memory_order_relaxed);
-    }
+      std::scoped_lock _scoped_lock(mutex);
+      for (const auto &_conn : connections)
+      {
+        const auto &_net = _conn.second->metrics_->network_;
+        total_read += _net.read_bytes_.accumulator_.load(std::memory_order_relaxed);
+        total_write += _net.write_bytes_.accumulator_.load(std::memory_order_relaxed);
+        total_read_per_minute += _net.read_bytes_.per_minute_.load(std::memory_order_relaxed);
+        total_write_per_minute += _net.write_bytes_.per_minute_.load(std::memory_order_relaxed);
+      }
+    };
+    _accumulate_metrics(
+      state->tcp_connections_,
+      state->tcp_connections_mutex_,
+      _total_read,
+      _total_write,
+      _total_read_per_minute,
+      _total_write_per_minute);
+    _accumulate_metrics(
+      state->unix_connections_,
+      state->unix_connections_mutex_,
+      _total_read,
+      _total_write,
+      _total_read_per_minute,
+      _total_write_per_minute);
 #endif
 
     push_u64(_total_read);
@@ -168,7 +193,11 @@ namespace throttr
     push_u64(_total_channels);
     push_u64(state->started_at_);
 
-    const uint64_t _total_connections = state->connections_.size();
+    uint64_t _total_connections = 0;
+    {
+      std::scoped_lock _scoped_lock(state->unix_connections_mutex_, state->tcp_connections_mutex_);
+      _total_connections = state->tcp_connections_.size() + state->unix_connections_.size();
+    }
     push_u64(_total_connections);
 
     {
