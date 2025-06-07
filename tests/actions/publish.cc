@@ -52,7 +52,7 @@ TEST_F(PublishTestFixture, OnSuccess)
   std::vector<std::byte> _header(1 + sizeof(value_type));
   boost::asio::read(_subscriber, boost::asio::buffer(_header.data(), _header.size()));
 
-  ASSERT_EQ(_header[0], std::byte{0x03});
+  ASSERT_EQ(_header[0], std::byte{static_cast<std::uint8_t>(request_types::event)});
 
   value_type _size = 0;
   std::memcpy(&_size, _header.data() + 1, sizeof(value_type));
