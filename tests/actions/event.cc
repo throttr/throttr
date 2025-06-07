@@ -13,12 +13,22 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include <gtest/gtest.h>
+#include "../service_test_fixture.hpp"
 
-#include <throttr/protocol_wrapper.hpp>
-#include <throttr/version.hpp>
-
-TEST(Throttr, Version)
+class EventTestFixture : public ServiceTestFixture
 {
-  ASSERT_EQ(throttr::get_version(), "5.0.5");
+};
+
+TEST_F(EventTestFixture, OnSuccess)
+{
+  const std::string _key = "consumer/set_via_event";
+  const std::vector _value = {std::byte{0xBE}, std::byte{0xEF}, std::byte{0xCA}, std::byte{0xFE}};
+
+  const auto _buffer = request_set_builder(_value, ttl_types::seconds, 10, _key);
+  const auto _event = request_event_builder(_buffer);
+
+  auto _response = send_and_receive(_event, 1);
+
+  ASSERT_EQ(_response.size(), 1);
+  ASSERT_EQ(static_cast<uint8_t>(_response[0]), 1);
 }

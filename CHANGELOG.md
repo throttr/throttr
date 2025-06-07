@@ -1,13 +1,14 @@
-### v5.0.6
+### v5.0.5
 
 - Now the program options are refactorized (macro usage reduced).
 - INFO request missing current timestamp issue fixed.
 - Now we have less dependency to connection class and will be used as connection<T>, being T different socket type.
-
-### v5.0.5
-
 - Now all the transport protocol is inside transport.hpp.
 - Now tests doesn't use macros everywhere.
+- Now we have event request type to be used on the future event bus.
+- Now we have agnostic transport layer.
+- Now we have the maximum optimization via -Ofast.
+- Now we remove the architecture native instructions and can be enabled via compilation flags.
 
 ### v5.0.4
 
