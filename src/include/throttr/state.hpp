@@ -19,6 +19,7 @@
 #define THROTTR_STATE_HPP
 
 #include "transport.hpp"
+#include <throttr/services/subscriptions_service.hpp>
 
 #include <atomic>
 #include <boost/asio/buffer.hpp>
@@ -93,11 +94,12 @@ namespace throttr
     /**
      * Port exposed
      */
-#ifdef ENABLED_FEATURE_UNIX_SOCKETS
-    std::string exposed_port_;
-#else
     std::uint16_t exposed_port_;
-#endif
+
+    /**
+     * Socket exposed
+     */
+    std::string exposed_socket_;
 
     /**
      * Storage
@@ -115,14 +117,24 @@ namespace throttr
     boost::uuids::random_generator id_generator_ = boost::uuids::random_generator();
 
     /**
-     * Connections container
+     * TCP Connections container
      */
-    std::unordered_map<boost::uuids::uuid, connection<local_transport_socket> *, std::hash<boost::uuids::uuid>> connections_;
+    std::unordered_map<boost::uuids::uuid, connection<tcp_socket> *, std::hash<boost::uuids::uuid>> tcp_connections_;
+
+    /**
+     * UNIX Connections container
+     */
+    std::unordered_map<boost::uuids::uuid, connection<unix_socket> *, std::hash<boost::uuids::uuid>> unix_connections_;
 
     /**
      * Connections mutex
      */
-    std::mutex connections_mutex_;
+    std::mutex tcp_connections_mutex_;
+
+    /**
+     * UNIX Connections mutex
+     */
+    std::mutex unix_connections_mutex_;
 
 #ifdef ENABLED_FEATURE_METRICS
     /**
@@ -210,14 +222,44 @@ namespace throttr
      *
      * @param connection
      */
-    void join(connection<local_transport_socket> *connection);
+    template<typename Transport> void join(connection<Transport> *connection)
+    {
+      if constexpr (std::is_same_v<Transport, tcp_socket>)
+      {
+        std::lock_guard lock(tcp_connections_mutex_);
+        tcp_connections_.try_emplace(connection->id_, connection);
+      }
+      else
+      {
+        std::lock_guard lock(unix_connections_mutex_);
+        unix_connections_.try_emplace(connection->id_, connection);
+      }
+    }
 
     /**
      * Leave
      *
      * @param connection
      */
-    void leave(const connection<local_transport_socket> *connection);
+    template<typename Transport> void leave(const connection<Transport> *connection)
+    {
+      if constexpr (std::is_same_v<Transport, tcp_socket>)
+      {
+        std::scoped_lock _lock(tcp_connections_mutex_, subscriptions_->mutex_);
+        auto &subs = subscriptions_->subscriptions_.get<by_connection_id>();
+        auto [begin, end] = subs.equal_range(connection->id_);
+        subs.erase(begin, end);
+        tcp_connections_.erase(connection->id_);
+      }
+      else
+      {
+        std::scoped_lock _lock(unix_connections_mutex_, subscriptions_->mutex_);
+        auto &subs = subscriptions_->subscriptions_.get<by_connection_id>();
+        auto [begin, end] = subs.equal_range(connection->id_);
+        subs.erase(begin, end);
+        unix_connections_.erase(connection->id_);
+      }
+    }
   };
 } // namespace throttr
 

@@ -67,11 +67,18 @@ namespace throttr
       writes_accumulator_.fetch_add(writes, std::memory_order_relaxed);
     }
 
-    for (const auto &_conn : state->connections_) // NOSONAR
+    auto _compute_metrics = [](const auto &connections, auto &mutex)
     {
-      for (auto &_m : _conn.second->metrics_->commands_)
-        _m.compute();
-    }
+      std::scoped_lock _lock(mutex);
+      for (const auto &_conn : connections) // NOSONAR
+      {
+        for (auto &_m : _conn.second->metrics_->commands_)
+          _m.compute();
+      }
+    };
+
+    _compute_metrics(state->tcp_connections_, state->tcp_connections_mutex_);
+    _compute_metrics(state->unix_connections_, state->unix_connections_mutex_);
 
     state->metrics_collector_->compute_all();
 

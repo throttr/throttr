@@ -36,6 +36,15 @@ namespace throttr
   class state;
 
   /**
+   * Connection kind
+   */
+  enum class connection_kind : uint8_t
+  {
+    tcp_socket,
+    unix_socket,
+  };
+
+  /**
    * Connection
    */
   template<typename Transport> class connection : public std::enable_shared_from_this<connection<Transport>>
@@ -122,6 +131,18 @@ namespace throttr
      * @param batch
      */
     void send(std::shared_ptr<message> batch);
+
+    /**
+     * Kind
+     *
+     * @return
+     */
+    [[nodiscard]] connection_kind kind() const
+    {
+      if (std::is_same_v<Transport, tcp_socket>)
+        return connection_kind::tcp_socket;
+      return connection_kind::unix_socket;
+    }
 
   private:
     /**

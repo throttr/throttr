@@ -37,13 +37,26 @@ namespace throttr
     const auto _request = request_connection::from_buffer(view);
     const auto &_uuid = _request.id_;
 
-    std::lock_guard _lock(state->connections_mutex_);
-    const auto &_map = state->connections_;
     boost::uuids::uuid _id{};
     std::memcpy(_id.data, _uuid.data(), _uuid.size());
-    const auto _it = _map.find(_id);
 
-    if (_it == _map.end())
+    bool _found_in_tcp = false;
+    bool _found_in_unix = false;
+
+    {
+      std::lock_guard _lock(state->tcp_connections_mutex_);
+      const auto &_tcp_map = state->tcp_connections_;
+      _found_in_tcp = _tcp_map.contains(_id);
+    }
+
+    if (!_found_in_tcp)
+    {
+      std::lock_guard _lock(state->unix_connections_mutex_);
+      const auto &_unix_map = state->unix_connections_;
+      _found_in_unix = _unix_map.contains(_id);
+    }
+
+    if (!_found_in_tcp && !_found_in_unix)
     {
       batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
       // LCOV_EXCL_START
@@ -59,9 +72,22 @@ namespace throttr
       return;
     }
 
-    const auto *_conn = _it->second;
-    batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
-    response_builder_service::write_connections_entry_to_buffer(state, &batch, _conn, write_buffer, false);
+    if (_found_in_tcp)
+    {
+      std::lock_guard _lock(state->tcp_connections_mutex_);
+      const auto &_tcp_map = state->tcp_connections_;
+      const auto *_conn = _tcp_map.find(_id)->second;
+      batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
+      response_builder_service::write_connections_entry_to_buffer<tcp_socket>(state, &batch, _conn, write_buffer, false);
+    }
+    else
+    {
+      std::lock_guard _lock(state->unix_connections_mutex_);
+      const auto &_unix_map = state->unix_connections_;
+      const auto *_conn = _unix_map.find(_id)->second;
+      batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
+      response_builder_service::write_connections_entry_to_buffer<unix_socket>(state, &batch, _conn, write_buffer, false);
+    }
 
     // LCOV_EXCL_START
 #ifndef NDEBUG

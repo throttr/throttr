@@ -41,63 +41,82 @@ namespace throttr
      * @param state
      */
     server(boost::asio::io_context &io_context, const program_parameters &program_options, const std::shared_ptr<state> &state) :
-        acceptor_(io_context, make_endpoint(program_options)), socket_(io_context), state_(state)
+        tcp_acceptor_(
+          io_context,
+          tcp_endpoint{boost::asio::ip::tcp::v4(), static_cast<boost::asio::ip::port_type>(program_options.port_)}),
+        tcp_socket_(io_context),
+        unix_acceptor_(io_context, unix_endpoint{program_options.socket_.c_str()}),
+        unix_socket_(io_context),
+        state_(state)
     {
-#ifndef ENABLED_FEATURE_UNIX_SOCKETS
-      state->exposed_port_ = acceptor_.local_endpoint().port();
-#endif
+      state->exposed_port_ = tcp_acceptor_.local_endpoint().port();
+      state->exposed_socket_ = program_options.socket_;
       state->acceptor_ready_ = true;
 
 #ifdef ENABLED_FEATURE_METRICS
       state->metrics_collector_->schedule_timer(state);
 #endif
 
-      do_accept();
-    }
-
-    /**
-     * Make endpoint
-     *
-     * @param program_options
-     * @return transport_endpoint
-     */
-    static local_transport_endpoint make_endpoint(const program_parameters &program_options)
-    {
-#ifdef ENABLED_FEATURE_UNIX_SOCKETS
-      return {program_options.socket_};
-#else
-      return {boost::asio::ip::tcp::v4(), static_cast<boost::asio::ip::port_type>(program_options.port_)};
-#endif
+      do_tcp_accept();
+      do_unix_accept();
     }
 
   private:
     /**
-     * Do accept
+     * Do TCP accept
      */
-    void do_accept()
+    void do_tcp_accept()
     {
-      acceptor_.async_accept(
-        socket_,
+      tcp_acceptor_.async_accept(
+        tcp_socket_,
         [this](const boost::system::error_code &error)
         {
           if (!error) // LCOV_EXCL_LINE Note: Partially tested.
           {
-            std::make_shared<connection<local_transport_socket>>(std::move(socket_), state_)->start();
+            std::make_shared<connection<tcp_socket>>(std::move(tcp_socket_), state_)->start();
           }
 
-          do_accept();
+          do_tcp_accept();
         });
     }
 
     /**
-     * Acceptor
+     * Do UNIX accept
      */
-    local_transport_acceptor acceptor_;
+    void do_unix_accept()
+    {
+      unix_acceptor_.async_accept(
+        unix_socket_,
+        [this](const boost::system::error_code &error)
+        {
+          if (!error) // LCOV_EXCL_LINE Note: Partially tested.
+          {
+            std::make_shared<connection<unix_socket>>(std::move(unix_socket_), state_)->start();
+          }
+
+          do_unix_accept();
+        });
+    }
 
     /**
-     * Socket
+     * TCP Acceptor
      */
-    local_transport_socket socket_;
+    tcp_acceptor tcp_acceptor_;
+
+    /**
+     * TCP Socket
+     */
+    tcp_socket tcp_socket_;
+
+    /**
+     * UNIX Acceptor
+     */
+    unix_acceptor unix_acceptor_;
+
+    /**
+     * UNIX Socket
+     */
+    unix_socket unix_socket_;
 
     /**
      * State

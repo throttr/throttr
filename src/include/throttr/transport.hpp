@@ -21,21 +21,13 @@
 
 namespace throttr
 {
-#ifdef ENABLED_FEATURE_UNIX_SOCKETS
-  using local_transport_acceptor = boost::asio::local::stream_protocol::acceptor;
-  using local_transport_socket = boost::asio::local::stream_protocol::socket;
-  using local_transport_endpoint = boost::asio::local::stream_protocol::endpoint;
-#else
-  using local_transport_acceptor = boost::asio::ip::tcp::acceptor;
-  using local_transport_socket = boost::asio::ip::tcp::socket;
-  using local_transport_endpoint = boost::asio::ip::tcp::endpoint;
-#endif
+  using unix_acceptor = boost::asio::local::stream_protocol::acceptor;
+  using unix_socket = boost::asio::local::stream_protocol::socket;
+  using unix_endpoint = boost::asio::local::stream_protocol::endpoint;
 
-#ifdef ENABLE_FEATURE_REMOTE_UNIX_SOCKETS
-  using remote_transport_socket = boost::asio::local::stream_protocol::socket;
-#else
-  using remote_transport_socket = boost::asio::ip::tcp::socket;
-#endif
+  using tcp_acceptor = boost::asio::ip::tcp::acceptor;
+  using tcp_socket = boost::asio::ip::tcp::socket;
+  using tcp_endpoint = boost::asio::ip::tcp::endpoint;
 } // namespace throttr
 
 #endif // THROTTR_TRANSPORT_HPP
