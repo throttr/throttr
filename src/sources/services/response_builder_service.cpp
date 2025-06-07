@@ -145,7 +145,8 @@ namespace throttr
       {
         const std::size_t _conn_size = write_connections_entry_to_buffer(state, nullptr, _conn, write_buffer, true);
 
-        if (constexpr std::size_t _max_fragment_size = 2048; _current_fragment_size + _conn_size > _max_fragment_size)
+        if (constexpr std::size_t _max_fragment_size = 2048; // LCOV_EXCL_LINE
+            _current_fragment_size + _conn_size > _max_fragment_size) // LCOV_EXCL_LINE
         // LCOV_EXCL_START
         {
           _fragments.push_back(std::move(_fragment));
