@@ -36,7 +36,6 @@ namespace throttr
 
     const auto _request = request_event::from_buffer(view);
     const auto _type = static_cast<request_types>(std::to_integer<uint8_t>(_request.buffer_[0]));
-    std::cout << "WTF" << std::endl;
 
 #ifdef ENABLED_FEATURE_METRICS
     state->metrics_collector_->commands_[static_cast<std::size_t>(_type)].mark();
