@@ -55,7 +55,7 @@ namespace throttr
     auto &_buffer = _message->write_buffer_;
     _buffer.reserve(1 + sizeof(value_type) + _payload.size());
 
-    _buffer.push_back(std::byte{0x03});
+    _buffer.push_back(static_cast<std::byte>(request_types::event));
 
     const value_type _size = _payload.size();
     append_value_type(_buffer, native_to_little(_size));
