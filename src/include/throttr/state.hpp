@@ -226,15 +226,20 @@ namespace throttr
     {
       if constexpr (std::is_same_v<Transport, tcp_socket>)
       {
-        std::scoped_lock lock(tcp_connections_mutex_, subscriptions_->mutex_);
-        subscriptions_->subscriptions_.insert(subscription{connection->id_, to_string(connection->id_)});
+        std::scoped_lock lock(tcp_connections_mutex_);
         tcp_connections_.try_emplace(connection->id_, connection);
       }
       else
       {
-        std::scoped_lock lock(unix_connections_mutex_, subscriptions_->mutex_);
-        subscriptions_->subscriptions_.insert(subscription{connection->id_, to_string(connection->id_)});
+        std::scoped_lock lock(unix_connections_mutex_);
         unix_connections_.try_emplace(connection->id_, connection);
+      }
+
+      {
+        std::scoped_lock lock(subscriptions_->mutex_);
+        const std::string _id(connection->id_.begin(), connection->id_.end());
+        subscriptions_->subscriptions_.insert(subscription{connection->id_, _id});
+        subscriptions_->subscriptions_.insert(subscription{connection->id_, "*"});
       }
     }
 

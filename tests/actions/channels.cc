@@ -58,7 +58,7 @@ TEST_F(ChannelsTestFixture, OnSuccess)
 
   // Channels
   const auto *_channels_count_ptr = reinterpret_cast<const uint64_t *>(&_fragment_header[8]); // NOSONAR
-  ASSERT_EQ(boost::endian::little_to_native(*_channels_count_ptr), 3);
+  ASSERT_EQ(boost::endian::little_to_native(*_channels_count_ptr), 4);
   auto _channel_count = boost::endian::little_to_native(*_channels_count_ptr);
   // Per Channel
   for (int _i = 0; _i < static_cast<int>(_channel_count); ++_i)
@@ -86,7 +86,7 @@ TEST_F(ChannelsTestFixture, OnSuccess)
     boost::asio::read(_socket, boost::asio::buffer(_subscribed_connections));
     uint64_t _subscribed_connections_number;
     std::memcpy(&_subscribed_connections_number, _subscribed_connections.data(), 8);
-    ASSERT_EQ(_subscribed_connections_number, 1);
+    ASSERT_GE(_subscribed_connections_number, 1);
   }
 
   boost::system::error_code _ec;
