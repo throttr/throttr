@@ -96,6 +96,20 @@ protected:
     return _socket;
   }
 
+  template<typename Transport> boost::uuids::uuid get_connection_id(Transport &socket)
+  {
+    const auto _whoami_buffer = request_whoami_builder();
+
+    std::vector<std::byte> _id_response(17);
+    boost::asio::write(socket, boost::asio::buffer(_whoami_buffer.data(), _whoami_buffer.size()));
+    boost::asio::read(socket, boost::asio::buffer(_id_response.data(), _id_response.size()));
+
+    boost::uuids::uuid _uuid{};
+    std::memcpy(_uuid.data, _id_response.data() + 1, 16);
+
+    return _uuid;
+  }
+
   /**
    * Send and receive
    *
