@@ -49,11 +49,10 @@ namespace throttr
       // LCOV_EXCL_START
 #ifndef NDEBUG
       fmt::println(
-        "{:%Y-%m-%d %H:%M:%S} REQUEST CHANNEL channel={} from={}"
-        "RESPONSE ok=false",
+        "{:%Y-%m-%d %H:%M:%S} REQUEST CHANNEL session_id={} META channel={} RESPONSE ok=false",
         std::chrono::system_clock::now(),
-        span_to_hex(_request.channel_),
-        to_string(id));
+        to_string(id),
+        span_to_hex(_request.channel_));
 #endif
       // LCOV_EXCL_STOP
       batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
@@ -105,11 +104,10 @@ namespace throttr
     // LCOV_EXCL_START
 #ifndef NDEBUG
     fmt::println(
-      "{:%Y-%m-%d %H:%M:%S} REQUEST CHANNEL channel={} from={} "
-      "RESPONSE ok=true",
+      "{:%Y-%m-%d %H:%M:%S} REQUEST CHANNEL session_id={} META channel={} RESPONSE ok=true",
       std::chrono::system_clock::now(),
-      span_to_hex(_request.channel_),
-      to_string(id));
+      to_string(id),
+      span_to_hex(_request.channel_));
 #endif
     // LCOV_EXCL_STOP
   }

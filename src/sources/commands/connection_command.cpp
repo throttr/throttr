@@ -62,11 +62,10 @@ namespace throttr
       // LCOV_EXCL_START
 #ifndef NDEBUG
       fmt::println(
-        "{:%Y-%m-%d %H:%M:%S} REQUEST CONNECTION id={} from={} "
-        "RESPONSE ok=false",
+        "{:%Y-%m-%d %H:%M:%S} REQUEST CONNECTION session_id={} META id={} RESPONSE ok=false",
         std::chrono::system_clock::now(),
-        span_to_hex(_request.id_),
-        to_string(id));
+        to_string(id),
+        span_to_hex(_request.id_));
 #endif
       // LCOV_EXCL_STOP
       return;
@@ -92,11 +91,10 @@ namespace throttr
     // LCOV_EXCL_START
 #ifndef NDEBUG
     fmt::println(
-      "{:%Y-%m-%d %H:%M:%S} REQUEST CONNECTION id={}from={} "
-      "RESPONSE ok=true",
+      "{:%Y-%m-%d %H:%M:%S} REQUEST CONNECTION session_id={} META id={} RESPONSE ok=true",
       std::chrono::system_clock::now(),
-      span_to_hex(_request.id_),
-      to_string(id));
+      to_string(id),
+      span_to_hex(_request.id_));
 #endif
     // LCOV_EXCL_STOP
   }

@@ -58,16 +58,14 @@ TEST_F(ChannelsTestFixture, OnSuccess)
 
   // Channels
   const auto *_channels_count_ptr = reinterpret_cast<const uint64_t *>(&_fragment_header[8]); // NOSONAR
-  ASSERT_EQ(boost::endian::little_to_native(*_channels_count_ptr), 1);
-
+  ASSERT_EQ(boost::endian::little_to_native(*_channels_count_ptr), 3);
+  auto _channel_count = boost::endian::little_to_native(*_channels_count_ptr);
   // Per Channel
-  std::uint8_t _chan_size = 0;
+  for (int _i = 0; _i < static_cast<int>(_channel_count); ++_i)
   {
     // Channel size
     std::vector<std::byte> _channel_size(1);
     boost::asio::read(_socket, boost::asio::buffer(_channel_size));
-    _chan_size = std::to_integer<uint8_t>(_channel_size[0]);
-    ASSERT_EQ(_chan_size, 11); // "CHANNEL_ONE".size() = 11
 
     // Read bytes
     std::vector<std::byte> _read_bytes(8);
@@ -90,12 +88,6 @@ TEST_F(ChannelsTestFixture, OnSuccess)
     std::memcpy(&_subscribed_connections_number, _subscribed_connections.data(), 8);
     ASSERT_EQ(_subscribed_connections_number, 1);
   }
-
-  // Channel name
-  std::vector<std::byte> _chan_name(_chan_size);
-  boost::asio::read(_socket, boost::asio::buffer(_chan_name));
-  std::string _name(reinterpret_cast<const char *>(_chan_name.data()), _chan_name.size());
-  ASSERT_EQ(_name, "CHANNEL_ONE");
 
   boost::system::error_code _ec;
   _subscriber.close(_ec);

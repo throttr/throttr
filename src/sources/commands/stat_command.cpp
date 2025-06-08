@@ -47,10 +47,10 @@ namespace throttr
       // LCOV_EXCL_START
 #ifndef NDEBUG
       fmt::println(
-        "{:%Y-%m-%d %H:%M:%S} REQUEST STAT key={} from={} RESPONSE ok=false",
+        "{:%Y-%m-%d %H:%M:%S} REQUEST STAT session_id={} META key={} RESPONSE ok=false",
         std::chrono::system_clock::now(),
-        _key.key_,
-        to_string(id));
+        to_string(id),
+        _key.key_);
 #endif
       batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
       return;
@@ -84,11 +84,11 @@ namespace throttr
     // LCOV_EXCL_START
 #ifndef NDEBUG
     fmt::println(
-      "{:%Y-%m-%d %H:%M:%S} REQUEST STAT key={} from={} RESPONSE ok=true read_per_minute={} write_per_minute={} read_total={} "
-      "write_total={}",
+      "{:%Y-%m-%d %H:%M:%S} REQUEST STAT session_id={} META key={} RESPONSE ok=true META read_per_minute={} write_per_minute={} "
+      "read_total={} write_total={}",
       std::chrono::system_clock::now(),
-      _key.key_,
       to_string(id),
+      _key.key_,
 #ifdef ENABLED_FEATURE_METRICS
       metrics.reads_per_minute_.load(),
       metrics.writes_per_minute_.load(),

@@ -46,6 +46,15 @@ namespace throttr
     if (!_it.has_value()) // LCOV_EXCL_LINE note: Partially covered.
     {
       batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
+      // LCOV_EXCL_START
+#ifndef NDEBUG
+      fmt::println(
+        "{:%Y-%m-%d %H:%M:%S} REQUEST UPDATE session_id={} META key={} RESPONSE ok=false",
+        std::chrono::system_clock::now(),
+        to_string(id),
+        span_to_hex(_request.key_));
+#endif
+      // LCOV_EXCL_STOP
       return;
     }
 
@@ -81,13 +90,12 @@ namespace throttr
     // LCOV_EXCL_START
 #ifndef NDEBUG
     fmt::println(
-      "{:%Y-%m-%d %H:%M:%S} REQUEST UPDATE key={} attribute={} change={} from={} "
-      "value={} RESPONSE ok={}",
+      "{:%Y-%m-%d %H:%M:%S} REQUEST UPDATE session_id={} META key={} attribute={} change={} value={} RESPONSE ok={}",
       std::chrono::system_clock::now(),
+      to_string(id),
       _key.key_,
       to_string(_request.attribute_),
       to_string(_request.change_),
-      to_string(id),
       _request.value_,
       _modified);
 #endif

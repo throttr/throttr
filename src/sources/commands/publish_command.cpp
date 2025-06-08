@@ -96,6 +96,8 @@ namespace throttr
       auto _process =
         [](auto &connections, auto &mutex, const auto &sub_id, const auto &scope_id, const auto &payload, const auto &message)
       {
+        boost::ignore_unused(payload);
+
         std::scoped_lock _lock(mutex);
         const auto _conn_it = connections.find(sub_id);
         // LCOV_EXCL_START
@@ -125,11 +127,10 @@ namespace throttr
     // LCOV_EXCL_START
 #ifndef NDEBUG
     fmt::println(
-      "{:%Y-%m-%d %H:%M:%S} REQUEST PUBLISH channel={} from={} data={} "
-      "RESPONSE ok=true",
+      "{:%Y-%m-%d %H:%M:%S} REQUEST PUBLISH session_id={} META channel={} data={} RESPONSE ok=true",
       std::chrono::system_clock::now(),
-      _channel,
       to_string(id),
+      _channel,
       span_to_hex(_payload));
 #endif
     // LCOV_EXCL_STOP

@@ -49,11 +49,10 @@ namespace throttr
     const auto _channel_view =
       std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size()); // NOSONAR
     fmt::println(
-      "{:%Y-%m-%d %H:%M:%S} REQUEST SUBSCRIBE channel={} from={} "
-      "RESPONSE ok={}",
+      "{:%Y-%m-%d %H:%M:%S} REQUEST SUBSCRIBE session_id={} META channel={} RESPONSE ok={}",
       std::chrono::system_clock::now(),
-      _channel_view,
       to_string(id),
+      _channel_view,
       _inserted);
 #endif
     // LCOV_EXCL_STOP

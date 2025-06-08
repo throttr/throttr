@@ -39,10 +39,7 @@ namespace throttr
     // LCOV_EXCL_START
 #ifndef NDEBUG
     fmt::println(
-      "{:%Y-%m-%d %H:%M:%S} REQUEST CONNECTIONS from={} "
-      "RESPONSE ok=true",
-      std::chrono::system_clock::now(),
-      to_string(id));
+      "{:%Y-%m-%d %H:%M:%S} REQUEST CONNECTIONS session_id={} RESPONSE ok=true", std::chrono::system_clock::now(), to_string(id));
 #endif
     // LCOV_EXCL_STOP
   }
