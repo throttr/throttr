@@ -82,16 +82,12 @@ namespace throttr
 
     // LCOV_EXCL_START
 #ifndef NDEBUG
-    const std::vector _channel_bytes(
-      reinterpret_cast<const std::byte *>(_request.channel_.data()),                           // NOSONAR
-      reinterpret_cast<const std::byte *>(_request.channel_.data() + _request.channel_.size()) // NOSONAR
-    );
+    const std::vector _channel_bytes(_request.channel_.begin(), _request.channel_.end());
     fmt::println(
-      "{:%Y-%m-%d %H:%M:%S} REQUEST UNSUBSCRIBE channel={} from={} "
-      "RESPONSE ok=true",
+      "{:%Y-%m-%d %H:%M:%S} REQUEST UNSUBSCRIBE session_id={} META channel={} RESPONSE ok=true",
       std::chrono::system_clock::now(),
-      span_to_hex(_channel_bytes),
-      to_string(id));
+      to_string(id),
+      span_to_hex(_channel_bytes));
 #endif
     // LCOV_EXCL_STOP
   }

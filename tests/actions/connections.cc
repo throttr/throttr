@@ -19,20 +19,13 @@ class ConnectionsTestFixture : public ServiceTestFixture
 {
 };
 
-TEST_F(ConnectionsTestFixture, OnSuccessSingleFragment)
+TEST_F(ConnectionsTestFixture, OnSuccess)
 {
   boost::asio::io_context _io_context;
   const auto _tcp_connection = make_tcp_connection(_io_context);
   const auto _unix_connection = make_connection(_io_context);
   const auto _conn_buffer = request_connections_builder();
-  const auto _response = send_and_receive(
-    _conn_buffer,
-    1 +         // status
-      8 +       // fragment count
-      8 +       // fragment id
-      8 +       // connection count
-      (235 * 3) // una conexión con ENABLED_FEATURE_METRICS
-  );
+  const auto _response = send_and_receive(_conn_buffer, 730);
 
   size_t _offset = 1;
 
@@ -54,34 +47,34 @@ TEST_F(ConnectionsTestFixture, OnSuccessSingleFragment)
   _offset += sizeof(_connection_count);
   ASSERT_GE(_connection_count, 3);
 
-  ASSERT_LE(_offset + 227, _response.size());
-
-  // UUID (16 bytes)
-  _offset += 16;
-
-  // IP version (1 byte)
-  const uint8_t _ip_version = std::to_integer<uint8_t>(_response[_offset]);
-  ASSERT_TRUE(_ip_version == 0x04 || _ip_version == 0x06);
-  _offset += 1;
-
-  // IP padded to 16 bytes
-  _offset += 16;
-
-  // Port (2 bytes)
-  uint16_t _port;
-  std::memcpy(&_port, _response.data() + _offset, sizeof(_port));
-  _offset += sizeof(_port);
-  _port = boost::endian::native_to_little(_port);
-  ASSERT_GT(_port, 0);
-
-  // 24 métricas (8 bytes cada una)
-  for (int i = 0; i < 25; ++i)
+  for (int _i = 0; _i < 3; ++_i)
   {
-    uint64_t _metric;
-    std::memcpy(&_metric, _response.data() + _offset, sizeof(_metric));
-    _offset += sizeof(_metric);
+    // UUID (16 bytes)
+    _offset += 16;
+
+    // IP version (1 byte)
+    const uint8_t _ip_version = std::to_integer<uint8_t>(_response[_offset]);
+    ASSERT_TRUE(_ip_version == 0x04 || _ip_version == 0x06);
+    _offset += 1;
+
+    // IP padded to 16 bytes
+    _offset += 16;
+
+    // Port (2 bytes)
+    uint16_t _port;
+    std::memcpy(&_port, _response.data() + _offset, sizeof(_port));
+    _offset += sizeof(_port);
+    _port = boost::endian::native_to_little(_port);
+    ASSERT_GT(_port, 0);
+
+    for (int _e = 0; _e < 25; ++_e)
+    {
+      uint64_t _metric;
+      std::memcpy(&_metric, _response.data() + _offset, sizeof(_metric));
+      _offset += sizeof(_metric);
+      ASSERT_GE(_metric, 0);
+    }
   }
 
-  ASSERT_EQ(_offset, 1 + 8 + 8 + 8 + 235);
-  ASSERT_LE(_offset, _response.size());
+  ASSERT_EQ(_offset, 730);
 }

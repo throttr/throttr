@@ -18,6 +18,7 @@
 #include <boost/asio/bind_allocator.hpp>
 #include <boost/asio/write.hpp>
 #include <boost/core/ignore_unused.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <throttr/services/commands_service.hpp>
 #include <throttr/services/messages_service.hpp>
 #include <throttr/services/metrics_collector_service.hpp>
@@ -30,15 +31,21 @@ namespace throttr
   connection<Transport>::connection(Transport socket, const std::shared_ptr<state> &state) :
       id_(state->id_generator_()), socket_(std::move(socket)), state_(state)
   {
+
     // LCOV_EXCL_START
     if (socket_.is_open())
     {
       if constexpr (std::is_same_v<Transport, tcp_socket>)
       {
+        kind_ = connection_kind::tcp_socket;
         const boost::asio::ip::tcp::no_delay no_delay_option(true);
         socket_.set_option(no_delay_option);
         ip_ = socket_.remote_endpoint().address().to_string();
         port_ = socket_.remote_endpoint().port();
+      }
+      else
+      {
+        kind_ = connection_kind::unix_socket;
       }
       connected_at_ =
         std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -50,7 +57,20 @@ namespace throttr
   {
     // LCOV_EXCL_START
 #ifndef NDEBUG
-    fmt::println("{:%Y-%m-%d %H:%M:%S} SESSION CLOSED ip={} port={}", std::chrono::system_clock::now(), ip_, port_);
+    switch (kind_)
+    {
+      case connection_kind::tcp_socket:
+        fmt::println(
+          "{:%Y-%m-%d %H:%M:%S} TCP SESSION CLOSED session_id={} META ip={} port={}",
+          std::chrono::system_clock::now(),
+          to_string(id_),
+          ip_,
+          port_);
+        break;
+      case connection_kind::unix_socket:
+        fmt::println("{:%Y-%m-%d %H:%M:%S} UNIX SESSION CLOSED session_id={}", std::chrono::system_clock::now(), to_string(id_));
+        break;
+    }
 #endif
     // LCOV_EXCL_STOP
     state_->leave(this);
@@ -60,7 +80,21 @@ namespace throttr
   {
     // LCOV_EXCL_START
 #ifndef NDEBUG
-    fmt::println("{:%Y-%m-%d %H:%M:%S} SESSION ESTABLISHED ip={} port={}", std::chrono::system_clock::now(), ip_, port_);
+    switch (kind_)
+    {
+      case connection_kind::tcp_socket:
+        fmt::println(
+          "{:%Y-%m-%d %H:%M:%S} TCP SESSION ESTABLISHED session_id={} META ip={} port={}",
+          std::chrono::system_clock::now(),
+          to_string(id_),
+          ip_,
+          port_);
+        break;
+      case connection_kind::unix_socket:
+        fmt::println(
+          "{:%Y-%m-%d %H:%M:%S} UNIX SESSION ESTABLISHED session_id={}", std::chrono::system_clock::now(), to_string(id_));
+        break;
+    }
 #endif
     // LCOV_EXCL_STOP
 
@@ -130,12 +164,25 @@ namespace throttr
 
       // LCOV_EXCL_START
 #ifndef NDEBUG
-      fmt::println(
-        "{:%Y-%m-%d %H:%M:%S} SESSION READ ip={} port={} buffer={}",
-        std::chrono::system_clock::now(),
-        ip_,
-        port_,
-        span_to_hex(_view));
+      switch (kind_)
+      {
+        case connection_kind::tcp_socket:
+          fmt::println(
+            "{:%Y-%m-%d %H:%M:%S} TCP SESSION READ session_id={} META ip={} port={} buffer={}",
+            std::chrono::system_clock::now(),
+            to_string(id_),
+            ip_,
+            port_,
+            span_to_hex(_view));
+          break;
+        case connection_kind::unix_socket:
+          fmt::println(
+            "{:%Y-%m-%d %H:%M:%S} UNIX SESSION READ session_id={} META buffer={}",
+            std::chrono::system_clock::now(),
+            to_string(id_),
+            span_to_hex(_view));
+          break;
+      }
 #endif
       // LCOV_EXCL_STOP
 
@@ -246,12 +293,24 @@ namespace throttr
   {
     // LCOV_EXCL_START
 #ifndef NDEBUG
-    fmt::println(
-      "{:%Y-%m-%d %H:%M:%S} SESSION WRITE ip={} port={} buffer={}",
-      std::chrono::system_clock::now(),
-      ip_,
-      port_,
-      buffers_to_hex(pending_writes_.front()->buffers_));
+    switch (kind_)
+    {
+      case connection_kind::tcp_socket:
+        fmt::println(
+          "{:%Y-%m-%d %H:%M:%S} TCP SESSION WRITE session_id={} META ip={} port={} buffer={}",
+          std::chrono::system_clock::now(),
+          to_string(id_),
+          ip_,
+          port_,
+          buffers_to_hex(pending_writes_.front()->buffers_));
+        break;
+      case connection_kind::unix_socket:
+        fmt::println(
+          "{:%Y-%m-%d %H:%M:%S} UNIX SESSION WRITE session_id={} META buffer={}",
+          std::chrono::system_clock::now(),
+          to_string(id_),
+          buffers_to_hex(pending_writes_.front()->buffers_));
+    }
 #endif
     // LCOV_EXCL_STOP
 

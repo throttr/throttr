@@ -24,67 +24,77 @@ class ChannelTestFixture : public ServiceTestFixture
 TEST_F(ChannelTestFixture, OnSuccess)
 {
   boost::asio::io_context _io_context;
-  auto _socket1 = make_connection(_io_context);
-  auto _socket2 = make_connection(_io_context);
+  uint64_t _timestamp = std::chrono::system_clock::now().time_since_epoch().count();
+  auto _subscriber = make_connection(_io_context);
+  auto _subscriber_id = get_connection_id(_subscriber);
+  auto _socket = make_connection(_io_context);
 
-  auto _subscribe_buffer = request_subscribe_builder("metrics");
-  boost::asio::write(_socket1, boost::asio::buffer(_subscribe_buffer.data(), _subscribe_buffer.size()));
+  auto _subscribe_buffer = request_subscribe_builder("CHANNEL_TEST");
+  boost::asio::write(_subscriber, boost::asio::buffer(_subscribe_buffer.data(), _subscribe_buffer.size()));
 
   std::vector<std::byte> _subscribe_response(1);
-  boost::asio::read(_socket1, boost::asio::buffer(_subscribe_response.data(), _subscribe_response.size()));
+  boost::asio::read(_subscriber, boost::asio::buffer(_subscribe_response.data(), _subscribe_response.size()));
   ASSERT_EQ(_subscribe_response[0], std::byte{0x01});
 
-  // 🔌 Conexión 2: CHANNEL request
-  std::string _chan = "metrics";
-  std::vector<std::byte> _channel_request = {std::byte{0x17}, std::byte{static_cast<std::uint8_t>(_chan.size())}};
-  _channel_request.insert(
-    _channel_request.end(),
-    reinterpret_cast<const std::byte *>(_chan.data()),
-    reinterpret_cast<const std::byte *>(_chan.data() + _chan.size()));
-
-  boost::asio::write(_socket2, boost::asio::buffer(_channel_request.data(), _channel_request.size()));
+  auto _channel_buffer = request_channel_builder("CHANNEL_TEST");
+  boost::asio::write(_socket, boost::asio::buffer(_channel_buffer.data(), _channel_buffer.size()));
 
   std::vector<std::byte> _header(1);
-  boost::asio::read(_socket2, boost::asio::buffer(_header));
+  boost::asio::read(_socket, boost::asio::buffer(_header));
+
+  // Success
   ASSERT_EQ(_header[0], std::byte{0x01});
 
+  // Numbers of subscribers (Q)
   std::vector<std::byte> _count_buf(8);
-  boost::asio::read(_socket2, boost::asio::buffer(_count_buf));
+  boost::asio::read(_socket, boost::asio::buffer(_count_buf));
   const auto *_count_ptr = reinterpret_cast<const uint64_t *>(_count_buf.data()); // NOSONAR
   ASSERT_EQ(boost::endian::little_to_native(*_count_ptr), 1);
 
-  std::vector<std::byte> _data(40);
-  boost::asio::read(_socket2, boost::asio::buffer(_data));
+  // Connection ID
+  std::vector<std::byte> _id_data(16);
+  boost::asio::read(_socket, boost::asio::buffer(_id_data));
+  boost::uuids::uuid _uuid{};
+  std::memcpy(_uuid.data, _id_data.data(), 16);
+  ASSERT_TRUE(_uuid == _subscriber_id);
 
-  ASSERT_EQ(_data.size(), 40);
+  // Subscribed At
+  std::vector<std::byte> _subscribed_at(8);
+  boost::asio::read(_socket, boost::asio::buffer(_subscribed_at));
+  uint64_t _subscribed_at_number;
+  std::memcpy(&_subscribed_at_number, _subscribed_at.data(), 8);
+  ASSERT_GE(_subscribed_at_number, _timestamp);
+
+  // Read bytes
+  std::vector<std::byte> _read_bytes(8);
+  boost::asio::read(_socket, boost::asio::buffer(_read_bytes));
+  uint64_t _read_bytes_number;
+  std::memcpy(&_read_bytes_number, _read_bytes.data(), 8);
+  ASSERT_GE(_read_bytes_number, 0);
+
+  // Write bytes
+  std::vector<std::byte> _write_bytes(8);
+  boost::asio::read(_socket, boost::asio::buffer(_write_bytes));
+  uint64_t _write_bytes_number;
+  std::memcpy(&_write_bytes_number, _write_bytes.data(), 8);
+  ASSERT_GE(_write_bytes_number, 0);
 
   boost::system::error_code _ec;
-  _socket1.close(_ec);
-  _socket2.close(_ec);
+  _subscriber.close(_ec);
+  _socket.close(_ec);
 }
 
 TEST_F(ChannelTestFixture, OnFailed)
 {
   boost::asio::io_context _io_context;
-
-  // 🔌 Conexión directa sin suscribirse a nada
   auto _socket = make_connection(_io_context);
 
-  // Enviar CHANNEL request a un canal inexistente
-  std::string _chan = "nope-channel";
-  std::vector<std::byte> _request = {std::byte{0x17}, std::byte{static_cast<std::uint8_t>(_chan.size())}};
-  _request.insert(
-    _request.end(),
-    reinterpret_cast<const std::byte *>(_chan.data()),
-    reinterpret_cast<const std::byte *>(_chan.data() + _chan.size()));
+  auto _channel_buffer = request_channel_builder("MISSING_CHANNEL");
+  boost::asio::write(_socket, boost::asio::buffer(_channel_buffer));
 
-  boost::asio::write(_socket, boost::asio::buffer(_request));
-
-  // Leer 1 byte de respuesta
+  // Status as failed
   std::vector<std::byte> _response(1);
   boost::asio::read(_socket, boost::asio::buffer(_response));
-
-  // Debe ser 0x00 → canal no existe
   ASSERT_EQ(_response[0], std::byte{0x00});
 
   boost::system::error_code _ec;

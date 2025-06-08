@@ -60,6 +60,11 @@ namespace throttr
      */
     std::uint64_t connected_at_ = 0;
 
+    /**
+     * Kind
+     */
+    connection_kind kind_;
+
 #ifdef ENABLED_FEATURE_METRICS
     /**
      * Metrics
@@ -131,18 +136,6 @@ namespace throttr
      * @param batch
      */
     void send(std::shared_ptr<message> batch);
-
-    /**
-     * Kind
-     *
-     * @return
-     */
-    [[nodiscard]] connection_kind kind() const
-    {
-      if (std::is_same_v<Transport, tcp_socket>)
-        return connection_kind::tcp_socket;
-      return connection_kind::unix_socket;
-    }
 
   private:
     /**

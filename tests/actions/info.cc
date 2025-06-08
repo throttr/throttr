@@ -60,11 +60,11 @@ TEST_F(InfoTestFixture, OnSuccess)
 
   std::this_thread::sleep_for(std::chrono::seconds(1));
 
-  std::vector<std::byte> _response(425);
+  std::vector<std::byte> _response(433);
   boost::asio::read(_socket, boost::asio::buffer(_response.data(), _response.size()));
 
   ASSERT_EQ(_response[0], std::byte{0x01});
-  ASSERT_EQ(_response.size(), 425);
+  ASSERT_EQ(_response.size(), 433);
   boost::system::error_code _ec;
   _socket.close(_ec);
 }

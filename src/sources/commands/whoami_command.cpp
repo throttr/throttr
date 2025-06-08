@@ -46,7 +46,7 @@ namespace throttr
     // LCOV_EXCL_START
 #ifndef NDEBUG
     fmt::println(
-      "{:%Y-%m-%d %H:%M:%S} REQUEST WHOAMI from={} "
+      "{:%Y-%m-%d %H:%M:%S} REQUEST WHOAMI session_id={} "
       "RESPONSE ok=true",
       std::chrono::system_clock::now(),
       to_string(id));

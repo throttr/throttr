@@ -58,10 +58,10 @@ namespace throttr
     // LCOV_EXCL_START
 #ifndef NDEBUG
     fmt::println(
-      "{:%Y-%m-%d %H:%M:%S} REQUEST PURGE key={} from={} RESPONSE ok={}",
+      "{:%Y-%m-%d %H:%M:%S} REQUEST PURGE session_id={} META key={} RESPONSE ok={}",
       std::chrono::system_clock::now(),
-      _key.key_,
       to_string(id),
+      _key.key_,
       _erased);
 #endif
     // LCOV_EXCL_STOP

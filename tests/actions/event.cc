@@ -27,8 +27,9 @@ TEST_F(EventTestFixture, OnSuccess)
   const auto _buffer = request_set_builder(_value, ttl_types::seconds, 10, _key);
   const auto _event = request_event_builder(_buffer);
 
-  auto _response = send_and_receive(_event, 1);
+  auto _response = send_and_receive(_event, 2);
 
-  ASSERT_EQ(_response.size(), 1);
+  ASSERT_EQ(_response.size(), 2);
   ASSERT_EQ(static_cast<uint8_t>(_response[0]), 1);
+  ASSERT_EQ(static_cast<uint8_t>(_response[1]), 1);
 }

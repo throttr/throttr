@@ -44,7 +44,7 @@ namespace throttr
     // LCOV_EXCL_START
 #ifndef NDEBUG
     fmt::println(
-      "{:%Y-%m-%d %H:%M:%S} REQUEST EVENT id={} data={} RESPONSE ok=true",
+      "{:%Y-%m-%d %H:%M:%S} REQUEST EVENT session_id={} META payload={} RESPONSE ok=true",
       std::chrono::system_clock::now(),
       to_string(id),
       span_to_hex(_request.buffer_));

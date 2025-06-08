@@ -24,52 +24,72 @@ TEST_F(ChannelsTestFixture, OnSuccess)
 {
   boost::asio::io_context _io_context;
 
-  // Conexión 1: Suscribirse al canal "metrics"
-  auto _socket1 = make_connection(_io_context);
-  auto _socket2 = make_connection(_io_context);
+  auto _subscriber = make_connection(_io_context);
+  auto _socket = make_connection(_io_context);
 
-  auto _subscribe_buffer = request_subscribe_builder("metrics");
-  boost::asio::write(_socket1, boost::asio::buffer(_subscribe_buffer.data(), _subscribe_buffer.size()));
+  auto _subscribe_buffer = request_subscribe_builder("CHANNEL_ONE");
+  boost::asio::write(_subscriber, boost::asio::buffer(_subscribe_buffer.data(), _subscribe_buffer.size()));
 
   std::vector<std::byte> _subscribe_response(1);
-  boost::asio::read(_socket1, boost::asio::buffer(_subscribe_response.data(), _subscribe_response.size()));
+  boost::asio::read(_subscriber, boost::asio::buffer(_subscribe_response.data(), _subscribe_response.size()));
   ASSERT_EQ(_subscribe_response[0], std::byte{0x01});
 
-  // CHANNELS opcode = 0x16 (ejemplo)
-  std::vector<std::byte> _channels_request = {std::byte{0x16}};
-  boost::asio::write(_socket2, boost::asio::buffer(_channels_request));
+  auto _channels_request = request_channels_builder();
+  boost::asio::write(_socket, boost::asio::buffer(_channels_request));
 
-  // Leer respuesta mínima: success (1 byte) + fragment count (8 bytes)
-  std::vector<std::byte> _header_response(9);
-  boost::asio::read(_socket2, boost::asio::buffer(_header_response));
+  // Status
+  std::vector<std::byte> _status_response(1);
+  boost::asio::read(_socket, boost::asio::buffer(_status_response));
+  ASSERT_EQ(_status_response[0], std::byte{0x01});
 
-  ASSERT_EQ(_header_response[0], std::byte{0x01});                                   // success
-  const auto *_count_ptr = reinterpret_cast<const uint64_t *>(&_header_response[1]); // NOSONAR
+  // Fragments (P)
+  std::vector<std::byte> _header_response(8);
+  boost::asio::read(_socket, boost::asio::buffer(_header_response));
+  const auto *_count_ptr = reinterpret_cast<const uint64_t *>(&_header_response[0]); // NOSONAR
   const uint64_t _fragment_count = *_count_ptr;
-  ASSERT_GT(boost::endian::little_to_native(_fragment_count), 0);
+  ASSERT_EQ(boost::endian::little_to_native(_fragment_count), 1);
 
-  // Leer primer fragmento: index (8), count (8), [1-byte size, 8+8+8], luego nombre
   std::vector<std::byte> _fragment_header(16);
-  boost::asio::read(_socket2, boost::asio::buffer(_fragment_header));
+  boost::asio::read(_socket, boost::asio::buffer(_fragment_header));
 
-  const auto *_chan_count_ptr = reinterpret_cast<const uint64_t *>(&_fragment_header[8]); // NOSONAR
-  ASSERT_GT(boost::endian::little_to_native(*_chan_count_ptr), 0);
+  // Fragment
+  const auto *_fragment_count_ptr = reinterpret_cast<const uint64_t *>(&_fragment_header[0]); // NOSONAR
+  ASSERT_EQ(boost::endian::little_to_native(*_fragment_count_ptr), 1);
 
-  // Leer canal: 1 + 8 + 8 + 8 = 25 bytes por canal
-  std::vector<std::byte> _channel_entry(25);
-  boost::asio::read(_socket2, boost::asio::buffer(_channel_entry));
+  // Channels
+  const auto *_channels_count_ptr = reinterpret_cast<const uint64_t *>(&_fragment_header[8]); // NOSONAR
+  ASSERT_EQ(boost::endian::little_to_native(*_channels_count_ptr), 3);
+  auto _channel_count = boost::endian::little_to_native(*_channels_count_ptr);
+  // Per Channel
+  for (int _i = 0; _i < static_cast<int>(_channel_count); ++_i)
+  {
+    // Channel size
+    std::vector<std::byte> _channel_size(1);
+    boost::asio::read(_socket, boost::asio::buffer(_channel_size));
 
-  const std::uint8_t _chan_size = std::to_integer<uint8_t>(_channel_entry[0]);
-  ASSERT_EQ(_chan_size, 7); // "metrics".size() = 7
+    // Read bytes
+    std::vector<std::byte> _read_bytes(8);
+    boost::asio::read(_socket, boost::asio::buffer(_read_bytes));
+    uint64_t _read_bytes_number;
+    std::memcpy(&_read_bytes_number, _read_bytes.data(), 8);
+    ASSERT_GE(_read_bytes_number, 0);
 
-  // Leer nombre del canal
-  std::vector<std::byte> _chan_name(_chan_size);
-  boost::asio::read(_socket2, boost::asio::buffer(_chan_name));
-  std::string _name(reinterpret_cast<const char *>(_chan_name.data()), _chan_name.size());
+    // Write bytes
+    std::vector<std::byte> _write_bytes(8);
+    boost::asio::read(_socket, boost::asio::buffer(_write_bytes));
+    uint64_t _write_bytes_number;
+    std::memcpy(&_write_bytes_number, _write_bytes.data(), 8);
+    ASSERT_GE(_write_bytes_number, 0);
 
-  ASSERT_EQ(_name, "metrics");
+    // Subscribed connections
+    std::vector<std::byte> _subscribed_connections(8);
+    boost::asio::read(_socket, boost::asio::buffer(_subscribed_connections));
+    uint64_t _subscribed_connections_number;
+    std::memcpy(&_subscribed_connections_number, _subscribed_connections.data(), 8);
+    ASSERT_EQ(_subscribed_connections_number, 1);
+  }
 
   boost::system::error_code _ec;
-  _socket1.close(_ec);
-  _socket2.close(_ec);
+  _subscriber.close(_ec);
+  _socket.close(_ec);
 }
