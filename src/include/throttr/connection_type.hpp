@@ -25,8 +25,8 @@ namespace throttr
    */
   enum class connection_type : uint8_t
   {
-    client,
-    agent,
+    client = 0,
+    agent = 1,
   };
 } // namespace throttr
 

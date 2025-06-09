@@ -41,8 +41,8 @@ namespace throttr
    */
   enum class connection_kind : uint8_t
   {
-    tcp_socket,
-    unix_socket,
+    tcp_socket = 0,
+    unix_socket = 1,
   };
 
   /**

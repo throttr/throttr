@@ -54,6 +54,8 @@ TEST_F(InfoTestFixture, OnSuccess)
   boost::asio::read(_socket, boost::asio::buffer(_res_set));
   ASSERT_EQ(_res_set[0], std::byte{0x01});
 
+  std::this_thread::sleep_for(std::chrono::seconds(1));
+
   // INFO
   const auto _info = request_info_builder();
   boost::asio::write(_socket, boost::asio::buffer(_info.data(), _info.size()));
