@@ -35,7 +35,7 @@ namespace throttr
     boost::ignore_unused(state, type, view);
 
     batch.emplace_back(&state::success_response_, 1);
-    append_uuid(write_buffer, batch, id.data());
+    append_uuid(write_buffer, batch, id);
 
     // LCOV_EXCL_START
 #ifndef NDEBUG

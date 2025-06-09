@@ -72,7 +72,7 @@ namespace throttr
     {
       const auto &_sub = *it;
 
-      append_uuid(write_buffer, batch, _sub.connection_id_.data());
+      append_uuid(write_buffer, batch, _sub.connection_id_);
 
       {
         const auto _offset = write_buffer.size();
