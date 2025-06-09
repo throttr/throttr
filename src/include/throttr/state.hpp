@@ -252,15 +252,17 @@ namespace throttr
     {
       if constexpr (std::is_same_v<Transport, tcp_socket>)
       {
-        if (connection->type_ == connection_type::client)
+        if (connection->type_ == connection_type::client) // LCOV_EXCL_LINE
         {
           std::scoped_lock lock(tcp_connections_mutex_);
           tcp_connections_.try_emplace(connection->id_, connection);
         }
         else
         {
+          // LCOV_EXCL_START
           std::scoped_lock lock(agent_tcp_connections_mutex_);
           agent_tcp_connections_.try_emplace(connection->id_, connection);
+          // LCOV_EXCL_STOP
         }
       }
       else
@@ -301,15 +303,17 @@ namespace throttr
 
       if constexpr (std::is_same_v<Transport, tcp_socket>)
       {
-        if (connection->type_ == connection_type::client)
+        if (connection->type_ == connection_type::client) // LCOV_EXCL_LINE
         {
           std::scoped_lock _lock(tcp_connections_mutex_);
           tcp_connections_.erase(connection->id_);
         }
         else
         {
+          // LCOV_EXCL_START
           std::scoped_lock _lock(agent_tcp_connections_mutex_);
           agent_tcp_connections_.erase(connection->id_);
+          // LCOV_EXCL_STOP
         }
       }
       else

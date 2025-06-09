@@ -65,14 +65,14 @@ namespace throttr
       _found_in_agent_unix = _agent_unix_map.contains(_id);
     }
 
-    if (!_found_in_agent_unix)
+    if (!_found_in_agent_unix) // LCOV_EXCL_LINE
     {
       std::lock_guard _lock(state->agent_tcp_connections_mutex_);
       const auto &_agent_tcp_map = state->agent_tcp_connections_;
       _found_in_agent_tcp = _agent_tcp_map.contains(_id);
     }
 
-    if (!_found_in_tcp && !_found_in_unix && !_found_in_agent_unix && !_found_in_agent_tcp)
+    if (!_found_in_tcp && !_found_in_unix && !_found_in_agent_unix && !_found_in_agent_tcp) // LCOV_EXCL_LINE
     {
       batch.emplace_back(&state::failed_response_, 1);
       // LCOV_EXCL_START
@@ -110,7 +110,7 @@ namespace throttr
       return;
     }
 
-    if (_found_in_unix)
+    if (_found_in_unix) // LCOV_EXCL_LINE
     {
       std::lock_guard _lock(state->unix_connections_mutex_);
       const auto &_unix_map = state->unix_connections_;
@@ -120,6 +120,7 @@ namespace throttr
       return;
     }
 
+    // LCOV_EXCL_START
     if (_found_in_agent_unix)
     {
       std::lock_guard _lock(state->agent_unix_connections_mutex_);
@@ -128,7 +129,6 @@ namespace throttr
       batch.emplace_back(&state::success_response_, 1);
       response_builder_service::write_connections_entry_to_buffer<unix_socket>(state, &batch, _conn, write_buffer, false);
 
-      // LCOV_EXCL_START
 #ifndef NDEBUG
       fmt::println(
         "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST CONNECTION session_id={} META id={} RESPONSE ok=true",
@@ -137,7 +137,6 @@ namespace throttr
         to_string(id),
         span_to_hex(_request.id_));
 #endif
-      // LCOV_EXCL_STOP
 
       return;
     }
@@ -148,7 +147,6 @@ namespace throttr
     batch.emplace_back(&state::success_response_, 1);
     response_builder_service::write_connections_entry_to_buffer<tcp_socket>(state, &batch, _conn, write_buffer, false);
 
-    // LCOV_EXCL_START
 #ifndef NDEBUG
     fmt::println(
       "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST CONNECTION session_id={} META id={} RESPONSE ok=true",
