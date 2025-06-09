@@ -49,7 +49,8 @@ namespace throttr
       // LCOV_EXCL_START
 #ifndef NDEBUG
       fmt::println(
-        "{:%Y-%m-%d %H:%M:%S} REQUEST CHANNEL session_id={} META channel={} RESPONSE ok=false",
+        "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST CHANNEL session_id={} META channel={} RESPONSE ok=false",
+        to_string(state->id_),
         std::chrono::system_clock::now(),
         to_string(id),
         span_to_hex(_request.channel_));
@@ -99,7 +100,8 @@ namespace throttr
     // LCOV_EXCL_START
 #ifndef NDEBUG
     fmt::println(
-      "{:%Y-%m-%d %H:%M:%S} REQUEST CHANNEL session_id={} META channel={} RESPONSE ok=true",
+      "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST CHANNEL session_id={} META channel={} RESPONSE ok=true",
+      to_string(state->id_),
       std::chrono::system_clock::now(),
       to_string(id),
       span_to_hex(_request.channel_));

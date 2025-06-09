@@ -49,7 +49,8 @@ namespace throttr
     const auto _channel_view =
       std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size()); // NOSONAR
     fmt::println(
-      "{:%Y-%m-%d %H:%M:%S} REQUEST SUBSCRIBE session_id={} META channel={} RESPONSE ok={}",
+      "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST SUBSCRIBE session_id={} META channel={} RESPONSE ok={}",
+      to_string(state->id_),
       std::chrono::system_clock::now(),
       to_string(id),
       _channel_view,

@@ -52,8 +52,9 @@ namespace throttr
         _request.channel_.data() + _request.channel_.size() // NOSONAR
       );
       fmt::println(
-        "{:%Y-%m-%d %H:%M:%S} REQUEST UNSUBSCRIBE channel={} from={} "
+        "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST UNSUBSCRIBE channel={} from={} "
         "RESPONSE ok=false",
+        to_string(state->id_),
         std::chrono::system_clock::now(),
         span_to_hex(_channel_bytes),
         to_string(id));
@@ -84,7 +85,8 @@ namespace throttr
 #ifndef NDEBUG
     const std::vector _channel_bytes(_request.channel_.begin(), _request.channel_.end());
     fmt::println(
-      "{:%Y-%m-%d %H:%M:%S} REQUEST UNSUBSCRIBE session_id={} META channel={} RESPONSE ok=true",
+      "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST UNSUBSCRIBE session_id={} META channel={} RESPONSE ok=true",
+      to_string(state->id_),
       std::chrono::system_clock::now(),
       to_string(id),
       span_to_hex(_channel_bytes));

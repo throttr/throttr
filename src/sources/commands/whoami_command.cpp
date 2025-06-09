@@ -40,8 +40,9 @@ namespace throttr
     // LCOV_EXCL_START
 #ifndef NDEBUG
     fmt::println(
-      "{:%Y-%m-%d %H:%M:%S} REQUEST WHOAMI session_id={} "
+      "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST WHOAMI session_id={} "
       "RESPONSE ok=true",
+      to_string(state->id_),
       std::chrono::system_clock::now(),
       to_string(id));
 #endif

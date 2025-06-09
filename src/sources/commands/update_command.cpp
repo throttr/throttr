@@ -49,7 +49,8 @@ namespace throttr
       // LCOV_EXCL_START
 #ifndef NDEBUG
       fmt::println(
-        "{:%Y-%m-%d %H:%M:%S} REQUEST UPDATE session_id={} META key={} RESPONSE ok=false",
+        "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST UPDATE session_id={} META key={} RESPONSE ok=false",
+        to_string(state->id_),
         std::chrono::system_clock::now(),
         to_string(id),
         span_to_hex(_request.key_));
@@ -90,7 +91,8 @@ namespace throttr
     // LCOV_EXCL_START
 #ifndef NDEBUG
     fmt::println(
-      "{:%Y-%m-%d %H:%M:%S} REQUEST UPDATE session_id={} META key={} attribute={} change={} value={} RESPONSE ok={}",
+      "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST UPDATE session_id={} META key={} attribute={} change={} value={} RESPONSE ok={}",
+      to_string(state->id_),
       std::chrono::system_clock::now(),
       to_string(id),
       _key.key_,

@@ -61,14 +61,19 @@ namespace throttr
     {
       case connection_kind::tcp_socket:
         fmt::println(
-          "{:%Y-%m-%d %H:%M:%S} TCP SESSION CLOSED session_id={} META ip={} port={}",
+          "[{}] [{:%Y-%m-%d %H:%M:%S}] TCP SESSION CLOSED session_id={} META ip={} port={}",
+          to_string(state_->id_),
           std::chrono::system_clock::now(),
           to_string(id_),
           ip_,
           port_);
         break;
       case connection_kind::unix_socket:
-        fmt::println("{:%Y-%m-%d %H:%M:%S} UNIX SESSION CLOSED session_id={}", std::chrono::system_clock::now(), to_string(id_));
+        fmt::println(
+          "[{}] [{:%Y-%m-%d %H:%M:%S}] UNIX SESSION CLOSED session_id={}",
+          to_string(state_->id_),
+          std::chrono::system_clock::now(),
+          to_string(id_));
         break;
     }
 #endif
@@ -86,7 +91,8 @@ namespace throttr
       {
         case connection_kind::tcp_socket:
           fmt::println(
-            "{:%Y-%m-%d %H:%M:%S} TCP SESSION ESTABLISHED session_id={} META ip={} port={}",
+            "[{}] [{:%Y-%m-%d %H:%M:%S}] TCP SESSION ESTABLISHED session_id={} META ip={} port={}",
+            to_string(state_->id_),
             std::chrono::system_clock::now(),
             to_string(id_),
             ip_,
@@ -94,7 +100,10 @@ namespace throttr
           break;
         case connection_kind::unix_socket:
           fmt::println(
-            "{:%Y-%m-%d %H:%M:%S} UNIX SESSION ESTABLISHED session_id={}", std::chrono::system_clock::now(), to_string(id_));
+            "[{}] [{:%Y-%m-%d %H:%M:%S}] UNIX SESSION ESTABLISHED session_id={}",
+            to_string(state_->id_),
+            std::chrono::system_clock::now(),
+            to_string(id_));
           break;
       }
     }
@@ -104,14 +113,19 @@ namespace throttr
       {
         case connection_kind::tcp_socket:
           fmt::println(
-            "{:%Y-%m-%d %H:%M:%S} TCP AGENT ESTABLISHED META ip={} port={}",
+            "[{}] [{:%Y-%m-%d %H:%M:%S}] TCP AGENT ESTABLISHED META ip={} port={}",
+            to_string(state_->id_),
             std::chrono::system_clock::now(),
             to_string(id_),
             ip_,
             port_);
           break;
         case connection_kind::unix_socket:
-          fmt::println("{:%Y-%m-%d %H:%M:%S} UNIX AGENT ESTABLISHED", std::chrono::system_clock::now(), to_string(id_));
+          fmt::println(
+            "[{}] [{:%Y-%m-%d %H:%M:%S}] UNIX AGENT ESTABLISHED",
+            to_string(state_->id_),
+            std::chrono::system_clock::now(),
+            to_string(id_));
           break;
       }
     }
@@ -188,7 +202,8 @@ namespace throttr
       {
         case connection_kind::tcp_socket:
           fmt::println(
-            "{:%Y-%m-%d %H:%M:%S} TCP SESSION READ session_id={} META ip={} port={} buffer={}",
+            "[{}] [{:%Y-%m-%d %H:%M:%S}] TCP SESSION READ session_id={} META ip={} port={} buffer={}",
+            to_string(state_->id_),
             std::chrono::system_clock::now(),
             to_string(id_),
             ip_,
@@ -197,7 +212,8 @@ namespace throttr
           break;
         case connection_kind::unix_socket:
           fmt::println(
-            "{:%Y-%m-%d %H:%M:%S} UNIX SESSION READ session_id={} META buffer={}",
+            "[{}] [{:%Y-%m-%d %H:%M:%S}] UNIX SESSION READ session_id={} META buffer={}",
+            to_string(state_->id_),
             std::chrono::system_clock::now(),
             to_string(id_),
             span_to_hex(_view));
@@ -317,7 +333,8 @@ namespace throttr
     {
       case connection_kind::tcp_socket:
         fmt::println(
-          "{:%Y-%m-%d %H:%M:%S} TCP SESSION WRITE session_id={} META ip={} port={} buffer={}",
+          "[{}] [{:%Y-%m-%d %H:%M:%S}] TCP SESSION WRITE session_id={} META ip={} port={} buffer={}",
+          to_string(state_->id_),
           std::chrono::system_clock::now(),
           to_string(id_),
           ip_,
@@ -326,7 +343,8 @@ namespace throttr
         break;
       case connection_kind::unix_socket:
         fmt::println(
-          "{:%Y-%m-%d %H:%M:%S} UNIX SESSION WRITE session_id={} META buffer={}",
+          "[{}] [{:%Y-%m-%d %H:%M:%S}] UNIX SESSION WRITE session_id={} META buffer={}",
+          to_string(state_->id_),
           std::chrono::system_clock::now(),
           to_string(id_),
           buffers_to_hex(pending_writes_.front()->buffers_));

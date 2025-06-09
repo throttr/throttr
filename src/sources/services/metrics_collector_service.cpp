@@ -28,7 +28,8 @@ namespace throttr
   void metrics_collector_service::schedule_timer(const std::shared_ptr<state> &state)
   {
 #ifndef NDEBUG
-    fmt::println("{:%Y-%m-%d %H:%M:%S} METRICS SNAPSHOT SCHEDULED", std::chrono::system_clock::now());
+    fmt::
+      println("[{}] [{:%Y-%m-%d %H:%M:%S}] METRICS SNAPSHOT SCHEDULED", to_string(state->id_), std::chrono::system_clock::now());
 #endif // NDEBUG
 
     state->metrics_timer_.expires_after(std::chrono::minutes(1));
@@ -47,7 +48,7 @@ namespace throttr
   void metrics_collector_service::run(const std::shared_ptr<state> &state)
   {
 #ifndef NDEBUG
-    fmt::println("{:%Y-%m-%d %H:%M:%S} METRICS SNAPSHOT STARTED", std::chrono::system_clock::now());
+    fmt::println("[{}] [{:%Y-%m-%d %H:%M:%S}] METRICS SNAPSHOT STARTED", to_string(state->id_), std::chrono::system_clock::now());
 #endif                                                                            // NDEBUG
     for (auto &_index = state->storage_.get<tag_by_key>(); auto &_entry : _index) // LCOV_EXCL_LINE Note: Partially tested.
     {
@@ -83,7 +84,8 @@ namespace throttr
     state->metrics_collector_->compute_all();
 
 #ifndef NDEBUG
-    fmt::println("{:%Y-%m-%d %H:%M:%S} METRICS SNAPSHOT COMPLETED", std::chrono::system_clock::now());
+    fmt::
+      println("[{}] [{:%Y-%m-%d %H:%M:%S}] METRICS SNAPSHOT COMPLETED", to_string(state->id_), std::chrono::system_clock::now());
 #endif // NDEBUG
   }
 

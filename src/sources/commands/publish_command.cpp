@@ -135,7 +135,8 @@ namespace throttr
     // LCOV_EXCL_START
 #ifndef NDEBUG
     fmt::println(
-      "{:%Y-%m-%d %H:%M:%S} REQUEST PUBLISH session_id={} META channel={} data={} RESPONSE ok=true",
+      "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST PUBLISH session_id={} META channel={} data={} RESPONSE ok=true",
+      to_string(state->id_),
       std::chrono::system_clock::now(),
       to_string(id),
       _channel,
