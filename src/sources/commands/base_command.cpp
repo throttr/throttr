@@ -31,7 +31,7 @@ namespace throttr
   {
     boost::ignore_unused(state, type, view, batch, write_buffer, id);
 
-    batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
+    batch.emplace_back(&state::failed_response_, 1);
   }
   // LCOV_EXCL_STOP
 } // namespace throttr

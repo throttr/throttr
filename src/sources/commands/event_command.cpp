@@ -51,7 +51,7 @@ namespace throttr
 #endif
     // LCOV_EXCL_STOP
 
-    batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
+    batch.emplace_back(&state::success_response_, 1);
 
     state->commands_->commands_[static_cast<std::size_t>(_type)](state, _type, _request.buffer_, batch, write_buffer, id);
   }

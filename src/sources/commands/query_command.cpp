@@ -64,7 +64,7 @@ namespace throttr
     const value_type _ttl = get_ttl(_it->entry_.expires_at_.load(std::memory_order_relaxed), _it->entry_.ttl_type_);
 
     // status_
-    batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
+    batch.emplace_back(&state::success_response_, 1);
 
     if (_as_query) // LCOV_EXCL_LINE
     {
@@ -73,26 +73,26 @@ namespace throttr
         const auto _offset = write_buffer.size();
         const value_type _counter_value = _it->entry_.counter_.load(std::memory_order_relaxed);
         append_value_type(write_buffer, native_to_little(_counter_value));
-        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(value_type)));
+        batch.emplace_back(&write_buffer[_offset], sizeof(value_type));
       }
       // TTL Type
-      batch.push_back(boost::asio::buffer(&_it->entry_.ttl_type_, sizeof(_it->entry_.ttl_type_)));
+      batch.emplace_back(&_it->entry_.ttl_type_, sizeof(_it->entry_.ttl_type_));
       // TTL
       {
         const auto _offset = write_buffer.size();
         append_value_type(write_buffer, native_to_little(_ttl));
-        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_ttl)));
+        batch.emplace_back(&write_buffer[_offset], sizeof(_ttl));
       }
     }
     else
     {
       // TTL Type
-      batch.emplace_back(boost::asio::buffer(&_it->entry_.ttl_type_, sizeof(_it->entry_.ttl_type_)));
+      batch.emplace_back(&_it->entry_.ttl_type_, sizeof(_it->entry_.ttl_type_));
       // TTL
       {
         const auto _offset = write_buffer.size();
         append_value_type(write_buffer, native_to_little(_ttl));
-        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_ttl)));
+        batch.emplace_back(&write_buffer[_offset], sizeof(_ttl));
       }
 
       const auto _buffer = _it->entry_.buffer_.load(std::memory_order_acquire);
@@ -101,14 +101,15 @@ namespace throttr
       {
         const auto _offset = write_buffer.size();
         append_value_type(write_buffer, native_to_little(_buffer->size()));
-        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(value_type)));
+        batch.emplace_back(&write_buffer[_offset], sizeof(value_type));
       }
 
       // Value
       {
         const auto _offset = write_buffer.size();
-        write_buffer.insert(write_buffer.end(), _buffer->begin(), _buffer->end());
-        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], _buffer->size()));
+        write_buffer.resize(_offset + _buffer->size());
+        std::memcpy(write_buffer.data() + _offset, _buffer->data(), _buffer->size());
+        batch.emplace_back(write_buffer.data() + _offset, _buffer->size());
       }
     }
 

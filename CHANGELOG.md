@@ -9,6 +9,12 @@
 - Now we have agnostic transport layer.
 - Now we have the maximum optimization via -Ofast.
 - Now we remove the architecture native instructions and can be enabled via compilation flags.
+- Now we have agent connection to the master.
+- Now we can broadcast to all connections using PUBLISH *.
+- Now we have better testing.
+- Now we have unix and tcp connection living in the same context.
+- Now we have EVENT request type.
+- Now we have several news program parameters.
 
 ### v5.0.4
 

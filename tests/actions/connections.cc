@@ -25,6 +25,10 @@ TEST_F(ConnectionsTestFixture, OnSuccess)
   const auto _tcp_connection = make_tcp_connection(_io_context);
   const auto _unix_connection = make_connection(_io_context);
   const auto _conn_buffer = request_connections_builder();
+
+  while (app_->state_->unix_connections_.size() + app_->state_->tcp_connections_.size() != 2)
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+
   const auto _response = send_and_receive(_conn_buffer, 730);
 
   size_t _offset = 1;
