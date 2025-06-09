@@ -133,8 +133,22 @@ namespace throttr
       _total_read_per_minute,
       _total_write_per_minute);
     _accumulate_metrics(
+      state->agent_tcp_connections_,
+      state->agent_tcp_connections_mutex_,
+      _total_read,
+      _total_write,
+      _total_read_per_minute,
+      _total_write_per_minute);
+    _accumulate_metrics(
       state->unix_connections_,
       state->unix_connections_mutex_,
+      _total_read,
+      _total_write,
+      _total_read_per_minute,
+      _total_write_per_minute);
+    _accumulate_metrics(
+      state->agent_unix_connections_,
+      state->agent_unix_connections_mutex_,
       _total_read,
       _total_write,
       _total_read_per_minute,
@@ -195,8 +209,9 @@ namespace throttr
 
     uint64_t _total_connections = 0;
     {
-      std::scoped_lock _scoped_lock(state->unix_connections_mutex_, state->tcp_connections_mutex_);
-      _total_connections = state->tcp_connections_.size() + state->unix_connections_.size();
+      std::scoped_lock _scoped_lock(state->unix_connections_mutex_, state->tcp_connections_mutex_, state->agent_unix_connections_mutex_, state->agent_tcp_connections_mutex_);
+      _total_connections = state->tcp_connections_.size() + state->unix_connections_.size() +
+                           state->agent_tcp_connections_.size() + state->agent_unix_connections_.size();
     }
     push_u64(_total_connections);
 

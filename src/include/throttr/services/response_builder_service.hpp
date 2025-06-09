@@ -112,6 +112,14 @@ namespace throttr
       // UUID (16 bytes)
       _push(conn->id_.data(), 16);
 
+      // Type (client or agent)
+      const auto _type = static_cast<std::uint8_t>(conn->type_);
+      _push(&_type, 1);
+
+      // Kind (tcp or unix)
+      const auto _kind = static_cast<std::uint8_t>(conn->kind_);
+      _push(&_kind, 1);
+
       // IP version (1 byte)
       const std::uint8_t _ip_version = conn->ip_.contains(':') ? 0x06 : 0x04;
       _push(&_ip_version, 1);

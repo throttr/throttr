@@ -84,6 +84,8 @@ namespace throttr
 
       auto _is_tcp = false;
       auto _is_unix = false;
+      auto _is_agent_tcp = false;
+      auto _is_agent_unix = false;
 
       {
         std::scoped_lock _lock(state->tcp_connections_mutex_);
@@ -95,9 +97,19 @@ namespace throttr
         _is_unix = state->unix_connections_.contains(_sub_id);
       }
 
+      {
+        std::scoped_lock _lock(state->agent_unix_connections_mutex_);
+        _is_agent_unix = state->agent_unix_connections_.contains(_sub_id);
+      }
+
+      {
+        std::scoped_lock _lock(state->agent_tcp_connections_mutex_);
+        _is_agent_tcp = state->agent_tcp_connections_.contains(_sub_id);
+      }
+
       // LCOV_EXCL_START
       // This is a strange condition, the subscription exists but the connection is gone...
-      if (!_is_tcp && !_is_unix)
+      if (!_is_tcp && !_is_unix && !_is_agent_tcp && !_is_agent_unix)
         continue;
       // LCOV_EXCL_STOP
 
@@ -128,8 +140,17 @@ namespace throttr
 
       if (_is_tcp)
         _process(state->tcp_connections_, state->tcp_connections_mutex_, _sub_id, id, _payload, _message);
-      else
+
+      if (_is_unix)
         _process(state->unix_connections_, state->unix_connections_mutex_, _sub_id, id, _payload, _message);
+
+      // LCOV_EXCL_START
+      if (_is_agent_tcp)
+        _process(state->agent_tcp_connections_, state->agent_tcp_connections_mutex_, _sub_id, id, _payload, _message);
+
+      if (_is_agent_unix)
+        _process(state->agent_unix_connections_, state->agent_unix_connections_mutex_, _sub_id, id, _payload, _message);
+      // LCOV_EXCL_STOP
     }
 
     // LCOV_EXCL_START

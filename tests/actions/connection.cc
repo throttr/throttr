@@ -43,6 +43,16 @@ protected:
     std::memcpy(_returned_uuid.data, _uuid_segment.data(), 16);
     ASSERT_EQ(_returned_uuid, _uuid);
 
+    std::vector<std::byte> _type_segment(1);
+    boost::asio::read(socket, boost::asio::buffer(_type_segment.data(), _type_segment.size()));
+    ASSERT_EQ(_type_segment[0], static_cast<std::byte>(connection_type::client));
+
+    std::vector<std::byte> _kind_segment(1);
+    boost::asio::read(socket, boost::asio::buffer(_kind_segment.data(), _kind_segment.size()));
+    ASSERT_TRUE(
+      _kind_segment[0] == static_cast<std::byte>(connection_kind::unix_socket) ||
+      _kind_segment[0] == static_cast<std::byte>(connection_kind::tcp_socket));
+
     std::vector<std::byte> _ip_version_segment(1);
     boost::asio::read(socket, boost::asio::buffer(_ip_version_segment.data(), _ip_version_segment.size()));
     const uint8_t _ip_version = std::to_integer<uint8_t>(_ip_version_segment[0]);

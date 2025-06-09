@@ -29,7 +29,11 @@ TEST_F(ConnectionsTestFixture, OnSuccess)
   while (app_->state_->unix_connections_.size() + app_->state_->tcp_connections_.size() != 2)
     std::this_thread::sleep_for(std::chrono::seconds(1));
 
-  const auto _response = send_and_receive(_conn_buffer, 730);
+  std::size_t _expected_size = 1 +       // Success byte
+                               237 * 3 + // 3 connections
+                               8 * 3;    // fragments + fragment count + connection count
+
+  const auto _response = send_and_receive(_conn_buffer, _expected_size);
 
   size_t _offset = 1;
 
@@ -56,6 +60,9 @@ TEST_F(ConnectionsTestFixture, OnSuccess)
     // UUID (16 bytes)
     _offset += 16;
 
+    // Type and Kind
+    _offset += 2;
+
     // IP version (1 byte)
     const uint8_t _ip_version = std::to_integer<uint8_t>(_response[_offset]);
     ASSERT_TRUE(_ip_version == 0x04 || _ip_version == 0x06);
@@ -80,5 +87,5 @@ TEST_F(ConnectionsTestFixture, OnSuccess)
     }
   }
 
-  ASSERT_EQ(_offset, 730);
+  ASSERT_EQ(_offset, _expected_size);
 }
