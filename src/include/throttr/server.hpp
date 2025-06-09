@@ -73,7 +73,7 @@ namespace throttr
         {
           if (!error) // LCOV_EXCL_LINE Note: Partially tested.
           {
-            std::make_shared<connection<tcp_socket>>(std::move(tcp_socket_), state_)->start();
+            std::make_shared<connection<tcp_socket>>(std::move(tcp_socket_), state_, connection_type::client)->start();
           }
 
           do_tcp_accept();
@@ -91,7 +91,7 @@ namespace throttr
         {
           if (!error) // LCOV_EXCL_LINE Note: Partially tested.
           {
-            std::make_shared<connection<unix_socket>>(std::move(unix_socket_), state_)->start();
+            std::make_shared<connection<unix_socket>>(std::move(unix_socket_), state_, connection_type::client)->start();
           }
 
           do_unix_accept();

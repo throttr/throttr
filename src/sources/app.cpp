@@ -30,6 +30,9 @@ namespace throttr
 
     server _server(ioc_, program_options_, state_);
 
+    const auto _agent = std::make_shared<agent>(ioc_, program_options_, state_);
+    _agent->start();
+
     std::vector<std::jthread> _threads;
     _threads.reserve(program_options_.threads_);
 
