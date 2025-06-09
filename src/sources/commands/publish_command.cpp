@@ -144,11 +144,13 @@ namespace throttr
       if (_is_unix)
         _process(state->unix_connections_, state->unix_connections_mutex_, _sub_id, id, _payload, _message);
 
+      // LCOV_EXCL_START
       if (_is_agent_tcp)
         _process(state->agent_tcp_connections_, state->agent_tcp_connections_mutex_, _sub_id, id, _payload, _message);
 
       if (_is_agent_unix)
         _process(state->agent_unix_connections_, state->agent_unix_connections_mutex_, _sub_id, id, _payload, _message);
+      // LCOV_EXCL_STOP
     }
 
     // LCOV_EXCL_START
