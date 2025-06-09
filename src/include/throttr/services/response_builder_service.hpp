@@ -113,11 +113,11 @@ namespace throttr
       _push(conn->id_.data(), 16);
 
       // Type (client or agent)
-      const std::uint8_t _type = static_cast<std::uint8_t>(conn->type_);
+      const auto _type = static_cast<std::uint8_t>(conn->type_);
       _push(&_type, 1);
 
       // Kind (tcp or unix)
-      const std::uint8_t _kind = static_cast<std::uint8_t>(conn->kind_);
+      const auto _kind = static_cast<std::uint8_t>(conn->kind_);
       _push(&_kind, 1);
 
       // IP version (1 byte)
