@@ -25,6 +25,7 @@
 #include <span>
 #include <throttr/connection_allocator.hpp>
 #include <throttr/connection_metrics.hpp>
+#include <throttr/connection_type.hpp>
 #include <throttr/message.hpp>
 #include <throttr/state.hpp>
 
@@ -42,15 +43,6 @@ namespace throttr
   {
     tcp_socket,
     unix_socket,
-  };
-
-  /**
-   * Connection type
-   */
-  enum class connection_type : uint8_t
-  {
-    client,
-    agent,
   };
 
   /**

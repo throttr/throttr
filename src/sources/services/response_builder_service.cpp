@@ -165,6 +165,8 @@ namespace throttr
 
     _fragmenter(state->tcp_connections_, state->tcp_connections_mutex_);
     _fragmenter(state->unix_connections_, state->unix_connections_mutex_);
+    _fragmenter(state->agent_tcp_connections_, state->agent_tcp_connections_mutex_);
+    _fragmenter(state->agent_unix_connections_, state->agent_unix_connections_mutex_);
 
     if (!std::get<0>(_fragment).empty() || !std::get<1>(_fragment).empty()) // LCOV_EXCL_LINE Note: Partially tested.
       _fragments.push_back(std::move(_fragment));

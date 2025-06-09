@@ -80,6 +80,8 @@ namespace throttr
 
     _compute_metrics(state->tcp_connections_, state->tcp_connections_mutex_);
     _compute_metrics(state->unix_connections_, state->unix_connections_mutex_);
+    _compute_metrics(state->agent_unix_connections_, state->agent_unix_connections_mutex_);
+    _compute_metrics(state->agent_tcp_connections_, state->agent_tcp_connections_mutex_);
 
     state->metrics_collector_->compute_all();
 

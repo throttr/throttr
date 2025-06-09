@@ -29,6 +29,7 @@
 #include <cstring>
 #include <deque>
 #include <memory>
+#include <throttr/connection_type.hpp>
 #include <throttr/protocol_wrapper.hpp>
 #include <throttr/storage.hpp>
 
@@ -132,6 +133,16 @@ namespace throttr
     std::unordered_map<boost::uuids::uuid, connection<unix_socket> *, std::hash<boost::uuids::uuid>> unix_connections_;
 
     /**
+     * Agent TCP Connections container
+     */
+    std::unordered_map<boost::uuids::uuid, connection<tcp_socket> *, std::hash<boost::uuids::uuid>> agent_tcp_connections_;
+
+    /**
+     * Agent UNIX Connections container
+     */
+    std::unordered_map<boost::uuids::uuid, connection<unix_socket> *, std::hash<boost::uuids::uuid>> agent_unix_connections_;
+
+    /**
      * Connections mutex
      */
     std::mutex tcp_connections_mutex_;
@@ -140,6 +151,16 @@ namespace throttr
      * UNIX Connections mutex
      */
     std::mutex unix_connections_mutex_;
+
+    /**
+     * Agent Connections mutex
+     */
+    std::mutex agent_tcp_connections_mutex_;
+
+    /**
+     * Agent UNIX Connections mutex
+     */
+    std::mutex agent_unix_connections_mutex_;
 
 #ifdef ENABLED_FEATURE_METRICS
     /**
@@ -231,13 +252,29 @@ namespace throttr
     {
       if constexpr (std::is_same_v<Transport, tcp_socket>)
       {
-        std::scoped_lock lock(tcp_connections_mutex_);
-        tcp_connections_.try_emplace(connection->id_, connection);
+        if (connection->type_ == connection_type::client)
+        {
+          std::scoped_lock lock(tcp_connections_mutex_);
+          tcp_connections_.try_emplace(connection->id_, connection);
+        }
+        else
+        {
+          std::scoped_lock lock(agent_tcp_connections_mutex_);
+          agent_tcp_connections_.try_emplace(connection->id_, connection);
+        }
       }
       else
       {
-        std::scoped_lock lock(unix_connections_mutex_);
-        unix_connections_.try_emplace(connection->id_, connection);
+        if (connection->type_ == connection_type::client)
+        {
+          std::scoped_lock lock(unix_connections_mutex_);
+          unix_connections_.try_emplace(connection->id_, connection);
+        }
+        else
+        {
+          std::scoped_lock lock(agent_unix_connections_mutex_);
+          agent_unix_connections_.try_emplace(connection->id_, connection);
+        }
       }
 
       {
@@ -255,21 +292,38 @@ namespace throttr
      */
     template<typename Transport> void leave(const connection<Transport> *connection)
     {
-      if constexpr (std::is_same_v<Transport, tcp_socket>)
       {
-        std::scoped_lock _lock(tcp_connections_mutex_, subscriptions_->mutex_);
+        std::scoped_lock _lock(subscriptions_->mutex_);
         auto &subs = subscriptions_->subscriptions_.get<by_connection_id>();
         auto [begin, end] = subs.equal_range(connection->id_);
         subs.erase(begin, end);
-        tcp_connections_.erase(connection->id_);
+      }
+
+      if constexpr (std::is_same_v<Transport, tcp_socket>)
+      {
+        if (connection->type_ == connection_type::client)
+        {
+          std::scoped_lock _lock(tcp_connections_mutex_);
+          tcp_connections_.erase(connection->id_);
+        }
+        else
+        {
+          std::scoped_lock _lock(agent_tcp_connections_mutex_);
+          agent_tcp_connections_.erase(connection->id_);
+        }
       }
       else
       {
-        std::scoped_lock _lock(unix_connections_mutex_, subscriptions_->mutex_);
-        auto &subs = subscriptions_->subscriptions_.get<by_connection_id>();
-        auto [begin, end] = subs.equal_range(connection->id_);
-        subs.erase(begin, end);
-        unix_connections_.erase(connection->id_);
+        if (connection->type_ == connection_type::client)
+        {
+          std::scoped_lock _lock(unix_connections_mutex_);
+          unix_connections_.erase(connection->id_);
+        }
+        else
+        {
+          std::scoped_lock _lock(agent_unix_connections_mutex_);
+          agent_unix_connections_.erase(connection->id_);
+        }
       }
     }
   };
