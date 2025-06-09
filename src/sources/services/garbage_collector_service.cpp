@@ -15,6 +15,7 @@
 
 #include <throttr/services/garbage_collector_service.hpp>
 
+#include <boost/uuid/uuid_io.hpp>
 #include <throttr/state.hpp>
 #include <throttr/utils.hpp>
 
@@ -23,7 +24,8 @@ namespace throttr
   void garbage_collector_service::schedule_timer(const std::shared_ptr<state> &state, const uint64_t proposed)
   {
 #ifndef NDEBUG
-    fmt::println("{:%Y-%m-%d %H:%M:%S} GARBAGE COLLECTION SCHEDULED", std::chrono::system_clock::now());
+    fmt::println(
+      "[{}] [{:%Y-%m-%d %H:%M:%S}] GARBAGE COLLECTION SCHEDULED", to_string(state->id_), std::chrono::system_clock::now());
 #endif
 
     const uint64_t _now = std::chrono::steady_clock::now().time_since_epoch().count();
@@ -47,7 +49,8 @@ namespace throttr
   {
     std::scoped_lock guard(state->mutex_);
 #ifndef NDEBUG
-    fmt::println("{:%Y-%m-%d %H:%M:%S} GARBAGE COLLECTION STARTED", std::chrono::system_clock::now());
+    fmt::
+      println("[{}] [{:%Y-%m-%d %H:%M:%S}] GARBAGE COLLECTION STARTED", to_string(state->id_), std::chrono::system_clock::now());
 #endif
 
     const uint64_t _now = std::chrono::steady_clock::now().time_since_epoch().count();
@@ -86,11 +89,12 @@ namespace throttr
       {
         _index.modify(
           _it,
-          [](entry_wrapper &entry)
+          [&state](entry_wrapper &entry)
           {
 #ifndef NDEBUG
             fmt::println(
-              "{:%Y-%m-%d %H:%M:%S} GARBAGE COLLECTOR MARKED KEY AS EXPIRED key={}",
+              "[{}] [{:%Y-%m-%d %H:%M:%S}] GARBAGE COLLECTOR MARKED KEY AS EXPIRED key={}",
+              to_string(state->id_),
               std::chrono::system_clock::now(),
               std::string_view(
                 reinterpret_cast<const char *>(entry.key_.data()), // NOSONAR
@@ -109,7 +113,8 @@ namespace throttr
       {
 #ifndef NDEBUG
         fmt::println(
-          "{:%Y-%m-%d %H:%M:%S} GARBAGE COLLECTOR ERASED EXPIRED KEY key={}",
+          "[{}] [{:%Y-%m-%d %H:%M:%S}] GARBAGE COLLECTOR ERASED EXPIRED KEY key={}",
+          to_string(state->id_),
           std::chrono::system_clock::now(),
           std::string_view(reinterpret_cast<const char *>(_it->key_.data()), _it->key_.size())); // NOSONAR
 #endif
@@ -135,7 +140,8 @@ namespace throttr
     }
 
 #ifndef NDEBUG
-    fmt::println("{:%Y-%m-%d %H:%M:%S} GARBAGE COLLECTION COMPLETED", std::chrono::system_clock::now());
+    fmt::println(
+      "[{}] [{:%Y-%m-%d %H:%M:%S}] GARBAGE COLLECTION COMPLETED", to_string(state->id_), std::chrono::system_clock::now());
 #endif
 
     if (_next_expiration != std::numeric_limits<std::uint64_t>::max()) // LCOV_EXCL_LINE Note: Partially tested.

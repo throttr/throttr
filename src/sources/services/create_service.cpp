@@ -74,8 +74,9 @@ namespace throttr
 
 #ifndef NDEBUG
           fmt::println(
-            "{:%Y-%m-%d %H:%M:%S} REQUEST SET AGAIN session_id={} META key={} value={}ttl_type={} ttl={} RESPONSE ok=true"
+            "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST SET AGAIN session_id={} META key={} value={}ttl_type={} ttl={} RESPONSE ok=true"
             "RESPONSE ok={}",
+            to_string(state->id_),
             std::chrono::system_clock::now(),
             to_string(id),
             span_to_hex(key),
@@ -149,7 +150,8 @@ namespace throttr
     {
       const value_type _counter_value = _entry_ptr.entry_.counter_.load(std::memory_order_relaxed);
       fmt::println(
-        "{:%Y-%m-%d %H:%M:%S} REQUEST INSERT session_id={} META key={} value={}ttl_type={} ttl={} RESPONSE ok={}",
+        "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST INSERT session_id={} META key={} value={}ttl_type={} ttl={} RESPONSE ok={}",
+        to_string(state->id_),
         std::chrono::system_clock::now(),
         to_string(id),
         span_to_hex(key),
@@ -162,7 +164,8 @@ namespace throttr
     {
       auto _buffer = _entry_ptr.entry_.buffer_.load(std::memory_order_relaxed);
       fmt::println(
-        "{:%Y-%m-%d %H:%M:%S} REQUEST SET session_id={} META key={} value={}ttl_type={} ttl={} RESPONSE ok={}",
+        "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST SET session_id={} META key={} value={}ttl_type={} ttl={} RESPONSE ok={}",
+        to_string(state->id_),
         std::chrono::system_clock::now(),
         to_string(id),
         span_to_hex(key),

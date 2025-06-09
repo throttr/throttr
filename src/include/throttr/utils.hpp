@@ -59,7 +59,8 @@ namespace throttr
    * @param batch
    * @param uuid
    */
-  inline void append_uuid(std::vector<std::byte> &write_buffer, std::vector<boost::asio::const_buffer> &batch, const boost::uuids::uuid &uuid)
+  inline void
+  append_uuid(std::vector<std::byte> &write_buffer, std::vector<boost::asio::const_buffer> &batch, const boost::uuids::uuid &uuid)
   {
     const auto _offset = write_buffer.size();
     write_buffer.resize(_offset + 16);

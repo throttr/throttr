@@ -51,7 +51,8 @@ namespace throttr
       // LCOV_EXCL_START
 #ifndef NDEBUG
       fmt::println(
-        "{:%Y-%m-%d %H:%M:%S} REQUEST {} session_id={} META key={} RESPONSE ok=false",
+        "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST {} session_id={} META key={} RESPONSE ok=false",
+        to_string(state->id_),
         std::chrono::system_clock::now(),
         _as_query ? "QUERY" : "GET",
         to_string(id),
@@ -119,7 +120,8 @@ namespace throttr
     {
       auto _quota = _it->entry_.counter_.load(std::memory_order_relaxed);
       fmt::println(
-        "{:%Y-%m-%d %H:%M:%S} REQUEST QUERY session_id={} META key={} RESPONSE ok=true META quota={} ttl_type={} ttl={}",
+        "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST QUERY session_id={} META key={} RESPONSE ok=true META quota={} ttl_type={} ttl={}",
+        to_string(state->id_),
         std::chrono::system_clock::now(),
         to_string(id),
         _key.key_,
@@ -131,7 +133,8 @@ namespace throttr
     {
       const auto _buffer = _it->entry_.buffer_.load(std::memory_order_acquire);
       fmt::println(
-        "{:%Y-%m-%d %H:%M:%S} REQUEST GET session_id={} META key={} RESPONSE ok=true META value={} ttl_type={} ttl={}",
+        "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST GET session_id={} META key={} RESPONSE ok=true META value={} ttl_type={} ttl={}",
+        to_string(state->id_),
         std::chrono::system_clock::now(),
         to_string(id),
         _key.key_,

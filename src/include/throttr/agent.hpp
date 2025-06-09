@@ -91,7 +91,8 @@ namespace throttr
       {
 #ifndef NDEBUG
         fmt::println(
-          "{:%Y-%m-%d %H:%M:%S} CONNECTION WITH MASTER UNIX SOCKET HAS BEEN FAILED ... RETRYING ...",
+          "[{}] [{:%Y-%m-%d %H:%M:%S}] CONNECTION WITH MASTER UNIX SOCKET HAS BEEN FAILED ... RETRYING ...",
+          to_string(state_->id_),
           std::chrono::system_clock::now());
 #endif
         return false;
@@ -114,7 +115,8 @@ namespace throttr
       {
 #ifndef NDEBUG
         fmt::println(
-          "{:%Y-%m-%d %H:%M:%S} CONNECTION WITH MASTER TCP SOCKET HAS BEEN FAILED ... RETRYING ...",
+          "[{}] [{:%Y-%m-%d %H:%M:%S}] CONNECTION WITH MASTER TCP SOCKET HAS BEEN FAILED ... RETRYING ...",
+          to_string(state_->id_),
           std::chrono::system_clock::now());
 #endif
         return false;

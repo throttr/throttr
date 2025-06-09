@@ -82,6 +82,11 @@ namespace throttr
   {
   public:
     /**
+     * ID
+     */
+    boost::uuids::uuid id_ = boost::uuids::random_generator()();
+
+    /**
      * Started at
      */
     std::uint64_t started_at_ = 0;
