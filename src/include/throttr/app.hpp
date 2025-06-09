@@ -18,6 +18,7 @@
 #ifndef THROTTR_APP_HPP
 #define THROTTR_APP_HPP
 
+#include <throttr/agent.hpp>
 #include <throttr/program_parameters.hpp>
 #include <throttr/server.hpp>
 #include <throttr/state.hpp>
@@ -49,7 +50,6 @@ namespace throttr
      * Construct
      *
      * @param program_options
-     * @param threads
      */
     explicit app(const program_parameters &program_options);
 

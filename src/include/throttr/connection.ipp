@@ -28,8 +28,8 @@
 namespace throttr
 {
   template<typename Transport>
-  connection<Transport>::connection(Transport socket, const std::shared_ptr<state> &state) :
-      id_(state->id_generator_()), socket_(std::move(socket)), state_(state)
+  connection<Transport>::connection(Transport socket, const std::shared_ptr<state> &state, const connection_type type) :
+      id_(state->id_generator_()), type_(type), socket_(std::move(socket)), state_(state)
   {
 
     // LCOV_EXCL_START
@@ -80,20 +80,40 @@ namespace throttr
   {
     // LCOV_EXCL_START
 #ifndef NDEBUG
-    switch (kind_)
+    if (type_ == connection_type::client)
     {
-      case connection_kind::tcp_socket:
-        fmt::println(
-          "{:%Y-%m-%d %H:%M:%S} TCP SESSION ESTABLISHED session_id={} META ip={} port={}",
-          std::chrono::system_clock::now(),
-          to_string(id_),
-          ip_,
-          port_);
-        break;
-      case connection_kind::unix_socket:
-        fmt::println(
-          "{:%Y-%m-%d %H:%M:%S} UNIX SESSION ESTABLISHED session_id={}", std::chrono::system_clock::now(), to_string(id_));
-        break;
+      switch (kind_)
+      {
+        case connection_kind::tcp_socket:
+          fmt::println(
+            "{:%Y-%m-%d %H:%M:%S} TCP SESSION ESTABLISHED session_id={} META ip={} port={}",
+            std::chrono::system_clock::now(),
+            to_string(id_),
+            ip_,
+            port_);
+          break;
+        case connection_kind::unix_socket:
+          fmt::println(
+            "{:%Y-%m-%d %H:%M:%S} UNIX SESSION ESTABLISHED session_id={}", std::chrono::system_clock::now(), to_string(id_));
+          break;
+      }
+    }
+    else
+    {
+      switch (kind_)
+      {
+        case connection_kind::tcp_socket:
+          fmt::println(
+            "{:%Y-%m-%d %H:%M:%S} TCP AGENT ESTABLISHED META ip={} port={}",
+            std::chrono::system_clock::now(),
+            to_string(id_),
+            ip_,
+            port_);
+          break;
+        case connection_kind::unix_socket:
+          fmt::println("{:%Y-%m-%d %H:%M:%S} UNIX AGENT ESTABLISHED", std::chrono::system_clock::now(), to_string(id_));
+          break;
+      }
     }
 #endif
     // LCOV_EXCL_STOP

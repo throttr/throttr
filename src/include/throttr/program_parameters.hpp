@@ -40,9 +40,9 @@ namespace throttr
     int threads_ = 1;
 
     /**
-     * As master
+     * Has master
      */
-    bool as_master_ = true;
+    bool has_master_ = true;
 
     /**
      * Master host
@@ -50,9 +50,19 @@ namespace throttr
     std::string master_host_ = "localhost";
 
     /**
+     * Master socket
+     */
+    std::string master_socket_ = "disabled";
+
+    /**
      * Master port
      */
     short master_port_ = 0;
+
+    /**
+     * Sync strategy
+     */
+    std::string sync_strategy_ = "hard";
   };
 } // namespace throttr
 

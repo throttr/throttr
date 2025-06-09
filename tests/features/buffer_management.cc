@@ -29,7 +29,7 @@ public:
   {
     boost::asio::io_context ioc;
     tcp_socket socket(ioc);
-    return connection(std::move(socket), state);
+    return connection(std::move(socket), state, connection_type::client);
   }
 };
 

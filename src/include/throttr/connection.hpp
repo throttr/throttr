@@ -45,6 +45,15 @@ namespace throttr
   };
 
   /**
+   * Connection type
+   */
+  enum class connection_type : uint8_t
+  {
+    client,
+    agent,
+  };
+
+  /**
    * Connection
    */
   template<typename Transport> class connection : public std::enable_shared_from_this<connection<Transport>>
@@ -65,6 +74,11 @@ namespace throttr
      */
     connection_kind kind_;
 
+    /**
+     * Type
+     */
+    connection_type type_;
+
 #ifdef ENABLED_FEATURE_METRICS
     /**
      * Metrics
@@ -77,8 +91,9 @@ namespace throttr
      *
      * @param socket
      * @param state
+     * @param type
      */
-    explicit connection(Transport socket, const std::shared_ptr<state> &state);
+    explicit connection(Transport socket, const std::shared_ptr<state> &state, connection_type type);
 
     /**
      * Destructor

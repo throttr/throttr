@@ -56,6 +56,7 @@ protected:
     program_parameters _program_options{
       .socket_ = to_string(boost::uuids::random_generator()()),
       .port_ = 0,
+      .has_master_ = false,
     };
     app_ = std::make_shared<app>(_program_options);
     server_thread_ = std::make_unique<std::jthread>([this]() { app_->serve(); });
