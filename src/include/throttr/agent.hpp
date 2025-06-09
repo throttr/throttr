@@ -22,6 +22,7 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/intrusive_ptr.hpp>
 #include <iostream>
+#include <thread>
 #include <throttr/connection.hpp>
 #include <throttr/program_parameters.hpp>
 #include <throttr/state.hpp>
@@ -59,57 +60,69 @@ namespace throttr
     {
       // LCOV_EXCL_START
       if (program_options_.has_master_)
-        boost::asio::post(
-          strand_,
-          [_self = shared_from_this()]() mutable
-          {
-            const bool _is_unix = _self->program_options_.master_socket_ != "disabled";
-            for (; _self->tries_ < 3; ++_self->tries_)
-            {
-              boost::system::error_code ec;
-              if (_is_unix)
-              {
-                const unix_endpoint _endpoint(_self->program_options_.master_socket_);
-                _self->unix_socket_.connect(_endpoint, ec);
-                if (ec)
-                {
-#ifndef NDEBUG
-                  fmt::println(
-                    "{:%Y-%m-%d %H:%M:%S} CONNECTION WITH MASTER UNIX SOCKET HAS BEEN FAILED ... RETRYING ...",
-                    std::chrono::system_clock::now());
-#endif
-                }
-                else
-                {
-                  std::make_shared<connection<unix_socket>>(std::move(_self->unix_socket_), _self->state_, connection_type::agent)
-                    ->start();
-                  break;
-                }
-              }
-              else
-              {
-                const auto _endpoints =
-                  _self->tcp_resolver_
-                    .resolve(_self->program_options_.master_host_, std::to_string(_self->program_options_.master_port_));
-                boost::asio::connect(_self->tcp_socket_, _endpoints, ec);
-                if (ec)
-                {
-#ifndef NDEBUG
-                  fmt::println(
-                    "{:%Y-%m-%d %H:%M:%S} CONNECTION WITH MASTER TCP SOCKET HAS BEEN FAILED ... RETRYING ...",
-                    std::chrono::system_clock::now());
-#endif
-                }
-                else
-                {
-                  std::make_shared<connection<tcp_socket>>(std::move(_self->tcp_socket_), _self->state_, connection_type::agent)
-                    ->start();
-                  break;
-                }
-              }
-            }
-          });
+        boost::asio::post(strand_, [_self = shared_from_this()]() mutable { _self->try_to_connect(); });
       // LCOV_EXCL_STOP
+    }
+
+    /**
+     * Try to connect
+     */
+    void try_to_connect()
+    {
+      const bool _is_unix = program_options_.master_socket_ != "disabled";
+      while (true)
+      {
+        if (const auto _success = _is_unix ? for_unix() : for_tcp(); _success)
+          break;
+        std::this_thread::sleep_for(std::chrono::seconds(5));
+      }
+    }
+
+    /**
+     * For UNIX
+     *
+     * @return
+     */
+    bool for_unix()
+    {
+      boost::system::error_code ec;
+      const unix_endpoint _endpoint(program_options_.master_socket_);
+      unix_socket_.connect(_endpoint, ec);
+      if (ec)
+      {
+#ifndef NDEBUG
+        fmt::println(
+          "{:%Y-%m-%d %H:%M:%S} CONNECTION WITH MASTER UNIX SOCKET HAS BEEN FAILED ... RETRYING ...",
+          std::chrono::system_clock::now());
+#endif
+        return false;
+      }
+      std::make_shared<connection<unix_socket>>(std::move(unix_socket_), state_, connection_type::agent)->start();
+      return true;
+    }
+
+    /**
+     * For TCP
+     *
+     * @return
+     */
+    bool for_tcp()
+    {
+      boost::system::error_code ec;
+      const auto _endpoints = tcp_resolver_.resolve(program_options_.master_host_, std::to_string(program_options_.master_port_));
+      boost::asio::connect(tcp_socket_, _endpoints, ec);
+      if (ec)
+      {
+#ifndef NDEBUG
+        fmt::println(
+          "{:%Y-%m-%d %H:%M:%S} CONNECTION WITH MASTER TCP SOCKET HAS BEEN FAILED ... RETRYING ...",
+          std::chrono::system_clock::now());
+#endif
+        return false;
+      }
+
+      std::make_shared<connection<tcp_socket>>(std::move(tcp_socket_), state_, connection_type::agent)->start();
+      return true;
     }
 
   private:
@@ -144,11 +157,6 @@ namespace throttr
      * Strand
      */
     boost::asio::strand<boost::asio::io_context::executor_type> strand_;
-
-    /**
-     * Tries
-     */
-    short tries_ = 0;
   };
 } // namespace throttr
 
