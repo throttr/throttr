@@ -148,7 +148,7 @@ namespace throttr
   template<typename Transport> void connection<Transport>::send(std::shared_ptr<message> batch)
   {
     auto self = this->shared_from_this();
-    boost::asio::post(socket_.get_executor(), [self, _batch = std::move(batch)]() mutable { self->on_send(_batch); });
+    boost::asio::post(socket_.get_executor(), [self, _batch = batch->shared_from_this()]() mutable { self->on_send(_batch); });
   }
 
   template<typename Transport> void connection<Transport>::on_read(const boost::system::error_code &error, std::size_t length)

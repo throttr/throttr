@@ -30,7 +30,7 @@ namespace throttr
   {
     const auto _offset = write_buffer.size();
     append_uint64_t(write_buffer, boost::endian::native_to_little(total));
-    batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(total)));
+    batch.emplace_back(&write_buffer[_offset], sizeof(total));
   }
 
   std::size_t response_builder_service::write_list_entry_to_buffer(
@@ -48,10 +48,11 @@ namespace throttr
       return entry->key_.size() + sizeof(value_type) + 11;
 
     const auto _offset = write_buffer.size();
-    write_buffer.push_back(static_cast<std::byte>(entry->key_.size()));
-    batch->emplace_back(boost::asio::buffer(&write_buffer[_offset], 1));
-    batch->emplace_back(boost::asio::buffer(&entry->entry_.type_, sizeof(entry->entry_.type_)));
-    batch->emplace_back(boost::asio::buffer(&entry->entry_.ttl_type_, sizeof(entry->entry_.ttl_type_)));
+    write_buffer.resize(_offset + 1);
+    write_buffer[_offset] = static_cast<std::byte>(entry->key_.size());
+    batch->emplace_back(&write_buffer[_offset], 1);
+    batch->emplace_back(&entry->entry_.type_, sizeof(entry->entry_.type_));
+    batch->emplace_back(&entry->entry_.ttl_type_, sizeof(entry->entry_.ttl_type_));
 
     // Handling _expires_at
     {
@@ -59,7 +60,7 @@ namespace throttr
 
       const auto _off = write_buffer.size();
       append_uint64_t(write_buffer, native_to_little(_expires_at));
-      batch->emplace_back(boost::asio::buffer(&write_buffer[_off], sizeof(_expires_at)));
+      batch->emplace_back(&write_buffer[_off], sizeof(_expires_at));
     }
 
     // Handling _bytes_used
@@ -76,7 +77,7 @@ namespace throttr
       }
       const auto _scoped_offset = write_buffer.size();
       append_uint64_t(write_buffer, native_to_little(_bytes_used));
-      batch->emplace_back(boost::asio::buffer(&write_buffer[_scoped_offset], sizeof(_bytes_used)));
+      batch->emplace_back(&write_buffer[_scoped_offset], sizeof(_bytes_used));
     }
 
     return 0;
@@ -98,7 +99,7 @@ namespace throttr
 
     const auto _offset = write_buffer.size();
     write_buffer.push_back(static_cast<std::byte>(entry->key_.size()));
-    batch->emplace_back(boost::asio::buffer(&write_buffer[_offset], 1));
+    batch->emplace_back(&write_buffer[_offset], 1);
 
 #ifdef ENABLED_FEATURE_METRICS
     for (const auto &_metric = *entry->metrics_; uint64_t _v :
@@ -109,7 +110,7 @@ namespace throttr
     {
       const auto _off = write_buffer.size();
       append_uint64_t(write_buffer, native_to_little(_v));
-      batch->emplace_back(boost::asio::buffer(&write_buffer[_off], sizeof(_v)));
+      batch->emplace_back(&write_buffer[_off], sizeof(_v));
     }
 #else
     for (int _i = 0; _i < 4; ++_i)
@@ -117,7 +118,7 @@ namespace throttr
       constexpr uint64_t _empty = 0;
       const auto _off = write_buffer.size();
       append_uint64_t(write_buffer, native_to_little(_empty));
-      batch->emplace_back(boost::asio::buffer(&write_buffer[_off], sizeof(_empty)));
+      batch->emplace_back(&write_buffer[_off], sizeof(_empty));
     }
 #endif
 
@@ -129,7 +130,7 @@ namespace throttr
     std::vector<boost::asio::const_buffer> &batch,
     std::vector<std::byte> &write_buffer)
   {
-    batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
+    batch.emplace_back(&state::success_response_, 1);
 
     using fragment_container =
       std::tuple<std::vector<const connection<tcp_socket> *>, std::vector<const connection<unix_socket> *>>;
@@ -181,7 +182,7 @@ namespace throttr
       {
         const auto _offset = write_buffer.size();
         append_uint64_t(write_buffer, boost::endian::native_to_little(_val));
-        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_val)));
+        batch.emplace_back(&write_buffer[_offset], sizeof(_val));
       }
 
       for (const auto *_conn : _tcp_fragment)
@@ -206,7 +207,7 @@ namespace throttr
     std::size_t _fragments_count = 1;
     std::size_t _fragment_size = 0;
 
-    batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
+    batch.emplace_back(&state::success_response_, 1);
 
     std::vector<const entry_wrapper *> _fragment_items;
     std::vector<std::vector<const entry_wrapper *>> _fragments;
@@ -245,7 +246,7 @@ namespace throttr
       const auto _offset = write_buffer.size();
       const uint64_t _fragment_count = _fragments.size();
       append_uint64_t(write_buffer, boost::endian::native_to_little(_fragment_count));
-      batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_fragment_count)));
+      batch.emplace_back(&write_buffer[_offset], sizeof(_fragment_count));
     }
 
     std::size_t _i = 0;
@@ -259,7 +260,7 @@ namespace throttr
       {
         const auto _offset = write_buffer.size();
         append_uint64_t(write_buffer, boost::endian::native_to_little(_value));
-        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_value)));
+        batch.emplace_back(&write_buffer[_offset], sizeof(_value));
       }
 
       // Serialize entries
@@ -271,7 +272,7 @@ namespace throttr
       // Add key data to the batch
       for (const auto &_entry : _fragment) // LCOV_EXCL_LINE Note: Partially tested.
       {
-        batch.emplace_back(boost::asio::buffer(_entry->key_.data(), _entry->key_.size()));
+        batch.emplace_back(_entry->key_.data(), _entry->key_.size());
       }
 
       _i++;
@@ -283,7 +284,7 @@ namespace throttr
     std::vector<boost::asio::const_buffer> &batch,
     std::vector<std::byte> &write_buffer)
   {
-    batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
+    batch.emplace_back(&state::success_response_, 1);
 
     std::vector<std::string> _channels_list;
     std::vector<std::vector<std::string>> _fragments;
@@ -350,7 +351,7 @@ namespace throttr
       {
         const auto _offset = write_buffer.size();
         append_uint64_t(write_buffer, boost::endian::native_to_little(_val));
-        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_val)));
+        batch.emplace_back(&write_buffer[_offset], sizeof(_val));
       }
 
       // Serialize channels in the fragment
@@ -360,22 +361,24 @@ namespace throttr
         const auto _size = static_cast<std::uint8_t>(_chan.size());
 
         const auto _offset = write_buffer.size();
-        write_buffer.push_back(std::byte{_size});
-        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], 1));
+        write_buffer.resize(_offset + 1);
+        write_buffer[_offset] = std::byte{_size};
+        batch.emplace_back(&write_buffer[_offset], 1);
 
         for (const uint64_t _metric : {_read, _write, _count})
         {
           const auto _scoped_offset = write_buffer.size();
           append_uint64_t(write_buffer, boost::endian::native_to_little(_metric));
-          batch.emplace_back(boost::asio::buffer(&write_buffer[_scoped_offset], sizeof(_metric)));
+          batch.emplace_back(&write_buffer[_scoped_offset], sizeof(_metric));
         }
       }
 
       for (const auto &_channel : _frag)
       {
         const auto _offset = write_buffer.size();
-        std::ranges::transform(_channel, std::back_inserter(write_buffer), [](char c) { return static_cast<std::byte>(c); });
-        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], _channel.size()));
+        write_buffer.resize(_offset + _channel.size());
+        std::ranges::transform(_channel, write_buffer.begin() + _offset, [](char c) { return static_cast<std::byte>(c); });
+        batch.emplace_back(&write_buffer[_offset], _channel.size());
       }
     }
   }

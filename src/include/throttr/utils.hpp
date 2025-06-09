@@ -53,6 +53,21 @@ namespace throttr
   }
 
   /**
+   * Append UUID
+   *
+   * @param write_buffer
+   * @param batch
+   * @param data
+   */
+  inline void append_uuid(std::vector<std::byte> &write_buffer, std::vector<boost::asio::const_buffer> &batch, const void *data)
+  {
+    const auto _offset = write_buffer.size();
+    write_buffer.resize(_offset + 16);
+    std::memcpy(write_buffer.data() + _offset, data, 16);
+    batch.emplace_back(write_buffer.data() + _offset, 16);
+  }
+
+  /**
    * Buffers to hex
    *
    * @param buffers

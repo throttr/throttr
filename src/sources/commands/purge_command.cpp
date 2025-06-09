@@ -71,11 +71,11 @@ namespace throttr
 
     if (_erased)
     {
-      batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
+      batch.emplace_back(&state::success_response_, 1);
     }
     else
     {
-      batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
+      batch.emplace_back(&state::failed_response_, 1);
     }
   }
 } // namespace throttr

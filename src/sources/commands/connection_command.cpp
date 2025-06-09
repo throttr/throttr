@@ -58,7 +58,7 @@ namespace throttr
 
     if (!_found_in_tcp && !_found_in_unix)
     {
-      batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
+      batch.emplace_back(&state::failed_response_, 1);
       // LCOV_EXCL_START
 #ifndef NDEBUG
       fmt::println(
@@ -76,7 +76,7 @@ namespace throttr
       std::lock_guard _lock(state->tcp_connections_mutex_);
       const auto &_tcp_map = state->tcp_connections_;
       const auto *_conn = _tcp_map.find(_id)->second;
-      batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
+      batch.emplace_back(&state::success_response_, 1);
       response_builder_service::write_connections_entry_to_buffer<tcp_socket>(state, &batch, _conn, write_buffer, false);
     }
     else
@@ -84,7 +84,7 @@ namespace throttr
       std::lock_guard _lock(state->unix_connections_mutex_);
       const auto &_unix_map = state->unix_connections_;
       const auto *_conn = _unix_map.find(_id)->second;
-      batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
+      batch.emplace_back(&state::success_response_, 1);
       response_builder_service::write_connections_entry_to_buffer<unix_socket>(state, &batch, _conn, write_buffer, false);
     }
 

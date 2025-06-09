@@ -34,14 +34,8 @@ namespace throttr
   {
     boost::ignore_unused(state, type, view);
 
-    batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
-
-    {
-      const auto _offset = write_buffer.size();
-      const auto *id_data = reinterpret_cast<const std::byte *>(id.data()); // NOSONAR
-      write_buffer.insert(write_buffer.end(), id_data, id_data + 16);
-      batch.emplace_back(boost::asio::buffer(reinterpret_cast<const void *>(&write_buffer[_offset]), 16)); // NOSONAR
-    }
+    batch.emplace_back(&state::success_response_, 1);
+    append_uuid(write_buffer, batch, id.data());
 
     // LCOV_EXCL_START
 #ifndef NDEBUG

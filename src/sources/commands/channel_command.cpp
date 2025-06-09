@@ -55,49 +55,44 @@ namespace throttr
         span_to_hex(_request.channel_));
 #endif
       // LCOV_EXCL_STOP
-      batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
+      batch.emplace_back(&state::failed_response_, 1);
       return;
     }
 
-    batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
+    batch.emplace_back(&state::success_response_, 1);
 
     {
       const auto _offset = write_buffer.size();
       const uint64_t _count = std::distance(_range.first, _range.second);
       append_uint64_t(write_buffer, native_to_little(_count));
-      batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_count)));
+      batch.emplace_back(&write_buffer[_offset], sizeof(_count));
     }
 
     for (auto it = _range.first; it != _range.second; ++it) // LCOV_EXCL_LINE Note: Partially tested.
     {
       const auto &_sub = *it;
 
-      {
-        const auto _offset = write_buffer.size();
-        const auto *id_data = reinterpret_cast<const std::byte *>(_sub.connection_id_.data()); // NOSONAR
-        write_buffer.insert(write_buffer.end(), id_data, id_data + 16);
-        batch.emplace_back(boost::asio::buffer(reinterpret_cast<const void *>(&write_buffer[_offset]), 16)); // NOSONAR
-      }
+      append_uuid(write_buffer, batch, _sub.connection_id_.data());
 
       {
         const auto _offset = write_buffer.size();
         append_uint64_t(write_buffer, native_to_little(_sub.subscribed_at_));
-        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(_sub.subscribed_at_)));
+        batch.emplace_back(&write_buffer[_offset], sizeof(_sub.subscribed_at_));
       }
 
 #ifdef ENABLED_FEATURE_METRICS
       const uint64_t _read = _sub.metrics_->read_bytes_.accumulator_.load(std::memory_order_relaxed);
       const uint64_t _write = _sub.metrics_->write_bytes_.accumulator_.load(std::memory_order_relaxed);
 #else
-      const uint64_t _read = 0;
-      const uint64_t _write = 0;
+      constexpr uint64_t _read = 0;
+      constexpr uint64_t _write = 0;
 #endif
 
-      for (uint64_t metric : {_read, _write})
+      for (const uint64_t metric : {_read, _write})
       {
         const auto _offset = write_buffer.size();
         append_uint64_t(write_buffer, native_to_little(metric));
-        batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(metric)));
+        batch.emplace_back(&write_buffer[_offset], sizeof(metric));
       }
     }
 

@@ -52,19 +52,19 @@ namespace throttr
         to_string(id),
         _key.key_);
 #endif
-      batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
+      batch.emplace_back(&state::failed_response_, 1);
       return;
       // LCOV_EXCL_STOP
     }
     const auto _it = _find.value();
     boost::ignore_unused(_it);
-    batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
+    batch.emplace_back(&state::success_response_, 1);
 
     auto _append_uint64 = [&write_buffer, &batch](const uint64_t value)
     {
       const auto _offset = write_buffer.size();
       append_uint64_t(write_buffer, native_to_little(value));
-      batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(uint64_t)));
+      batch.emplace_back(&write_buffer[_offset], sizeof(uint64_t));
     };
 
 #ifdef ENABLED_FEATURE_METRICS

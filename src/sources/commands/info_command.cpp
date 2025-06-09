@@ -43,7 +43,7 @@ namespace throttr
 
     std::scoped_lock _lock(state->subscriptions_->mutex_);
 
-    batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
+    batch.emplace_back(&state::success_response_, 1);
 
     const auto _now =
       std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
@@ -54,7 +54,7 @@ namespace throttr
     {
       const auto _offset = write_buffer.size();
       append_uint64_t(write_buffer, native_to_little(value));
-      batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(value)));
+      batch.emplace_back(&write_buffer[_offset], sizeof(value));
     };
 
     uint64_t _total_requests = 0;
@@ -202,10 +202,13 @@ namespace throttr
 
     {
       const auto _offset = write_buffer.size();
+      write_buffer.resize(_offset + 16, std::byte{0});
       const auto _version_data = get_version();
-      write_buffer.insert(write_buffer.end(), 16, std::byte{0});
-      std::ranges::transform(_version_data, write_buffer.end() - 16, [](char c) { return static_cast<std::byte>(c); });
-      batch.emplace_back(boost::asio::buffer(&write_buffer[_offset], 16));
+
+      for (std::size_t i = 0; i < std::min<std::size_t>(_version_data.size(), 16); ++i)
+        write_buffer[_offset + i] = static_cast<std::byte>(_version_data[i]);
+
+      batch.emplace_back(&write_buffer[_offset], 16);
     }
 
     // LCOV_EXCL_START

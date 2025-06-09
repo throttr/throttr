@@ -42,7 +42,7 @@ namespace throttr
 
     auto [_it, _inserted] = state->subscriptions_->subscriptions_.insert(subscription{id, _channel});
 
-    batch.emplace_back(boost::asio::buffer(_inserted ? &state::success_response_ : &state::failed_response_, 1));
+    batch.emplace_back(_inserted ? &state::success_response_ : &state::failed_response_, 1);
 
     // LCOV_EXCL_START
 #ifndef NDEBUG

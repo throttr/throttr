@@ -45,7 +45,7 @@ namespace throttr
 
     if (!_it.has_value()) // LCOV_EXCL_LINE note: Partially covered.
     {
-      batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
+      batch.emplace_back(&state::failed_response_, 1);
       // LCOV_EXCL_START
 #ifndef NDEBUG
       fmt::println(
@@ -103,11 +103,11 @@ namespace throttr
 
     if (_modified)
     {
-      batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
+      batch.emplace_back(&state::success_response_, 1);
     }
     else
     {
-      batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
+      batch.emplace_back(&state::failed_response_, 1);
     }
   }
 } // namespace throttr

@@ -43,7 +43,7 @@ namespace throttr
 
     if (!state->subscriptions_->is_subscribed(id, _channel)) // LCOV_EXCL_LINE Note: Partially tested.
     {
-      batch.emplace_back(boost::asio::buffer(&state::failed_response_, 1));
+      batch.emplace_back(&state::failed_response_, 1);
 
       // LCOV_EXCL_START
 #ifndef NDEBUG
@@ -78,7 +78,7 @@ namespace throttr
       index.erase(it);
     }
 
-    batch.emplace_back(boost::asio::buffer(&state::success_response_, 1));
+    batch.emplace_back(&state::success_response_, 1);
 
     // LCOV_EXCL_START
 #ifndef NDEBUG

@@ -45,7 +45,7 @@ namespace throttr
       std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size())}; // NOSONAR
     const auto _range = _subs.equal_range(_channel);                                                         // NOSONAR
 
-    // LCOV_EXCL_START Note: This means that there are no suscriptions.
+    // LCOV_EXCL_START Note: This means that there are no subscriptions.
     if (_range.first == _range.second)
       return;
     // LCOV_EXCL_STOP
@@ -53,17 +53,25 @@ namespace throttr
     const auto _message = std::make_shared<message>();
     _message->recyclable_ = false;
     auto &_buffer = _message->write_buffer_;
-    _buffer.reserve(1 + sizeof(value_type) + _payload.size());
 
-    _buffer.push_back(static_cast<std::byte>(request_types::event));
+    const auto _payload_size = _payload.size();
+    const auto _total_size = 1 + sizeof(value_type) + _payload_size;
+    _buffer.resize(_total_size);
 
-    const value_type _size = _payload.size();
-    append_value_type(_buffer, native_to_little(_size));
+    std::size_t _offset = 0;
 
-    for (const auto &_byte : _payload)
-      _buffer.push_back(std::byte{std::to_integer<uint8_t>(_byte)});
+    // Type
+    _buffer[_offset++] = static_cast<std::byte>(request_types::event);
 
-    _message->buffers_.emplace_back(boost::asio::buffer(_buffer));
+    // Size
+    const value_type _size = native_to_little(static_cast<value_type>(_payload_size));
+    std::memcpy(_buffer.data() + _offset, &_size, sizeof(value_type));
+    _offset += sizeof(value_type);
+
+    // Value
+    std::memcpy(_buffer.data() + _offset, _payload.data(), _payload_size);
+
+    _message->buffers_.emplace_back(_buffer.data(), _buffer.size());
 
     for (auto _it = _range.first; _it != _range.second; ++_it) // LCOV_EXCL_LINE Note: Partially tested.
     {

@@ -106,7 +106,7 @@ namespace throttr
         const auto _offset = write_buffer.size();
         const auto *_bytes = static_cast<const std::byte *>(ptr);
         write_buffer.insert(write_buffer.end(), _bytes, _bytes + size);
-        batch->emplace_back(boost::asio::buffer(reinterpret_cast<const void *>(&write_buffer[_offset]), size)); // NOSONAR
+        batch->emplace_back(&write_buffer[_offset], size); // NOSONAR
       };
 
       // UUID (16 bytes)
@@ -153,7 +153,7 @@ namespace throttr
       {
         const auto _offset = write_buffer.size();
         append_uint64_t(write_buffer, native_to_little(_val));
-        batch->emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(uint64_t)));
+        batch->emplace_back(&write_buffer[_offset], sizeof(uint64_t));
       }
 
       constexpr std::array monitored_request_types =
@@ -187,7 +187,7 @@ namespace throttr
 #endif
         const auto _offset = write_buffer.size();
         append_uint64_t(write_buffer, native_to_little(_value));
-        batch->emplace_back(boost::asio::buffer(&write_buffer[_offset], sizeof(uint64_t)));
+        batch->emplace_back(&write_buffer[_offset], sizeof(uint64_t));
       }
 
       return 0;

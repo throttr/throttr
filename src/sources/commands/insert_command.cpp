@@ -36,6 +36,6 @@ namespace throttr
 
     const auto _inserted = create_service::
       use(state, _request.key_, _request.quota_, _request.ttl_type_, _request.ttl_, entry_types::counter, id, true);
-    batch.emplace_back(boost::asio::buffer(_inserted ? &state::success_response_ : &state::failed_response_, 1));
+    batch.emplace_back(_inserted ? &state::success_response_ : &state::failed_response_, 1);
   }
 } // namespace throttr

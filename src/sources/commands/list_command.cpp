@@ -43,7 +43,7 @@ namespace throttr
       [_state = state->shared_from_this(),
        _write_buffer_ref = // LCOV_EXCL_LINE Note: For some reason this line isn't tested ...
        std::ref(write_buffer)](std::vector<boost::asio::const_buffer> *b, const entry_wrapper *e, const bool measure)
-      { return _state->response_builder_->write_list_entry_to_buffer(_state, b, e, _write_buffer_ref, measure); });
+      { return response_builder_service::write_list_entry_to_buffer(_state, b, e, _write_buffer_ref, measure); });
 
     // LCOV_EXCL_START
 #ifndef NDEBUG
