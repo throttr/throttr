@@ -25,7 +25,7 @@ TEST_F(EventTestFixture, OnSuccess)
   const std::vector _value = {std::byte{0xBE}, std::byte{0xEF}, std::byte{0xCA}, std::byte{0xFE}};
 
   const auto _buffer = request_set_builder(_value, ttl_types::seconds, 10, _key);
-  const auto _event = request_event_builder(_buffer);
+  const auto _event = request_event_builder(_buffer, "channel");
 
   auto _response = send_and_receive(_event, 2);
 

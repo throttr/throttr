@@ -180,12 +180,13 @@ namespace throttr
     if (buffer.size() < request_event_header_size)
       return 0;
     // LCOV_EXCL_STOP
+    const auto _channel_size = static_cast<uint8_t>(buffer[1]); // NOSONAR
     value_type _value_size = 0;
     for (std::size_t i = 0; i < sizeof(value_type); ++i)
     {
-      _value_size |= static_cast<value_type>(std::to_integer<uint8_t>(buffer[1 + i])) << (8 * i); // NOSONAR
+      _value_size |= static_cast<value_type>(std::to_integer<uint8_t>(buffer[2 + i])) << (8 * i); // NOSONAR
     }
-    return request_event_header_size + _value_size;
+    return request_event_header_size + _channel_size + _value_size;
   }
 
   static std::size_t invalid_size(const std::span<const std::byte> &)
