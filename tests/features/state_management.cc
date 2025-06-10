@@ -356,6 +356,7 @@ TEST_F(StateManagementTestFixture, StateCanPersistKeys)
   EXPECT_EQ(_index.size(), 2);
 
   const program_parameters _parameters = {
+    .persistent_ = true,
     .dump_ = to_string(boost::uuids::random_generator()()),
   };
   state_->prepare_for_shutdown(_parameters);
