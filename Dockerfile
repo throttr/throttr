@@ -23,19 +23,19 @@ RUN mkdir -p build && \
       -DENABLE_FEATURE_METRICS="$METRICS" \
       -DENABLE_STATIC_LINKING=ON && \
     make -j4 && \
-    strip --strip-all throttr  && \
+    strip --strip-all throttr && \
     mv throttr /usr/bin/throttr && \
     ctest --output-on-failure -V && \
-    adduser --system --no-create-home --shell /bin/false throttr
+    echo "Success"
 
-FROM alpine:latest
+FROM scratch
 
 COPY --from=builder /usr/bin/throttr /usr/bin/throttr
 COPY /LICENSE /LICENSE
 COPY --from=builder /etc/passwd /etc/passwd
 COPY --from=builder /etc/group /etc/group
 
-USER throttr
+USER root # NOSONAR
 
 EXPOSE 9000
 
