@@ -49,20 +49,24 @@ TEST_F(PublishTestFixture, OnSuccess)
   const auto _publish_buffer = request_publish_builder({std::byte{0x42}}, "news");
   boost::asio::write(_publisher, boost::asio::buffer(_publish_buffer.data(), _publish_buffer.size()));
 
-  std::vector<std::byte> _header(1 + sizeof(value_type));
+  std::vector<std::byte> _header(2 + sizeof(value_type));
   boost::asio::read(_subscriber, boost::asio::buffer(_header.data(), _header.size()));
 
   ASSERT_EQ(_header[0], std::byte{static_cast<std::uint8_t>(request_types::event)});
 
-  value_type _size = 0;
-  std::memcpy(&_size, _header.data() + 1, sizeof(value_type));
-  _size = boost::endian::little_to_native(_size);
+  uint8_t _channel_size = 0;
+  std::memcpy(&_channel_size, _header.data() + 1, sizeof(uint8_t));
+  _channel_size = boost::endian::little_to_native(_channel_size);
 
-  std::vector<std::byte> _payload(_size);
+  value_type _payload_size = 0;
+  std::memcpy(&_payload_size, _header.data() + 2, sizeof(value_type));
+  _payload_size = boost::endian::little_to_native(_payload_size);
+
+  std::vector<std::byte> _payload(_payload_size + _channel_size);
   boost::asio::read(_subscriber, boost::asio::buffer(_payload.data(), _payload.size()));
 
-  ASSERT_EQ(_size, 1);
-  ASSERT_EQ(_payload[0], std::byte{0x42});
+  ASSERT_EQ(_payload_size, 1);
+  ASSERT_EQ(_payload[_channel_size + 0], std::byte{0x42});
 
   boost::system::error_code _ec;
   _subscriber.close(_ec);
