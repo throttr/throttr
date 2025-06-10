@@ -30,6 +30,7 @@
 #include <deque>
 #include <memory>
 #include <throttr/connection_type.hpp>
+#include <throttr/program_parameters.hpp>
 #include <throttr/protocol_wrapper.hpp>
 #include <throttr/storage.hpp>
 
@@ -330,6 +331,16 @@ namespace throttr
         }
       }
     }
+
+    /**
+     * Prepare for shutdown
+     */
+    void prepare_for_shutdown(const program_parameters &parameters);
+
+    /**
+     * Prepare for startup
+     */
+    void prepare_for_startup(const program_parameters &parameters);
   };
 } // namespace throttr
 

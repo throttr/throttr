@@ -209,7 +209,11 @@ namespace throttr
 
     uint64_t _total_connections = 0;
     {
-      std::scoped_lock _scoped_lock(state->unix_connections_mutex_, state->tcp_connections_mutex_, state->agent_unix_connections_mutex_, state->agent_tcp_connections_mutex_);
+      std::scoped_lock _scoped_lock(
+        state->unix_connections_mutex_,
+        state->tcp_connections_mutex_,
+        state->agent_unix_connections_mutex_,
+        state->agent_tcp_connections_mutex_);
       _total_connections = state->tcp_connections_.size() + state->unix_connections_.size() +
                            state->agent_tcp_connections_.size() + state->agent_unix_connections_.size();
     }

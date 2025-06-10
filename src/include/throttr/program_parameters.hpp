@@ -63,6 +63,16 @@ namespace throttr
      * Sync strategy
      */
     std::string sync_strategy_ = "hard";
+
+    /**
+     * Persistent
+     */
+    bool persistent_ = false;
+
+    /**
+     * Dump
+     */
+    std::string dump_ = "throttr.db";
   };
 } // namespace throttr
 

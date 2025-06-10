@@ -15,6 +15,8 @@
 
 #include <throttr/app.hpp>
 
+#include <boost/asio/signal_set.hpp>
+
 #include <thread>
 #include <vector>
 
@@ -42,6 +44,17 @@ namespace throttr
       _threads.emplace_back([self = shared_from_this()] { self->ioc_.run(); });
     }
     // LCOV_EXCL_STOP
+
+    state_->prepare_for_startup(program_options_);
+
+    boost::asio::signal_set signals(ioc_, SIGINT, SIGTERM);
+    signals.async_wait(
+      [&](auto /*ec*/, int /*signal_number*/)
+      {
+        fmt::println("[{}] [{:%Y-%m-%d %H:%M:%S}] SIGNAL RECEIVED", to_string(state_->id_), std::chrono::system_clock::now());
+        state_->prepare_for_shutdown(program_options_);
+        ioc_.stop();
+      });
 
     ioc_.run();
 
