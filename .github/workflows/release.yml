@@ -32,11 +32,11 @@ jobs:
           cd build
           cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.type }} -DBUILD_TESTS=OFF -DRUNTIME_VALUE_SIZE=${{ matrix.size }} -DENABLE_FEATURE_METRICS=${{ matrix.metrics == 'METRICS_ENABLED' && 'ON' || 'OFF' }} -DENABLE_STATIC_LINKING=ON
           make -j4
+          strip --strip-all throttr
           cd ..
           mkdir -p dist
           cp build/throttr dist/
           cp LICENSE dist/
-          strip --strip-all throttr
           cd dist && zip throttr-${{ matrix.type }}-${{ matrix.size }}-amd64-${{ matrix.metrics == 'METRICS_ENABLED' && 'metrics-enabled' || 'metrics-disabled' }}.zip throttr LICENSE
 
       - name: Upload release asset

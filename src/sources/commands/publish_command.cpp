@@ -47,7 +47,21 @@ namespace throttr
 
     // LCOV_EXCL_START Note: This means that there are no subscriptions.
     if (_range.first == _range.second)
+    {
+      // LCOV_EXCL_START
+#ifndef NDEBUG
+      fmt::println(
+        "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST PUBLISH session_id={} META channel={} data={} RESPONSE ok=false",
+        to_string(state->id_),
+        std::chrono::system_clock::now(),
+        to_string(id),
+        _channel,
+        span_to_hex(_payload));
+#endif
+      // LCOV_EXCL_STOP
+      batch.emplace_back(&state::failed_response_, 1); // LCOV_EXCL_LINE
       return;
+    }
     // LCOV_EXCL_STOP
 
     const auto _message = std::make_shared<message>();
@@ -55,7 +69,7 @@ namespace throttr
     auto &_buffer = _message->write_buffer_;
 
     const auto _payload_size = _payload.size();
-    const auto _total_size = 1 + sizeof(value_type) + _payload_size;
+    const auto _total_size = 1 + sizeof(value_type) + 1 + _payload_size + _channel.size();
     _buffer.resize(_total_size);
 
     std::size_t _offset = 0;
@@ -64,9 +78,18 @@ namespace throttr
     _buffer[_offset++] = static_cast<std::byte>(request_types::event);
 
     // Size
+    const uint8_t _channel_size = native_to_little(static_cast<uint8_t>(_channel.size()));
+    std::memcpy(_buffer.data() + _offset, &_channel_size, sizeof(uint8_t)); // NOSONAR
+    _offset += sizeof(uint8_t);
+
+    // Size
     const value_type _size = native_to_little(static_cast<value_type>(_payload_size));
     std::memcpy(_buffer.data() + _offset, &_size, sizeof(value_type));
     _offset += sizeof(value_type);
+
+    // Channel
+    std::memcpy(_buffer.data() + _offset, _channel.data(), _channel_size);
+    _offset += _channel_size;
 
     // Value
     std::memcpy(_buffer.data() + _offset, _payload.data(), _payload_size);
@@ -164,5 +187,7 @@ namespace throttr
       span_to_hex(_payload));
 #endif
     // LCOV_EXCL_STOP
+
+    batch.emplace_back(&state::success_response_, 1);
   }
 } // namespace throttr
