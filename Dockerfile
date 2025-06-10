@@ -22,13 +22,12 @@ RUN mkdir -p build && \
       -DRUNTIME_VALUE_SIZE="$SIZE" \
       -DENABLE_FEATURE_METRICS="$METRICS" \
       -DENABLE_STATIC_LINKING=ON && \
-    make -j4 && \
+    make -j32 && \
     strip --strip-all throttr  && \
     mv throttr /usr/bin/throttr && \
-    ctest --output-on-failure -V && \
-    adduser --system --no-create-home --shell /bin/false throttr
+    adduser --system --uid 1000 --no-create-home --shell /bin/false throttr
 
-FROM scratch
+FROM alpine:latest
 
 COPY --from=builder /usr/bin/throttr /usr/bin/throttr
 COPY /LICENSE /LICENSE

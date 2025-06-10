@@ -40,7 +40,7 @@ main(const int argc, const char *argv[])
 
   auto _push_option = _options.add_options();
 
-  _push_option("socket", value<std::string>()->default_value("throttr.sock"));
+  _push_option("socket", value<std::string>()->default_value("/tmp/throttr.sock"));
   _push_option("port", value<short>()->default_value(9000));
   _push_option("threads", value<int>()->default_value(default_threads));
   _push_option("has_master", value<bool>()->default_value(false));
@@ -49,7 +49,7 @@ main(const int argc, const char *argv[])
   _push_option("master_port", value<short>()->default_value(9000));
   _push_option("sync_strategy", value<std::string>()->default_value("hard"));
   _push_option("persistent", value<bool>()->default_value(false));
-  _push_option("dump", value<std::string>()->default_value("throttr.db"));
+  _push_option("dump", value<std::string>()->default_value("/tmp/throttr.db"));
 
   variables_map _vm;
   store(parse_command_line(argc, argv, _options), _vm);
