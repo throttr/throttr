@@ -89,7 +89,7 @@ include(FetchContent)
 FetchContent_Declare(
         throttr-protocol
         GIT_REPOSITORY https://github.com/throttr/protocol.git
-        GIT_TAG 7.3.1
+        GIT_TAG 7.3.2
 )
 
 FetchContent_MakeAvailable(throttr-protocol)
