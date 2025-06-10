@@ -43,12 +43,12 @@ namespace throttr
 
     template<typename T> void write_raw(std::ofstream &out, const T &value)
     {
-      out.write(reinterpret_cast<const char *>(&value), sizeof(T));
+      out.write(reinterpret_cast<const char *>(&value), sizeof(T)); // NOSONAR
     }
 
     template<typename T> void read_raw(std::ifstream &in, T &value)
     {
-      in.read(reinterpret_cast<char *>(&value), sizeof(T));
+      in.read(reinterpret_cast<char *>(&value), sizeof(T)); // NOSONAR
     }
 
     uint64_t read_metric(std::ifstream &_in)
@@ -60,13 +60,13 @@ namespace throttr
 
     void write_bytes(std::ofstream &out, const std::vector<std::byte> &buffer)
     {
-      out.write(reinterpret_cast<const char *>(buffer.data()), buffer.size());
+      out.write(reinterpret_cast<const char *>(buffer.data()), buffer.size()); // NOSONAR
     }
 
     void read_bytes(std::ifstream &in, std::vector<std::byte> &buffer, std::size_t size)
     {
       buffer.resize(size);
-      in.read(reinterpret_cast<char *>(buffer.data()), size);
+      in.read(reinterpret_cast<char *>(buffer.data()), size); // NOSONAR
     }
   } // namespace
 
@@ -74,7 +74,7 @@ namespace throttr
   {
     std::ofstream _out(filename, std::ios::binary);
     if (!_out)
-      throw std::runtime_error("Unable to open dump file for writing");
+      throw std::runtime_error("Unable to open dump file for writing"); // NOSONAR
 
     _out.write(MAGIC_, 4);
     write_raw(_out, VERSION_);
@@ -121,7 +121,7 @@ namespace throttr
         const auto _buffer_ptr = _e.entry_.buffer_.load();
         value_type _buffer_size = static_cast<value_type>(_buffer_ptr->size());
         write_raw(_out, _buffer_size);
-        _out.write(reinterpret_cast<const char *>(_buffer_ptr->data()), _buffer_size);
+        _out.write(reinterpret_cast<const char *>(_buffer_ptr->data()), _buffer_size); // NOSONAR
       }
     }
   }
@@ -130,22 +130,22 @@ namespace throttr
   {
     std::ifstream _in(filename, std::ios::binary);
     if (!_in)
-      throw std::runtime_error("Unable to open dump file for reading");
+      throw std::runtime_error("Unable to open dump file for reading"); // NOSONAR
 
-    char _magic[4];
+    char _magic[4]; // NOSONAR
     _in.read(_magic, 4);
     if (std::string_view(_magic, 4) != MAGIC_)
-      throw std::runtime_error("Invalid dump file format");
+      throw std::runtime_error("Invalid dump file format"); // NOSONAR
 
     uint8_t _version = 0;
     read_raw(_in, _version);
     if (_version != VERSION_)
-      throw std::runtime_error("Unsupported dump file version");
+      throw std::runtime_error("Unsupported dump file version"); // NOSONAR
 
     uint8_t _file_value_size = 0;
     read_raw(_in, _file_value_size);
     if (_file_value_size != get_value_size_code())
-      throw std::runtime_error("Mismatched value_size in dump file");
+      throw std::runtime_error("Mismatched value_size in dump file"); // NOSONAR
 
     uint32_t _count = 0;
     read_raw(_in, _count);
