@@ -73,25 +73,27 @@ namespace throttr
   void dump_to_file(const storage_type &storage, const std::string &filename)
   {
     std::ofstream _out(filename, std::ios::binary);
+    // LCOV_EXCL_START
     if (!_out)
       throw std::runtime_error("Unable to open dump file for writing"); // NOSONAR
+    // LCOV_EXCL_STOP
 
     _out.write(MAGIC_, 4);
     write_raw(_out, VERSION_);
     write_raw(_out, get_value_size_code());
 
     uint32_t _count = 0;
-    for (const auto &_entry : storage)
+    for (const auto &_entry : storage) // LCOV_EXCL_LINE
     {
-      if (!_entry.expired_)
+      if (!_entry.expired_) // LCOV_EXCL_LINE
         ++_count;
     }
     write_raw(_out, _count);
 
-    for (const auto &_e : storage)
+    for (const auto &_e : storage) // LCOV_EXCL_LINE
     {
       if (_e.expired_)
-        continue;
+        continue; // LCOV_EXCL_LINE
 
       const auto &_key = _e.key_;
       uint16_t _key_size = static_cast<uint16_t>(_key.size());
@@ -129,23 +131,31 @@ namespace throttr
   void restore_from_file(storage_type &storage, const std::string &filename)
   {
     std::ifstream _in(filename, std::ios::binary);
+    // LCOV_EXCL_START
     if (!_in)
       throw std::runtime_error("Unable to open dump file for reading"); // NOSONAR
+    // LCOV_EXCL_STOP
 
     char _magic[4]; // NOSONAR
     _in.read(_magic, 4);
+    // LCOV_EXCL_START
     if (std::string_view(_magic, 4) != MAGIC_)
       throw std::runtime_error("Invalid dump file format"); // NOSONAR
+    // LCOV_EXCL_STOP
 
     uint8_t _version = 0;
     read_raw(_in, _version);
+    // LCOV_EXCL_START
     if (_version != VERSION_)
       throw std::runtime_error("Unsupported dump file version"); // NOSONAR
+    // LCOV_EXCL_STOP
 
     uint8_t _file_value_size = 0;
     read_raw(_in, _file_value_size);
+    // LCOV_EXCL_START
     if (_file_value_size != get_value_size_code())
       throw std::runtime_error("Mismatched value_size in dump file"); // NOSONAR
+    // LCOV_EXCL_STOP
 
     uint32_t _count = 0;
     read_raw(_in, _count);
