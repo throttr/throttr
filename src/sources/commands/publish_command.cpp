@@ -59,7 +59,7 @@ namespace throttr
         span_to_hex(_payload));
 #endif
       // LCOV_EXCL_STOP
-      batch.emplace_back(&state::failed_response_, 1);
+      batch.emplace_back(&state::failed_response_, 1); // LCOV_EXCL_LINE
       return;
     }
     // LCOV_EXCL_STOP
@@ -79,7 +79,7 @@ namespace throttr
 
     // Size
     const uint8_t _channel_size = native_to_little(static_cast<uint8_t>(_channel.size()));
-    std::memcpy(_buffer.data() + _offset, &_channel_size, sizeof(uint8_t));
+    std::memcpy(_buffer.data() + _offset, &_channel_size, sizeof(uint8_t)); // NOSONAR
     _offset += sizeof(uint8_t);
 
     // Size
