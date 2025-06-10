@@ -48,6 +48,7 @@ namespace throttr
     state_->prepare_for_startup(program_options_);
 
     boost::asio::signal_set signals(ioc_, SIGINT, SIGTERM);
+    // LCOV_EXCL_sTART
     signals.async_wait(
       [&](auto /*ec*/, int /*signal_number*/)
       {
@@ -55,6 +56,7 @@ namespace throttr
         state_->prepare_for_shutdown(program_options_);
         ioc_.stop();
       });
+    // LCOV_EXCL_STOP
 
     ioc_.run();
 
