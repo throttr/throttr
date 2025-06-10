@@ -47,7 +47,21 @@ namespace throttr
 
     // LCOV_EXCL_START Note: This means that there are no subscriptions.
     if (_range.first == _range.second)
+    {
+      // LCOV_EXCL_START
+#ifndef NDEBUG
+      fmt::println(
+        "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST PUBLISH session_id={} META channel={} data={} RESPONSE ok=false",
+        to_string(state->id_),
+        std::chrono::system_clock::now(),
+        to_string(id),
+        _channel,
+        span_to_hex(_payload));
+#endif
+      // LCOV_EXCL_STOP
+      batch.emplace_back(&state::failed_response_, 1);
       return;
+    }
     // LCOV_EXCL_STOP
 
     const auto _message = std::make_shared<message>();
@@ -164,5 +178,7 @@ namespace throttr
       span_to_hex(_payload));
 #endif
     // LCOV_EXCL_STOP
+
+    batch.emplace_back(&state::success_response_, 1);
   }
 } // namespace throttr
