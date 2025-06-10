@@ -53,7 +53,6 @@ namespace throttr
         to_string(id),
         _key.key_);
 #endif
-      batch.emplace_back(&state::failed_response_, 1);
       return;
       // LCOV_EXCL_STOP
     }
