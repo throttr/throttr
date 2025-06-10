@@ -180,7 +180,7 @@ namespace throttr
     if (buffer.size() < request_event_header_size)
       return 0;
     // LCOV_EXCL_STOP
-    const auto _channel_size = static_cast<uint8_t>(buffer[1]);
+    const auto _channel_size = static_cast<uint8_t>(buffer[1]); // NOSONAR
     value_type _value_size = 0;
     for (std::size_t i = 0; i < sizeof(value_type); ++i)
     {
