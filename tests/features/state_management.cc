@@ -331,24 +331,28 @@ TEST_F(StateManagementTestFixture, StateCanPersistKeys)
   _entry1.counter_.store(32, std::memory_order_release);
   _entry1.expires_at_.store(expires1_ns, std::memory_order_release);
   auto _entry1wrapper = entry_wrapper{to_bytes("c1r1"), std::move(_entry1)};
+#ifdef ENABLED_FEATURE_METRICS
   _entry1wrapper.metrics_->reads_.store(3, std::memory_order_release);
   _entry1wrapper.metrics_->reads_accumulator_.store(66, std::memory_order_release);
   _entry1wrapper.metrics_->writes_per_minute_.store(30, std::memory_order_release);
   _entry1wrapper.metrics_->writes_.store(5, std::memory_order_release);
   _entry1wrapper.metrics_->writes_accumulator_.store(10, std::memory_order_release);
   _entry1wrapper.metrics_->writes_per_minute_.store(33, std::memory_order_release);
+#endif
 
   entry _entry2;
   _entry2.type_ = entry_types::raw;
   _entry2.buffer_.store(std::make_shared<std::vector<std::byte>>(1, std::byte{1}), std::memory_order_release);
   _entry2.expires_at_.store(expires2_ns, std::memory_order_release);
   auto _entry2wrapper = entry_wrapper{to_bytes("c2r2"), std::move(_entry2)};
+#ifdef ENABLED_FEATURE_METRICS
   _entry2wrapper.metrics_->reads_.store(5, std::memory_order_release);
   _entry2wrapper.metrics_->reads_accumulator_.store(11, std::memory_order_release);
   _entry2wrapper.metrics_->writes_per_minute_.store(13, std::memory_order_release);
   _entry2wrapper.metrics_->writes_.store(15, std::memory_order_release);
   _entry2wrapper.metrics_->writes_accumulator_.store(17, std::memory_order_release);
   _entry2wrapper.metrics_->writes_per_minute_.store(19, std::memory_order_release);
+#endif
 
   _index.insert(_entry1wrapper);
   _index.insert(_entry2wrapper);
