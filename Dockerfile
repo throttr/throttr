@@ -22,10 +22,11 @@ RUN mkdir -p build && \
       -DRUNTIME_VALUE_SIZE="$SIZE" \
       -DENABLE_FEATURE_METRICS="$METRICS" \
       -DENABLE_STATIC_LINKING=ON && \
-    make -j32 && \
+    make -j4 && \
     strip --strip-all throttr  && \
     mv throttr /usr/bin/throttr && \
-    adduser --system --uid 1000 --no-create-home --shell /bin/false throttr
+    ctest --output-on-failure -V && \
+    adduser --system --no-create-home --shell /bin/false throttr
 
 FROM alpine:latest
 
