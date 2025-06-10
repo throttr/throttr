@@ -48,6 +48,8 @@ main(const int argc, const char *argv[])
   _push_option("master_host", value<std::string>()->default_value("127.0.0.1"));
   _push_option("master_port", value<short>()->default_value(9000));
   _push_option("sync_strategy", value<std::string>()->default_value("hard"));
+  _push_option("persistent", value<bool>()->default_value(false));
+  _push_option("dump", value<std::string>()->default_value("throttr.db"));
 
   variables_map _vm;
   store(parse_command_line(argc, argv, _options), _vm);
@@ -61,6 +63,7 @@ main(const int argc, const char *argv[])
     .master_socket_ = _vm["master_socket"].as<std::string>(),
     .master_port_ = _vm["master_port"].as<short>(),
     .sync_strategy_ = _vm["sync_strategy"].as<std::string>(),
+    .dump_ = _vm["dump"].as<std::string>(),
   };
 
   const auto _app = std::make_shared<app>(_program_options);
