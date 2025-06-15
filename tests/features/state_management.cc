@@ -68,7 +68,7 @@ test_ttl_change(
   const request_update _request{_header.attribute_, _header.change_, _header.value_, _key};
 
   _entry.ttl_type_ = _ttl_type;
-  const auto _now = steady_clock::now().time_since_epoch().count();
+  const auto _now = system_clock::now().time_since_epoch().count();
   const auto _before = _entry.expires_at_.load(std::memory_order_relaxed);
 
   const auto _key_bytes = std::vector<
@@ -105,7 +105,7 @@ TEST(StateManagementTest, TTLChange)
   boost::asio::io_context _ioc;
   auto _state = std::make_shared<state>(_ioc);
   entry _entry;
-  _entry.expires_at_.store(steady_clock::now().time_since_epoch().count(), std::memory_order_relaxed);
+  _entry.expires_at_.store(system_clock::now().time_since_epoch().count(), std::memory_order_relaxed);
   const std::vector _key = {std::byte{0x01}, std::byte{0x02}, std::byte{0x03}, std::byte{0x04}};
 
   {
@@ -171,7 +171,7 @@ TEST(StateManagementTest, TTLChange)
 
 TEST(StateManagementTest, CalculateExpirationPointNanoseconds)
 {
-  const auto _now_tp = std::chrono::steady_clock::now();
+  const auto _now_tp = std::chrono::system_clock::now();
   const auto _now_ns = _now_tp.time_since_epoch().count();
 
   constexpr value_type _expiration_value = 32;
@@ -185,7 +185,7 @@ TEST(StateManagementTest, CalculateExpirationPointNanoseconds)
 
 TEST(StateManagementTest, CalculateExpirationPointSeconds)
 {
-  const auto _now_tp = std::chrono::steady_clock::now();
+  const auto _now_tp = std::chrono::system_clock::now();
   const auto _now_ns = _now_tp.time_since_epoch().count();
 
   value_type _expiration_value = 3;
@@ -202,7 +202,7 @@ TEST(StateManagementTest, CalculateExpirationPointSeconds)
 
 TEST(StateManagementTest, CalculateTTLRemainingNanosecondsNotExpired)
 {
-  const auto _now_tp = std::chrono::steady_clock::now();
+  const auto _now_tp = std::chrono::system_clock::now();
   const auto _now_ns = _now_tp.time_since_epoch().count();
 
   const auto _expires_ns = _now_ns + 256;
@@ -213,7 +213,7 @@ TEST(StateManagementTest, CalculateTTLRemainingNanosecondsNotExpired)
 
 TEST(StateManagementTest, CalculateTTLRemainingSecondsNotExpired)
 {
-  const auto _now_tp = std::chrono::steady_clock::now();
+  const auto _now_tp = std::chrono::system_clock::now();
   const auto _now_ns = _now_tp.time_since_epoch().count();
 
   const auto _expires_ns = _now_ns + std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::seconds(10)).count();
@@ -224,7 +224,7 @@ TEST(StateManagementTest, CalculateTTLRemainingSecondsNotExpired)
 
 TEST(StateManagementTest, CalculateTTLRemainingNanosecondsExpired)
 {
-  const auto _now_tp = std::chrono::steady_clock::now();
+  const auto _now_tp = std::chrono::system_clock::now();
   const auto _now_ns = _now_tp.time_since_epoch().count();
 
   const auto _expires_ns = _now_ns - 100;
@@ -237,7 +237,7 @@ TEST(StateManagementTest, CalculateTTLRemainingNanosecondsExpired)
 
 TEST(StateManagementTest, CalculateTTLRemainingSecondsExpired)
 {
-  const auto _now_tp = std::chrono::steady_clock::now();
+  const auto _now_tp = std::chrono::system_clock::now();
   const auto _now_ns = _now_tp.time_since_epoch().count();
 
   const auto _expires_ns = _now_ns - std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::seconds(1)).count();
@@ -291,7 +291,7 @@ TEST_F(StateManagementTestFixture, ScheduleExpiration_ReprogramsIfNextEntryExist
   auto &_storage = state_->storage_;
   auto &_index = _storage.get<tag_by_key>();
 
-  const std::uint64_t now_ns = steady_clock::now().time_since_epoch().count();
+  const std::uint64_t now_ns = system_clock::now().time_since_epoch().count();
   const std::uint64_t expires1_ns = now_ns;
   const std::uint64_t expires2_ns = now_ns + duration_cast<nanoseconds>(seconds(5)).count();
 
@@ -322,7 +322,7 @@ TEST_F(StateManagementTestFixture, StateCanPersistKeys)
   auto &_storage = state_->storage_;
   auto &_index = _storage.get<tag_by_key>();
 
-  const std::uint64_t now_ns = steady_clock::now().time_since_epoch().count();
+  const std::uint64_t now_ns = system_clock::now().time_since_epoch().count();
   const std::uint64_t expires1_ns = now_ns + duration_cast<nanoseconds>(minutes(30)).count();
   const std::uint64_t expires2_ns = now_ns + duration_cast<nanoseconds>(minutes(60)).count();
 

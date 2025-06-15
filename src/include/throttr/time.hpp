@@ -79,7 +79,7 @@ namespace throttr
   {
     using namespace std::chrono;
 
-    const std::uint64_t now_ns = steady_clock::now().time_since_epoch().count();
+    const std::uint64_t now_ns = system_clock::now().time_since_epoch().count();
     if (expires_at <= now_ns)
     {
       return 0;

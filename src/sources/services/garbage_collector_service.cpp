@@ -28,7 +28,7 @@ namespace throttr
       "[{}] [{:%Y-%m-%d %H:%M:%S}] GARBAGE COLLECTION SCHEDULED", to_string(state->id_), std::chrono::system_clock::now());
 #endif
 
-    const uint64_t _now = std::chrono::steady_clock::now().time_since_epoch().count();
+    const uint64_t _now = std::chrono::system_clock::now().time_since_epoch().count();
     if (proposed <= _now) // LCOV_EXCL_LINE Note: Partially tested.
     {
       run(state);
@@ -53,7 +53,7 @@ namespace throttr
       println("[{}] [{:%Y-%m-%d %H:%M:%S}] GARBAGE COLLECTION STARTED", to_string(state->id_), std::chrono::system_clock::now());
 #endif
 
-    const uint64_t _now = std::chrono::steady_clock::now().time_since_epoch().count();
+    const uint64_t _now = std::chrono::system_clock::now().time_since_epoch().count();
     auto &_index = state->storage_.get<tag_by_key>();
 
     std::vector<request_key> _to_expire;

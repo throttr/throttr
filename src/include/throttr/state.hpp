@@ -198,7 +198,7 @@ namespace throttr
     /**
      * Expired entries
      */
-    std::deque<std::pair<entry_wrapper, std::chrono::steady_clock::time_point>> expired_entries_;
+    std::deque<std::pair<entry_wrapper, std::chrono::system_clock::time_point>> expired_entries_;
 
     /**
      * Commands service
