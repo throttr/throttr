@@ -40,7 +40,7 @@ namespace throttr
 
     using namespace boost::endian;
 
-    const auto _now = std::chrono::steady_clock::now();
+    const auto _now = std::chrono::system_clock::now();
     const auto _now_ns = _now.time_since_epoch().count();
     const auto _expires_at = get_expiration_point(_now_ns, ttl_type, ttl);
 
