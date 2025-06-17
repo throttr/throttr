@@ -282,7 +282,11 @@ namespace throttr
 
       {
         std::scoped_lock lock(subscriptions_->mutex_);
-        const std::string _id(connection->id_.begin(), connection->id_.end());
+        std::ostringstream oss;
+        for (auto byte : connection->id_) {
+          oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
+        }
+        const std::string _id(oss.str());
         subscriptions_->subscriptions_.insert(subscription{connection->id_, _id});
         subscriptions_->subscriptions_.insert(subscription{connection->id_, "*"});
       }
