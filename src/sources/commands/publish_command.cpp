@@ -157,7 +157,6 @@ namespace throttr
           _conn->metrics_->network_.received_bytes_.mark(payload.size());
 #endif
 
-        if (_conn->id_ != scope_id) // LCOV_EXCL_LINE
           _conn->send(message);
       };
 
