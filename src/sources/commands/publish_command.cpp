@@ -157,7 +157,7 @@ namespace throttr
           _conn->metrics_->network_.received_bytes_.mark(payload.size());
 #endif
 
-          _conn->send(message);
+        _conn->send(message);
       };
 
       if (_is_tcp)
