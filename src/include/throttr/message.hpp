@@ -49,8 +49,8 @@ namespace throttr
      */
     message()
     {
-      write_buffer_.reserve(8096);
-      buffers_.reserve(64);
+      write_buffer_.reserve(8096 * 32);
+      buffers_.reserve(1024 * 32);
     }
   };
 } // namespace throttr
