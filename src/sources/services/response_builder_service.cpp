@@ -398,7 +398,7 @@ namespace throttr
       5 * _channels_count     // Channel size + Reads + Writes + Connections + Name
     );
 
-    write_buffer.resize(write_buffer.size() + _write_buffer_size);
+    write_buffer.resize(write_buffer.size() + _write_buffer_size + sizeof(uint64_t));
 
     batch.emplace_back(&state::success_response_, 1);
 
