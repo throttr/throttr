@@ -66,7 +66,7 @@ namespace throttr
 
     const value_type _ttl = get_ttl(_it->entry_.expires_at_.load(std::memory_order_relaxed), _it->entry_.ttl_type_);
 
-    std::size_t _offset = 0;
+    std::size_t _offset = write_buffer.size();
 
     if (_as_query)
     {

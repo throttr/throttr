@@ -60,12 +60,12 @@ namespace throttr
     const auto _it = _find.value();
     boost::ignore_unused(_it);
 
+    std::size_t _offset = write_buffer.size();
+
     write_buffer.resize(write_buffer.size() + sizeof(uint64_t) * 4); // 4 uint64_t metrics
     batch.reserve(batch.size() + 5);                                 // status + 4 metrics
 
     batch.emplace_back(&state::success_response_, 1);
-
-    std::size_t _offset = 0;
 
 #ifdef ENABLED_FEATURE_METRICS
     const auto &metrics = *_it->metrics_;

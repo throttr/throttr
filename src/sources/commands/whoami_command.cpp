@@ -40,7 +40,7 @@ namespace throttr
     const auto _batch_offset = batch.size();
 
     batch.reserve(_batch_offset + 2);
-    write_buffer.resize(write_buffer.size() + _buffer_offset + 16);
+    write_buffer.resize(_buffer_offset + 16);
 
     batch.emplace_back(&state::success_response_, 1);
 

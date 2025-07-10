@@ -25,14 +25,6 @@
 
 namespace throttr
 {
-  inline void
-  push_total_fragments(std::vector<boost::asio::const_buffer> &batch, std::vector<std::byte> &write_buffer, const uint64_t total)
-  {
-    const auto _offset = write_buffer.size();
-    append_uint64_t(write_buffer, boost::endian::native_to_little(total));
-    batch.emplace_back(&write_buffer[_offset], sizeof(total));
-  }
-
   std::pair<std::size_t, std::size_t> response_builder_service::write_list_entry_to_buffer(
     const std::shared_ptr<state> &state,
     std::vector<boost::asio::const_buffer> *batch,
@@ -148,7 +140,7 @@ namespace throttr
     std::size_t _global_batch_size = 2;        // This is status + fragments count
     std::size_t _global_write_buffer_size = 8; // This is fragment count
 
-    std::size_t _offset = 0;
+    std::size_t _offset = write_buffer.size();
 
     auto _fragmenter = [&](auto &connections, auto &mutex)
     {
@@ -239,7 +231,7 @@ namespace throttr
     std::size_t _fragments_count = 1;
     std::size_t _fragment_size = 0;
 
-    std::size_t _offset = 0;
+    std::size_t _offset = write_buffer.size();
 
     std::vector<const entry_wrapper *> _fragment_items;
     std::vector<std::vector<const entry_wrapper *>> _fragments;
@@ -332,7 +324,7 @@ namespace throttr
     std::vector<boost::asio::const_buffer> &batch,
     std::vector<std::byte> &write_buffer)
   {
-    std::size_t _offset = 0;
+    std::size_t _offset = write_buffer.size();
 
     std::vector<std::string> _channels_list;
     std::vector<std::vector<std::string>> _fragments;
@@ -443,7 +435,7 @@ namespace throttr
 
       for (const auto &_channel : _frag)
       {
-        std::memcpy(write_buffer.data() + _offset, &_channel, _channel.size());
+        std::memcpy(write_buffer.data() + _offset,  _channel.data(), _channel.size());
         batch.emplace_back(write_buffer.data() + _offset, _channel.size());
         _offset += _channel.size();
       }

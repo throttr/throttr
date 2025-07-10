@@ -43,6 +43,8 @@ namespace throttr
 
     std::scoped_lock _lock(state->subscriptions_->mutex_);
 
+    std::size_t _offset = write_buffer.size();
+
     // 8 bytes now
     // 16 bytes total requests + total requests per minute
     // 288 bytes on 2 (8 bytes) per type metrics (18 total)
@@ -67,8 +69,6 @@ namespace throttr
     batch.reserve(batch.size() + 54);
 
     batch.emplace_back(&state::success_response_, 1);
-
-    std::size_t _offset = 0;
 
     const auto _now =
       std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();

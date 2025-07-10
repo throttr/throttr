@@ -37,7 +37,7 @@ namespace throttr
     const auto _request = request_connection::from_buffer(view);
     const auto &_uuid = _request.id_;
 
-    std::size_t _offset = 0;
+    std::size_t _offset = write_buffer.size();
 
     boost::uuids::uuid _id{};
     std::memcpy(_id.data, _uuid.data(), _uuid.size());
