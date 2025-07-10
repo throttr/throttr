@@ -22,8 +22,6 @@
 
 namespace throttr
 {
-  // LCOV_EXCL_START Note: This isn't something that i could cover
-
   /**
    * Handler memory
    */
@@ -178,7 +176,6 @@ namespace throttr
     connection_handler_memory &memory_;
   };
 
-  // LCOV_EXCL_STOP
 } // namespace throttr
 
 #endif // THROTTR_CONNECTION_ALLOCATOR_HPP

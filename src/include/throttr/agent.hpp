@@ -52,7 +52,6 @@ namespace throttr
     {
     }
 
-    // LCOV_EXCL_START
     /**
      * Start
      */
@@ -124,7 +123,6 @@ namespace throttr
       std::make_shared<connection<tcp_socket>>(std::move(tcp_socket_), state_, connection_type::agent)->start();
       return true;
     }
-    // LCOV_EXCL_STOP
 
   private:
     /**

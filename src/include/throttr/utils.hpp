@@ -23,7 +23,6 @@
 #include <boost/asio/buffer.hpp>
 #include <throttr/protocol_wrapper.hpp>
 
-// LCOV_EXCL_START
 namespace throttr
 {
   /**
@@ -201,6 +200,5 @@ namespace throttr
     }
   }
 } // namespace throttr
-// LCOV_EXCL_STOP
 
 #endif // THROTTR_UTILS_HPP

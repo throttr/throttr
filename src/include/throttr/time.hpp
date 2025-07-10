@@ -42,7 +42,6 @@ namespace throttr
 
     std::uint64_t offset_ns = 0;
 
-    // LCOV_EXCL_START
     switch (ttl_type)
     {
       case ttl_types::nanoseconds:
@@ -65,7 +64,6 @@ namespace throttr
         break;
     }
     return now + offset_ns;
-    // LCOV_EXCL_STOP
   }
 
   /**
@@ -87,7 +85,6 @@ namespace throttr
 
     const std::uint64_t diff_ns = expires_at - now_ns;
 
-    // LCOV_EXCL_START
     switch (ttl_type)
     {
       case ttl_types::nanoseconds:
@@ -103,7 +100,6 @@ namespace throttr
       default:
         return duration_cast<seconds>(nanoseconds(diff_ns)).count();
     }
-    // LCOV_EXCL_STOP
   }
 } // namespace throttr
 

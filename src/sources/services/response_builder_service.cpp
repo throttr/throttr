@@ -350,7 +350,9 @@ namespace throttr
         _write_sum = 0;
         _count = 0;
 
-        _write_buffer_size += sizeof(uint64_t) * 3 + 1 + _current_channel.size();
+        _write_buffer_size += sizeof(uint64_t) * 3 +   // Read + Writes + Connections
+                              1 +                      // Size
+                              _current_channel.size(); // Name
 
         auto _range = _subs.equal_range(_current_channel);
         for (auto _range_it = _range.first; _range_it != _range.second; ++_range_it)
@@ -388,7 +390,14 @@ namespace throttr
       }
     }
 
-    batch.reserve(batch.size() + 1 + 2 * _fragments.size() + 3 * _channels_count);
+    batch.reserve(
+      batch.size() +          // Current size
+      1 +                     // Status
+      1 +                     // Fragments count
+      2 * _fragments.size() + // Fragment index + Channel count
+      5 * _channels_count     // Channel size + Reads + Writes + Connections + Name
+    );
+
     write_buffer.resize(write_buffer.size() + _write_buffer_size);
 
     batch.emplace_back(&state::success_response_, 1);
@@ -435,7 +444,7 @@ namespace throttr
 
       for (const auto &_channel : _frag)
       {
-        std::memcpy(write_buffer.data() + _offset,  _channel.data(), _channel.size());
+        std::memcpy(write_buffer.data() + _offset, _channel.data(), _channel.size());
         batch.emplace_back(write_buffer.data() + _offset, _channel.size());
         _offset += _channel.size();
       }

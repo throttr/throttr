@@ -71,7 +71,7 @@ namespace throttr
         tcp_socket_,
         [this](const boost::system::error_code &error)
         {
-          if (!error) // LCOV_EXCL_LINE Note: Partially tested.
+          if (!error)
           {
             std::make_shared<connection<tcp_socket>>(std::move(tcp_socket_), state_, connection_type::client)->start();
           }
@@ -89,7 +89,7 @@ namespace throttr
         unix_socket_,
         [this](const boost::system::error_code &error)
         {
-          if (!error) // LCOV_EXCL_LINE Note: Partially tested.
+          if (!error)
           {
             std::make_shared<connection<unix_socket>>(std::move(unix_socket_), state_, connection_type::client)->start();
           }
