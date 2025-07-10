@@ -70,6 +70,8 @@ namespace throttr
     if (_erased) // LCOV_EXCL_LINE Note: Partially tested.
       _index.erase(_it);
 
+    batch.reserve(batch.size() + 1);
+
     if (_erased)
     {
       batch.emplace_back(&state::success_response_, 1);

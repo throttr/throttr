@@ -35,6 +35,8 @@ namespace throttr
 
     boost::ignore_unused(type, view, id);
 
+    batch.reserve(batch.size() + 1);
+
     response_builder_service::handle_fragmented_entries_response(
       state,
       batch,
@@ -42,8 +44,9 @@ namespace throttr
       2048,
       [_state = state->shared_from_this(),
        _write_buffer_ref = // LCOV_EXCL_LINE Note: For some reason this line isn't tested ...
-       std::ref(write_buffer)](std::vector<boost::asio::const_buffer> *b, const entry_wrapper *e, const bool measure)
-      { return response_builder_service::write_list_entry_to_buffer(_state, b, e, _write_buffer_ref, measure); });
+       std::ref(write_buffer)](
+        std::vector<boost::asio::const_buffer> *b, const entry_wrapper *e, std::size_t &offset, const bool measure)
+      { return response_builder_service::write_list_entry_to_buffer(_state, b, e, _write_buffer_ref, offset, measure); });
 
     // LCOV_EXCL_START
 #ifndef NDEBUG

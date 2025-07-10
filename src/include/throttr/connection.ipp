@@ -15,6 +15,8 @@
 
 #pragma once
 
+#include "message.hpp"
+
 #include <boost/asio/bind_allocator.hpp>
 #include <boost/asio/write.hpp>
 #include <boost/core/ignore_unused.hpp>
@@ -159,7 +161,7 @@ namespace throttr
     buffer_start_ = 0;
   }
 
-  template<typename Transport> void connection<Transport>::send(std::shared_ptr<message> batch)
+  template<typename Transport> void connection<Transport>::send(const std::shared_ptr<message> &batch)
   {
     auto self = this->shared_from_this();
     boost::asio::post(socket_.get_executor(), [self, _batch = batch->shared_from_this()]() mutable { self->on_send(_batch); });
@@ -186,17 +188,36 @@ namespace throttr
 
   template<typename Transport> void connection<Transport>::try_process_next()
   {
+    for (auto it = used_message_pool_.begin(); it != used_message_pool_.end();)
+    {
+      if ((*it)->used_)
+      {
+        (*it)->used_ = false;
+        available_message_pool_.push_back(*it);
+        it = used_message_pool_.erase(it);
+      }
+      else
+      {
+        ++it;
+      }
+    }
+
+    if (available_message_pool_.size() > 8192)
+    {
+      available_message_pool_.resize(8192);
+      available_message_pool_.shrink_to_fit();
+    }
+
     while (true)
     {
       const std::span<const std::byte> _span(buffer_.data() + buffer_start_, buffer_end_ - buffer_start_);
       const std::size_t _msg_size = get_message_size(_span);
-      if (_msg_size == 0 || _span.size() < _msg_size) // LCOV_EXCL_LINE note: Ignored.
+      if (_msg_size == 0 || _span.size() < _msg_size)
         break;
 
       const std::span<const std::byte> _view(buffer_.data() + buffer_start_, _msg_size);
       buffer_start_ += _msg_size;
 
-      // LCOV_EXCL_START
 #ifndef NDEBUG
       switch (kind_)
       {
@@ -220,24 +241,25 @@ namespace throttr
           break;
       }
 #endif
-      // LCOV_EXCL_STOP
 
       const auto _type = static_cast<request_types>(std::to_integer<uint8_t>(_view[0]));
 #ifdef ENABLED_FEATURE_METRICS
       state_->metrics_collector_->commands_[static_cast<std::size_t>(_type)].mark();
       metrics_->commands_[static_cast<std::size_t>(_type)].mark();
 #endif
-      state_->commands_->commands_[static_cast<std::size_t>(
-        _type)](state_, _type, _view, message_->buffers_, message_->write_buffer_, this->id_);
-      // LCOV_EXCL_STOP
-    }
 
-    // LCOV_EXCL_START Note: Partially tested.
-    // The not tested case is when in-while break condition is triggered but no
-    // queue element exists.
-    if (!message_->buffers_.empty())
-      send(message_);
-    // LCOV_EXCL_STOP
+      while (available_message_pool_.size() < 4096)
+        available_message_pool_.push_back(std::make_shared<message>());
+
+      const auto _message = available_message_pool_.front();
+      available_message_pool_.erase(available_message_pool_.begin());
+
+      state_->commands_->commands_[static_cast<std::size_t>(
+        _type)](state_, _type, _view, _message->buffers_, _message->write_buffer_, this->id_);
+
+      used_message_pool_.push_back(_message);
+      send(_message);
+    }
 
     compact_buffer_if_needed();
     do_read();
@@ -288,6 +310,9 @@ namespace throttr
 
     const std::shared_ptr<message> _message = pending_writes_.front();
     pending_writes_.pop_front();
+
+    _message->used_ = true;
+
     if (_message->recyclable_)
     {
       _message->write_buffer_.clear();

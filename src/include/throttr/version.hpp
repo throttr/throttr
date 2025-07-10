@@ -29,7 +29,7 @@ namespace throttr
    */
   inline std::string_view get_version()
   {
-    return "5.0.9";
+    return "5.0.10";
   }
 } // namespace throttr
 

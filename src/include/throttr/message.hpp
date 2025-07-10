@@ -45,14 +45,20 @@ namespace throttr
     bool recyclable_ = true;
 
     /**
+     * Used
+     */
+    bool used_ = false;
+
+    /**
      * Constructor
      */
     message()
     {
-      write_buffer_.reserve(8096 * 32);
-      buffers_.reserve(1024 * 32);
     }
   };
+
+  inline thread_local std::vector<std::shared_ptr<message>> available_message_pool_;
+  inline thread_local std::vector<std::shared_ptr<message>> used_message_pool_;
 } // namespace throttr
 
 #endif // THROTTR_MESSAGE_HPP

@@ -38,19 +38,16 @@ namespace throttr
 
     const auto _request = request_unsubscribe::from_buffer(view);
 
-    const auto _channel =
-      std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size()); // NOSONAR
+    const auto _channel = std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size());
 
-    if (!state->subscriptions_->is_subscribed(id, _channel)) // LCOV_EXCL_LINE Note: Partially tested.
+    batch.reserve(batch.size() + 1);
+
+    if (!state->subscriptions_->is_subscribed(id, _channel))
     {
       batch.emplace_back(&state::failed_response_, 1);
 
-      // LCOV_EXCL_START
 #ifndef NDEBUG
-      const std::vector _channel_bytes(
-        _request.channel_.data(),                           // NOSONAR
-        _request.channel_.data() + _request.channel_.size() // NOSONAR
-      );
+      const std::vector _channel_bytes(_request.channel_.data(), _request.channel_.data() + _request.channel_.size());
       fmt::println(
         "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST UNSUBSCRIBE channel={} from={} "
         "RESPONSE ok=false",
@@ -59,7 +56,6 @@ namespace throttr
         span_to_hex(_channel_bytes),
         to_string(id));
 #endif
-      // LCOV_EXCL_STOP
       return;
     }
 
@@ -68,9 +64,9 @@ namespace throttr
 
     std::vector<decltype(index.begin())> _to_erase;
 
-    for (auto it = begin; it != end; ++it) // LCOV_EXCL_LINE Note: Partially tested.
+    for (auto it = begin; it != end; ++it)
     {
-      if (it->channel_ == _channel) // LCOV_EXCL_LINE Note: Partially tested.
+      if (it->channel_ == _channel)
         _to_erase.push_back(it);
     }
 
@@ -81,7 +77,6 @@ namespace throttr
 
     batch.emplace_back(&state::success_response_, 1);
 
-    // LCOV_EXCL_START
 #ifndef NDEBUG
     const std::vector _channel_bytes(_request.channel_.begin(), _request.channel_.end());
     fmt::println(
@@ -91,6 +86,5 @@ namespace throttr
       to_string(id),
       span_to_hex(_channel_bytes));
 #endif
-    // LCOV_EXCL_STOP
   }
 } // namespace throttr

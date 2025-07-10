@@ -14,6 +14,7 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 #include <throttr/app.hpp>
+#include <throttr/message.hpp>
 
 #include <boost/asio/signal_set.hpp>
 
@@ -41,7 +42,16 @@ namespace throttr
     // LCOV_EXCL_START
     for (auto _i = program_options_.threads_; _i > 0; --_i)
     {
-      _threads.emplace_back([self = shared_from_this()] { self->ioc_.run(); });
+      _threads.emplace_back(
+        [self = shared_from_this(), state = state_->shared_from_this()]
+        {
+          available_message_pool_.reserve(8192);
+          for (auto _e = 0; _e < 8192; ++_e)
+          {
+            available_message_pool_.emplace_back(std::make_shared<message>());
+          }
+          self->ioc_.run();
+        });
     }
     // LCOV_EXCL_STOP
 
@@ -57,6 +67,12 @@ namespace throttr
         ioc_.stop();
       });
     // LCOV_EXCL_STOP
+
+    available_message_pool_.reserve(8192);
+    for (auto _e = 0; _e < 8192; ++_e)
+    {
+      available_message_pool_.emplace_back(std::make_shared<message>());
+    }
 
     ioc_.run();
 

@@ -34,10 +34,19 @@ namespace throttr
   {
     boost::ignore_unused(state, type, view);
 
-    batch.emplace_back(&state::success_response_, 1);
-    append_uuid(write_buffer, batch, id);
+    // This is the better way to write without having problem with batching ...
 
-    // LCOV_EXCL_START
+    const auto _buffer_offset = write_buffer.size();
+    const auto _batch_offset = batch.size();
+
+    batch.reserve(_batch_offset + 2);
+    write_buffer.resize(write_buffer.size() + _buffer_offset + 16);
+
+    batch.emplace_back(&state::success_response_, 1);
+
+    std::memcpy(write_buffer.data() + _buffer_offset, id.data, 16);
+    batch.emplace_back(write_buffer.data() + _buffer_offset, 16);
+
 #ifndef NDEBUG
     fmt::println(
       "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST WHOAMI session_id={} "
@@ -46,6 +55,5 @@ namespace throttr
       std::chrono::system_clock::now(),
       to_string(id));
 #endif
-    // LCOV_EXCL_STOP
   }
 } // namespace throttr

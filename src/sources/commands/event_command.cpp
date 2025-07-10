@@ -13,7 +13,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include <iostream>
 #include <throttr/commands/event_command.hpp>
 
 #include <boost/uuid/uuid_io.hpp>
@@ -36,6 +35,8 @@ namespace throttr
 
     const auto _request = request_event::from_buffer(view);
     const auto _type = static_cast<request_types>(std::to_integer<uint8_t>(_request.buffer_[0]));
+
+    batch.reserve(batch.size() + 1);
 
 #ifdef ENABLED_FEATURE_METRICS
     state->metrics_collector_->commands_[static_cast<std::size_t>(_type)].mark();

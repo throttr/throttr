@@ -41,9 +41,12 @@ namespace throttr
 
     const request_key _key{
       std::string_view(reinterpret_cast<const char *>(_request.key_.data()), _request.key_.size())}; // NOSONAR
-    const auto _find = state->finder_->find_or_fail_for_batch(state, _key, batch);
+    const auto _find = state->finder_->find_or_fail(state, _key);
     if (!_find.has_value()) // LCOV_EXCL_LINE
     {
+      batch.reserve(batch.size() + 1);
+      batch.emplace_back(boost::asio::const_buffer(&state::failed_response_, 1));
+
       // LCOV_EXCL_START
 #ifndef NDEBUG
       fmt::println(
@@ -56,28 +59,46 @@ namespace throttr
       return;
       // LCOV_EXCL_STOP
     }
+
     const auto _it = _find.value();
     boost::ignore_unused(_it);
+
+    write_buffer.resize(write_buffer.size() + sizeof(uint64_t) * 4); // 4 uint64_t metrics
+    batch.reserve(batch.size() + 5);                                 // status + 4 metrics
+
     batch.emplace_back(&state::success_response_, 1);
 
-    auto _append_uint64 = [&write_buffer, &batch](const uint64_t value)
-    {
-      const auto _offset = write_buffer.size();
-      append_uint64_t(write_buffer, native_to_little(value));
-      batch.emplace_back(&write_buffer[_offset], sizeof(uint64_t));
-    };
+    std::size_t _offset = 0;
 
 #ifdef ENABLED_FEATURE_METRICS
     const auto &metrics = *_it->metrics_;
-    _append_uint64(metrics.reads_per_minute_.load(std::memory_order_relaxed));
-    _append_uint64(metrics.writes_per_minute_.load(std::memory_order_relaxed));
-    _append_uint64(metrics.reads_accumulator_.load(std::memory_order_relaxed));
-    _append_uint64(metrics.writes_accumulator_.load(std::memory_order_relaxed));
+    const auto _reads_per_minute = metrics.reads_per_minute_.load(std::memory_order_relaxed);
+    const auto _writes_per_minute = metrics.writes_per_minute_.load(std::memory_order_relaxed);
+    const auto _reads_accumulator = metrics.reads_accumulator_.load(std::memory_order_relaxed);
+    const auto _writes_accumulator = metrics.writes_accumulator_.load(std::memory_order_relaxed);
+
+    std::memcpy(write_buffer.data() + _offset, &_reads_per_minute, sizeof(uint64_t));
+    batch.emplace_back(write_buffer.data() + _offset, sizeof(uint64_t));
+    _offset += sizeof(uint64_t);
+
+    std::memcpy(write_buffer.data() + _offset, &_writes_per_minute, sizeof(uint64_t));
+    batch.emplace_back(write_buffer.data() + _offset, sizeof(uint64_t));
+    _offset += sizeof(uint64_t);
+
+    std::memcpy(write_buffer.data() + _offset, &_reads_accumulator, sizeof(uint64_t));
+    batch.emplace_back(write_buffer.data() + _offset, sizeof(uint64_t));
+    _offset += sizeof(uint64_t);
+
+    std::memcpy(write_buffer.data() + _offset, &_writes_accumulator, sizeof(uint64_t));
+    batch.emplace_back(write_buffer.data() + _offset, sizeof(uint64_t));
+
 #else
+    constexpr uint64_t _empty = 0;
     for (int _i = 0; _i < 4; ++_i)
     {
-      constexpr uint64_t _empty = 0;
-      _append_uint64(_empty);
+      std::memcpy(write_buffer.data() + _offset, &_empty, sizeof(uint64_t));
+      batch.emplace_back(write_buffer.data() + _offset, sizeof(uint64_t));
+      _offset += sizeof(uint64_t);
     }
 #endif
 

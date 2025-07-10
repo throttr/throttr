@@ -38,9 +38,13 @@ namespace throttr
     boost::ignore_unused(type, write_buffer, id);
 
     const auto _request = request_update::from_buffer(view);
+
     const request_key _key{
       std::string_view(reinterpret_cast<const char *>(_request.key_.data()), _request.key_.size())}; // NOSONAR
     const std::uint64_t _now = std::chrono::system_clock::now().time_since_epoch().count();
+
+    batch.reserve(batch.size() + 1);
+
     const auto _it = state->finder_->find_or_fail(state, _key);
 
     if (!_it.has_value()) // LCOV_EXCL_LINE note: Partially covered.

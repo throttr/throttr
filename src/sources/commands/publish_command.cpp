@@ -45,6 +45,8 @@ namespace throttr
       std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size())}; // NOSONAR
     const auto _range = _subs.equal_range(_channel);                                                         // NOSONAR
 
+    batch.reserve(batch.size() + 1);
+
     // LCOV_EXCL_START Note: This means that there are no subscriptions.
     if (_range.first == _range.second)
     {
@@ -66,6 +68,8 @@ namespace throttr
 
     const auto _message = std::make_shared<message>();
     _message->recyclable_ = false;
+    _message->buffers_.reserve(1);
+
     auto &_buffer = _message->write_buffer_;
 
     const auto _payload_size = _payload.size();

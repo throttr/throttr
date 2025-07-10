@@ -42,9 +42,10 @@ namespace throttr
 
     auto [_it, _inserted] = state->subscriptions_->subscriptions_.insert(subscription{id, _channel});
 
+    batch.reserve(batch.size() + 1);
+
     batch.emplace_back(_inserted ? &state::success_response_ : &state::failed_response_, 1);
 
-    // LCOV_EXCL_START
 #ifndef NDEBUG
     const auto _channel_view =
       std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size()); // NOSONAR
@@ -56,6 +57,5 @@ namespace throttr
       _channel_view,
       _inserted);
 #endif
-    // LCOV_EXCL_STOP
   }
 } // namespace throttr

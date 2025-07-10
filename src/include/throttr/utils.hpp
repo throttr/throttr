@@ -34,9 +34,8 @@ namespace throttr
    */
   inline void append_uint64_t(std::vector<std::byte> &buffer, const uint64_t value)
   {
-    const auto _size = buffer.size();
-    buffer.resize(_size + sizeof(uint64_t));
-    std::memcpy(buffer.data() + _size, &value, sizeof(uint64_t));
+    const auto _offset = buffer.size();
+    std::memcpy(buffer.data() + _offset, &value, sizeof(uint64_t));
   }
 
   /**
@@ -47,9 +46,8 @@ namespace throttr
    */
   inline void append_value_type(std::vector<std::byte> &buffer, const value_type value)
   {
-    const auto _size = buffer.size();
-    buffer.resize(_size + sizeof(value_type));
-    std::memcpy(buffer.data() + _size, &value, sizeof(value_type));
+    const auto _offset = buffer.size();
+    std::memcpy(buffer.data() + _offset, &value, sizeof(value_type));
   }
 
   /**
@@ -63,7 +61,6 @@ namespace throttr
   append_uuid(std::vector<std::byte> &write_buffer, std::vector<boost::asio::const_buffer> &batch, const boost::uuids::uuid &uuid)
   {
     const auto _offset = write_buffer.size();
-    write_buffer.resize(_offset + 16);
     std::memcpy(write_buffer.data() + _offset, uuid.data, 16);
     batch.emplace_back(write_buffer.data() + _offset, 16);
   }

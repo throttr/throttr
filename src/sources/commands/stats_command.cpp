@@ -42,8 +42,8 @@ namespace throttr
       write_buffer,
       2048,
       [_state = state->shared_from_this(),
-       &write_buffer](std::vector<boost::asio::const_buffer> *b, const entry_wrapper *e, const bool measure)
-      { return response_builder_service::write_stats_entry_to_buffer(_state, b, e, write_buffer, measure); });
+       &write_buffer](std::vector<boost::asio::const_buffer> *b, const entry_wrapper *e, std::size_t &offset, const bool measure)
+      { return response_builder_service::write_stats_entry_to_buffer(_state, b, e, write_buffer, offset, measure); });
 
     // LCOV_EXCL_START
 #ifndef NDEBUG

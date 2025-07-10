@@ -43,23 +43,47 @@ namespace throttr
 
     std::scoped_lock _lock(state->subscriptions_->mutex_);
 
+    // 8 bytes now
+    // 16 bytes total requests + total requests per minute
+    // 288 bytes on 2 (8 bytes) per type metrics (18 total)
+    // 32 bytes on metrics (reads, writes) (total and per minute)
+    // 40 bytes on metrics (keys, buffers, counters, allocated bytes on buffers, allocated bytes on counters)
+    // 24 bytes on channels, subscriptions and started at
+    // 24 bytes on total connections + version
+    // ===
+    // 432 bytes
+    write_buffer.resize(write_buffer.size() + 432);
+
+    // 1 status
+    // 1 now
+    // 2 total and per minute requests
+    // 36 in per type, total and per minute requests
+    // 4 in reads and writes, per minute and total
+    // 5 in keys, counters, buffers, allocated on buffers and counters
+    // 3 in subscriptions, channels and started_at
+    // 2 in connections and version
+    // ===
+    // 54 segments
+    batch.reserve(batch.size() + 54);
+
     batch.emplace_back(&state::success_response_, 1);
+
+    std::size_t _offset = 0;
 
     const auto _now =
       std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 
     boost::ignore_unused(_now);
 
-    const auto push_u64 = [&](const uint64_t value)
-    {
-      const auto _offset = write_buffer.size();
-      append_uint64_t(write_buffer, native_to_little(value));
-      batch.emplace_back(&write_buffer[_offset], sizeof(value));
-    };
-
     uint64_t _total_requests = 0;
     uint64_t _total_requests_per_minute = 0;
-    push_u64(static_cast<uint64_t>(_now));
+
+    const auto _now_little = native_to_little(_now);
+
+    std::memcpy(write_buffer.data() + _offset, &_now_little, sizeof(uint64_t));
+    batch.emplace_back(write_buffer.data() + _offset, sizeof(uint64_t));
+    _offset += sizeof(uint64_t); // 8 bytes
+
 #ifdef ENABLED_FEATURE_METRICS
     const auto &metrics = state->metrics_collector_->commands_;
     for (const auto &m : metrics)
@@ -68,10 +92,19 @@ namespace throttr
       _total_requests_per_minute += m.per_minute_.load(std::memory_order_relaxed);
     }
 #endif
-    push_u64(_total_requests);
-    push_u64(_total_requests_per_minute);
 
-    for (auto metric_type : {
+    const auto _total_requests_little = native_to_little(_total_requests);
+    const auto _total_requests_per_minute_little = native_to_little(_total_requests_per_minute);
+
+    std::memcpy(write_buffer.data() + _offset, &_total_requests_little, sizeof(uint64_t));
+    batch.emplace_back(write_buffer.data() + _offset, sizeof(uint64_t));
+    _offset += sizeof(uint64_t);
+
+    std::memcpy(write_buffer.data() + _offset, &_total_requests_per_minute_little, sizeof(uint64_t));
+    batch.emplace_back(write_buffer.data() + _offset, sizeof(uint64_t));
+    _offset += sizeof(uint64_t);
+
+    for (auto _metric_type : {
            request_types::insert,
            request_types::query,
            request_types::update,
@@ -90,15 +123,33 @@ namespace throttr
            request_types::whoami,
            request_types::connection,
            request_types::connections,
-         })
+         }) // 18 x 8 * 2 = 288 bytes on metrics
     {
 #ifdef ENABLED_FEATURE_METRICS
-      push_u64(metrics[static_cast<std::size_t>(metric_type)].accumulator_.load(std::memory_order_relaxed));
-      push_u64(metrics[static_cast<std::size_t>(metric_type)].per_minute_.load(std::memory_order_relaxed));
+
+      const auto _accumulator =
+        native_to_little(metrics[static_cast<std::size_t>(_metric_type)].accumulator_.load(std::memory_order_relaxed));
+      const auto _per_minute =
+        native_to_little(metrics[static_cast<std::size_t>(_metric_type)].per_minute_.load(std::memory_order_relaxed));
+
+      std::memcpy(write_buffer.data() + _offset, &_accumulator, sizeof(uint64_t));
+      batch.emplace_back(write_buffer.data() + _offset, sizeof(uint64_t));
+      _offset += sizeof(uint64_t);
+
+      std::memcpy(write_buffer.data() + _offset, &_per_minute, sizeof(uint64_t));
+      batch.emplace_back(write_buffer.data() + _offset, sizeof(uint64_t));
+      _offset += sizeof(uint64_t);
+
 #else
-      boost::ignore_unused(metric_type);
-      push_u64(_total_requests);
-      push_u64(_total_requests);
+      boost::ignore_unused(_metric_type);
+
+      std::memcpy(write_buffer.data() + _offset, &_total_requests, sizeof(uint64_t));
+      batch.emplace_back(write_buffer.data() + _offset, sizeof(uint64_t));
+      _offset += sizeof(uint64_t);
+
+      std::memcpy(write_buffer.data() + _offset, &_total_requests, sizeof(uint64_t));
+      batch.emplace_back(write_buffer.data() + _offset, sizeof(uint64_t));
+      _offset += sizeof(uint64_t);
 #endif
     }
 
@@ -155,10 +206,25 @@ namespace throttr
       _total_write_per_minute);
 #endif
 
-    push_u64(_total_read);
-    push_u64(_total_read_per_minute);
-    push_u64(_total_write);
-    push_u64(_total_write_per_minute);
+    const uint64_t _total_read_little = native_to_little(_total_read);
+    std::memcpy(write_buffer.data() + _offset, &_total_read_little, sizeof(uint64_t));
+    batch.emplace_back(write_buffer.data() + _offset, sizeof(uint64_t));
+    _offset += sizeof(uint64_t);
+
+    const uint64_t _total_read_per_minute_little = native_to_little(_total_read_per_minute);
+    std::memcpy(write_buffer.data() + _offset, &_total_read_per_minute_little, sizeof(uint64_t));
+    batch.emplace_back(write_buffer.data() + _offset, sizeof(uint64_t));
+    _offset += sizeof(uint64_t);
+
+    const uint64_t _total_write_little = native_to_little(_total_write);
+    std::memcpy(write_buffer.data() + _offset, &_total_write_little, sizeof(uint64_t));
+    batch.emplace_back(write_buffer.data() + _offset, sizeof(uint64_t));
+    _offset += sizeof(uint64_t);
+
+    const uint64_t _total_write_per_minute_little = native_to_little(_total_write_per_minute);
+    std::memcpy(write_buffer.data() + _offset, &_total_write_per_minute_little, sizeof(uint64_t));
+    batch.emplace_back(write_buffer.data() + _offset, sizeof(uint64_t));
+    _offset += sizeof(uint64_t);
 
     uint64_t _total_keys = 0;
     uint64_t _total_counters = 0;
@@ -181,11 +247,30 @@ namespace throttr
       _total_keys++;
     }
 
-    push_u64(_total_keys);
-    push_u64(_total_counters);
-    push_u64(_total_buffers);
-    push_u64(_total_allocated_bytes_on_counters);
-    push_u64(_total_allocated_bytes_on_buffers);
+    const uint64_t _total_keys_little = native_to_little(_total_keys);
+    std::memcpy(write_buffer.data() + _offset, &_total_keys_little, sizeof(uint64_t));
+    batch.emplace_back(write_buffer.data() + _offset, sizeof(uint64_t));
+    _offset += sizeof(uint64_t);
+
+    const uint64_t _total_counters_little = native_to_little(_total_counters);
+    std::memcpy(write_buffer.data() + _offset, &_total_counters_little, sizeof(uint64_t));
+    batch.emplace_back(write_buffer.data() + _offset, sizeof(uint64_t));
+    _offset += sizeof(uint64_t);
+
+    const uint64_t _total_buffers_little = native_to_little(_total_buffers);
+    std::memcpy(write_buffer.data() + _offset, &_total_buffers_little, sizeof(uint64_t));
+    batch.emplace_back(write_buffer.data() + _offset, sizeof(uint64_t));
+    _offset += sizeof(uint64_t);
+
+    const uint64_t _total_allocated_bytes_on_counters_little = native_to_little(_total_allocated_bytes_on_counters);
+    std::memcpy(write_buffer.data() + _offset, &_total_allocated_bytes_on_counters_little, sizeof(uint64_t));
+    batch.emplace_back(write_buffer.data() + _offset, sizeof(uint64_t));
+    _offset += sizeof(uint64_t);
+
+    const uint64_t _total_allocated_bytes_on_buffers_little = native_to_little(_total_allocated_bytes_on_buffers);
+    std::memcpy(write_buffer.data() + _offset, &_total_allocated_bytes_on_buffers_little, sizeof(uint64_t));
+    batch.emplace_back(write_buffer.data() + _offset, sizeof(uint64_t));
+    _offset += sizeof(uint64_t);
 
     uint64_t _total_subscriptions = 0;
     uint64_t _total_channels = 0;
@@ -203,9 +288,20 @@ namespace throttr
       _total_subscriptions++;
     }
 
-    push_u64(_total_subscriptions);
-    push_u64(_total_channels);
-    push_u64(state->started_at_);
+    const uint64_t _total_subscriptions_little = native_to_little(_total_subscriptions);
+    std::memcpy(write_buffer.data() + _offset, &_total_subscriptions_little, sizeof(uint64_t));
+    batch.emplace_back(write_buffer.data() + _offset, sizeof(uint64_t));
+    _offset += sizeof(uint64_t);
+
+    const uint64_t _total_channels_little = native_to_little(_total_channels);
+    std::memcpy(write_buffer.data() + _offset, &_total_channels_little, sizeof(uint64_t));
+    batch.emplace_back(write_buffer.data() + _offset, sizeof(uint64_t));
+    _offset += sizeof(uint64_t);
+
+    const uint64_t _started_at_little = native_to_little(state->started_at_);
+    std::memcpy(write_buffer.data() + _offset, &_started_at_little, sizeof(uint64_t));
+    batch.emplace_back(write_buffer.data() + _offset, sizeof(uint64_t));
+    _offset += sizeof(uint64_t);
 
     uint64_t _total_connections = 0;
     {
@@ -217,18 +313,19 @@ namespace throttr
       _total_connections = state->tcp_connections_.size() + state->unix_connections_.size() +
                            state->agent_tcp_connections_.size() + state->agent_unix_connections_.size();
     }
-    push_u64(_total_connections);
 
-    {
-      const auto _offset = write_buffer.size();
-      write_buffer.resize(_offset + 16, std::byte{0});
-      const auto _version_data = get_version();
+    const uint64_t _total_connections_little = native_to_little(_total_connections);
+    std::memcpy(write_buffer.data() + _offset, &_total_connections_little, sizeof(uint64_t));
+    batch.emplace_back(write_buffer.data() + _offset, sizeof(uint64_t));
+    _offset += sizeof(uint64_t);
 
-      for (std::size_t i = 0; i < std::min<std::size_t>(_version_data.size(), 16); ++i)
-        write_buffer[_offset + i] = static_cast<std::byte>(_version_data[i]);
+    const auto _version_data = get_version();
+    std::memset(write_buffer.data() + _offset, 0, 16); // Limpia a cero
+    for (std::size_t i = 0; i < std::min<std::size_t>(_version_data.size(), 16); ++i)
+      write_buffer[_offset + i] = static_cast<std::byte>(_version_data[i]);
 
-      batch.emplace_back(&write_buffer[_offset], 16);
-    }
+    batch.emplace_back(write_buffer.data() + _offset, 16);
+    _offset += 16;
 
     // LCOV_EXCL_START
 #ifndef NDEBUG

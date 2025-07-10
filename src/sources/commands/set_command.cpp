@@ -34,6 +34,8 @@ namespace throttr
 
     const auto _request = request_set::from_buffer(view);
 
+    batch.reserve(batch.size() + 1);
+
     const auto _inserted =
       create_service::use(state, _request.key_, _request.value_, _request.ttl_type_, _request.ttl_, entry_types::raw, id);
     batch.emplace_back(_inserted ? &state::success_response_ : &state::failed_response_, 1);

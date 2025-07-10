@@ -21,7 +21,6 @@
 #include <boost/asio/connect.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/intrusive_ptr.hpp>
-#include <iostream>
 #include <thread>
 #include <throttr/connection.hpp>
 #include <throttr/program_parameters.hpp>
