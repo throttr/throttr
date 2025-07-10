@@ -39,8 +39,7 @@ namespace throttr
         entry.counter_.fetch_add(little_to_native(request.value_), std::memory_order_relaxed);
         break;
       case decrease:
-        if (entry.counter_.load(std::memory_order_relaxed) >= little_to_native(request.value_)) // LCOV_EXCL_LINE note: Partially
-                                                                                                // covered.
+        if (entry.counter_.load(std::memory_order_relaxed) >= little_to_native(request.value_))
         {
           entry.counter_.fetch_sub(little_to_native(request.value_), std::memory_order_relaxed);
         }
@@ -100,7 +99,6 @@ namespace throttr
         break;
     }
 
-    // LCOV_EXCL_START
     if (
       state->scheduled_key_.size() == key.size() &&
       std::equal(state->scheduled_key_.begin(), state->scheduled_key_.end(), key.begin()))
@@ -110,7 +108,6 @@ namespace throttr
         [_state = state->shared_from_this(), _expires_at = entry.expires_at_.load(std::memory_order_relaxed)]
         { _state->garbage_collector_->schedule_timer(_state, _expires_at); });
     }
-    // LCOV_EXCL_STOP
 
     return true;
   }

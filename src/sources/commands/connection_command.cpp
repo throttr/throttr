@@ -67,18 +67,17 @@ namespace throttr
       _found_in_agent_unix = _agent_unix_map.contains(_id);
     }
 
-    if (!_found_in_agent_unix) // LCOV_EXCL_LINE
+    if (!_found_in_agent_unix)
     {
       std::lock_guard _lock(state->agent_tcp_connections_mutex_);
       const auto &_agent_tcp_map = state->agent_tcp_connections_;
       _found_in_agent_tcp = _agent_tcp_map.contains(_id);
     }
 
-    if (!_found_in_tcp && !_found_in_unix && !_found_in_agent_unix && !_found_in_agent_tcp) // LCOV_EXCL_LINE
+    if (!_found_in_tcp && !_found_in_unix && !_found_in_agent_unix && !_found_in_agent_tcp)
     {
       batch.reserve(batch.size() + 1);
       batch.emplace_back(&state::failed_response_, 1);
-      // LCOV_EXCL_START
 #ifndef NDEBUG
       fmt::println(
         "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST CONNECTION session_id={} META id={} RESPONSE ok=false",
@@ -87,7 +86,6 @@ namespace throttr
         to_string(id),
         span_to_hex(_request.id_));
 #endif
-      // LCOV_EXCL_STOP
       return;
     }
 
@@ -102,7 +100,6 @@ namespace throttr
       batch.emplace_back(&state::success_response_, 1);
       response_builder_service::write_connections_entry_to_buffer<tcp_socket>(state, &batch, _conn, write_buffer, _offset, false);
 
-      // LCOV_EXCL_START
 #ifndef NDEBUG
       fmt::println(
         "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST CONNECTION session_id={} META id={} RESPONSE ok=true",
@@ -111,12 +108,11 @@ namespace throttr
         to_string(id),
         span_to_hex(_request.id_));
 #endif
-      // LCOV_EXCL_STOP
 
       return;
     }
 
-    if (_found_in_unix) // LCOV_EXCL_LINE
+    if (_found_in_unix)
     {
       batch.reserve(batch.size() + 32);
       write_buffer.resize(write_buffer.size() + 237);
@@ -130,7 +126,6 @@ namespace throttr
       return;
     }
 
-    // LCOV_EXCL_START
     if (_found_in_agent_unix)
     {
       batch.reserve(batch.size() + 32);
@@ -172,6 +167,5 @@ namespace throttr
       to_string(id),
       span_to_hex(_request.id_));
 #endif
-    // LCOV_EXCL_STOP
   }
 } // namespace throttr

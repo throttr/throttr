@@ -35,27 +35,25 @@ namespace throttr
     boost::ignore_unused(type, write_buffer, id);
 
     const auto _request = request_purge::from_buffer(view);
-    const request_key _key{
-      std::string_view(reinterpret_cast<const char *>(_request.key_.data()), _request.key_.size())}; // NOSONAR
+    const request_key _key{std::string_view(reinterpret_cast<const char *>(_request.key_.data()), _request.key_.size())};
 
     auto &_index = state->storage_.get<tag_by_key>();
     const auto _it = _index.find(_key);
 
     bool _erased = true;
 
-    if (_it == _index.end() || _it->expired_) // LCOV_EXCL_LINE note: Partially covered.
+    if (_it == _index.end() || _it->expired_)
     {
       _erased = false;
     }
 
 #ifdef ENABLED_FEATURE_METRICS
-    if (_it != _index.end()) // LCOV_EXCL_LINE Note: Partially tested.
+    if (_it != _index.end())
     {
       _it->metrics_->reads_.fetch_add(1, std::memory_order_relaxed);
     }
 #endif
 
-    // LCOV_EXCL_START
 #ifndef NDEBUG
     fmt::println(
       "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST PURGE session_id={} META key={} RESPONSE ok={}",
@@ -65,9 +63,8 @@ namespace throttr
       _key.key_,
       _erased);
 #endif
-    // LCOV_EXCL_STOP
 
-    if (_erased) // LCOV_EXCL_LINE Note: Partially tested.
+    if (_erased)
       _index.erase(_it);
 
     batch.reserve(batch.size() + 1);

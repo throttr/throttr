@@ -42,15 +42,13 @@ namespace throttr
     std::size_t _offset = write_buffer.size();
 
     const auto &_subs = state->subscriptions_->subscriptions_.get<by_channel_name>();
-    const auto _channel =
-      std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size()); // NOSONAR
+    const auto _channel = std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size());
     auto _range = _subs.equal_range(std::string(_channel));
 
-    if (_range.first == _range.second) // LCOV_EXCL_LINE Note: Partially tested.
+    if (_range.first == _range.second)
     {
       batch.reserve(batch.size() + 1);
 
-      // LCOV_EXCL_START
 #ifndef NDEBUG
       fmt::println(
         "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST CHANNEL session_id={} META channel={} RESPONSE ok=false",
@@ -59,7 +57,6 @@ namespace throttr
         to_string(id),
         span_to_hex(_request.channel_));
 #endif
-      // LCOV_EXCL_STOP
       batch.emplace_back(&state::failed_response_, 1);
       return;
     }
@@ -84,7 +81,7 @@ namespace throttr
       _offset += sizeof(uint64_t);
     }
 
-    for (auto it = _range.first; it != _range.second; ++it) // LCOV_EXCL_LINE Note: Partially tested.
+    for (auto it = _range.first; it != _range.second; ++it)
     {
       const auto &_sub = *it;
 
@@ -113,7 +110,6 @@ namespace throttr
       } // 16 bytes
     }
 
-    // LCOV_EXCL_START
 #ifndef NDEBUG
     fmt::println(
       "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST CHANNEL session_id={} META channel={} RESPONSE ok=true",
@@ -122,6 +118,5 @@ namespace throttr
       to_string(id),
       span_to_hex(_request.channel_));
 #endif
-    // LCOV_EXCL_STOP
   }
 } // namespace throttr

@@ -42,16 +42,14 @@ namespace throttr
 
     const bool _as_query = type == request_types::query;
 
-    const request_key _key{
-      std::string_view(reinterpret_cast<const char *>(_request.key_.data()), _request.key_.size())}; // NOSONAR
+    const request_key _key{std::string_view(reinterpret_cast<const char *>(_request.key_.data()), _request.key_.size())};
     const auto _find = state->finder_->find_or_fail(state, _key);
 
-    if (!_find.has_value()) // LCOV_EXCL_LINE Note: Partially tested.
+    if (!_find.has_value())
     {
       batch.reserve(batch.size() + 1);
       batch.emplace_back(boost::asio::const_buffer(&state::failed_response_, 1));
 
-      // LCOV_EXCL_START
 #ifndef NDEBUG
       fmt::println(
         "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST {} session_id={} META key={} RESPONSE ok=false",
@@ -61,7 +59,6 @@ namespace throttr
         to_string(id),
         _key.key_);
 #endif
-      // LCOV_EXCL_STOP
 
       return;
     }
@@ -71,7 +68,7 @@ namespace throttr
 
     std::size_t _offset = 0;
 
-    if (_as_query) // LCOV_EXCL_LINE
+    if (_as_query)
     {
       write_buffer.resize(write_buffer.size() + sizeof(value_type) * 2);
       batch.reserve(batch.size() + 4);
@@ -128,7 +125,6 @@ namespace throttr
       }
     }
 
-    // LCOV_EXCL_START
 #ifndef NDEBUG
     if (_as_query)
     {

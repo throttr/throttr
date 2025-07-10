@@ -39,7 +39,6 @@ namespace throttr
     std::vector<std::jthread> _threads;
     _threads.reserve(program_options_.threads_);
 
-    // LCOV_EXCL_START
     for (auto _i = program_options_.threads_; _i > 0; --_i)
     {
       _threads.emplace_back(
@@ -53,12 +52,10 @@ namespace throttr
           self->ioc_.run();
         });
     }
-    // LCOV_EXCL_STOP
 
     state_->prepare_for_startup(program_options_);
 
     boost::asio::signal_set signals(ioc_, SIGINT, SIGTERM);
-    // LCOV_EXCL_START
     signals.async_wait(
       [&](auto /*ec*/, int /*signal_number*/)
       {
@@ -66,7 +63,6 @@ namespace throttr
         state_->prepare_for_shutdown(program_options_);
         ioc_.stop();
       });
-    // LCOV_EXCL_STOP
 
     available_message_pool_.reserve(8192);
     for (auto _e = 0; _e < 8192; ++_e)
@@ -76,12 +72,10 @@ namespace throttr
 
     ioc_.run();
 
-    // LCOV_EXCL_START
     for (auto &_thread : _threads)
     {
       _thread.join();
     }
-    // LCOV_EXCL_STOP
 
     return EXIT_SUCCESS;
   }

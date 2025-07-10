@@ -37,7 +37,7 @@ namespace throttr
       state->strand_,
       [_self = shared_from_this(), _state = state->shared_from_this()](const boost::system::error_code &ec)
       {
-        if (!ec) // LCOV_EXCL_LINE Note: Partially tested.
+        if (!ec)
         {
           run(_state);
           _self->schedule_timer(_state); // reschedule
@@ -49,13 +49,11 @@ namespace throttr
   {
 #ifndef NDEBUG
     fmt::println("[{}] [{:%Y-%m-%d %H:%M:%S}] METRICS SNAPSHOT STARTED", to_string(state->id_), std::chrono::system_clock::now());
-#endif                                                                            // NDEBUG
-    for (auto &_index = state->storage_.get<tag_by_key>(); auto &_entry : _index) // LCOV_EXCL_LINE Note: Partially tested.
+#endif // NDEBUG
+    for (auto &_index = state->storage_.get<tag_by_key>(); auto &_entry : _index)
     {
-      // LCOV_EXCL_START
       if (_entry.expired_)
         continue;
-      // LCOV_EXCL_STOP
 
       auto &[reads_, writes_, reads_accumulator_, writes_accumulator_, reads_per_minute_, writes_per_minute_] = *_entry.metrics_;
       const auto reads = reads_.exchange(0, std::memory_order_relaxed);
@@ -71,7 +69,7 @@ namespace throttr
     auto _compute_metrics = [](const auto &connections, auto &mutex)
     {
       std::scoped_lock _lock(mutex);
-      for (const auto &_conn : connections) // NOSONAR
+      for (const auto &_conn : connections)
       {
         for (auto &_m : _conn.second->metrics_->commands_)
           _m.compute();

@@ -42,7 +42,6 @@ namespace throttr
     state->metrics_collector_->commands_[static_cast<std::size_t>(_type)].mark();
 #endif
 
-    // LCOV_EXCL_START
 #ifndef NDEBUG
     fmt::println(
       "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST EVENT session_id={} META channel={} payload={} RESPONSE ok=true",
@@ -52,7 +51,6 @@ namespace throttr
       span_to_hex(_request.channel_),
       span_to_hex(_request.buffer_));
 #endif
-    // LCOV_EXCL_STOP
 
     batch.emplace_back(&state::success_response_, 1);
 

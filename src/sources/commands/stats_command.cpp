@@ -45,7 +45,6 @@ namespace throttr
        &write_buffer](std::vector<boost::asio::const_buffer> *b, const entry_wrapper *e, std::size_t &offset, const bool measure)
       { return response_builder_service::write_stats_entry_to_buffer(_state, b, e, write_buffer, offset, measure); });
 
-    // LCOV_EXCL_START
 #ifndef NDEBUG
     fmt::println(
       "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST STATS session_id={} RESPONSE ok=true",
@@ -53,6 +52,5 @@ namespace throttr
       std::chrono::system_clock::now(),
       to_string(id));
 #endif
-    // LCOV_EXCL_STOP
   }
 } // namespace throttr

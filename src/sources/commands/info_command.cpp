@@ -232,7 +232,7 @@ namespace throttr
     uint64_t _total_allocated_bytes_on_counters = 0;
     uint64_t _total_allocated_bytes_on_buffers = 0;
 
-    for (const auto &_index = state->storage_.get<tag_by_key>(); auto &_item : _index) // LCOV_EXCL_LINE Note: Partially tested.
+    for (const auto &_index = state->storage_.get<tag_by_key>(); auto &_item : _index)
     {
       if (_item.entry_.type_ == entry_types::counter)
       {
@@ -274,13 +274,11 @@ namespace throttr
 
     uint64_t _total_subscriptions = 0;
     uint64_t _total_channels = 0;
-    std::set<std::string> _existing_keys; // NOSONAR
+    std::set<std::string> _existing_keys;
 
-    for (const auto &_index =                                          // LCOV_EXCL_LINE Note: Partially tested.
-         state->subscriptions_->subscriptions_.get<by_channel_name>(); // LCOV_EXCL_LINE Note: Partially tested.
-         auto &_item : _index)                                         // LCOV_EXCL_LINE Note: Partially tested.
+    for (const auto &_index = state->subscriptions_->subscriptions_.get<by_channel_name>(); auto &_item : _index)
     {
-      if (!_existing_keys.contains(_item.channel_)) // LCOV_EXCL_LINE Note: Partially tested.
+      if (!_existing_keys.contains(_item.channel_))
       {
         _existing_keys.insert(_item.channel_);
         _total_channels++;
@@ -327,7 +325,6 @@ namespace throttr
     batch.emplace_back(write_buffer.data() + _offset, 16);
     _offset += 16;
 
-    // LCOV_EXCL_START
 #ifndef NDEBUG
     fmt::println(
       "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST INFO session_id={} RESPONSE ok=true",
@@ -335,6 +332,5 @@ namespace throttr
       std::chrono::system_clock::now(),
       to_string(id));
 #endif
-    // LCOV_EXCL_STOP
   }
 } // namespace throttr

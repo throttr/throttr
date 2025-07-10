@@ -38,7 +38,7 @@ namespace throttr
 
     const auto _request = request_subscribe::from_buffer(view);
     const std::string _channel{
-      std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size())}; // NOSONAR
+      std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size())};
 
     auto [_it, _inserted] = state->subscriptions_->subscriptions_.insert(subscription{id, _channel});
 
@@ -48,7 +48,7 @@ namespace throttr
 
 #ifndef NDEBUG
     const auto _channel_view =
-      std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size()); // NOSONAR
+      std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size());
     fmt::println(
       "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST SUBSCRIBE session_id={} META channel={} RESPONSE ok={}",
       to_string(state->id_),

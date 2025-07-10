@@ -20,7 +20,6 @@
 
 namespace throttr
 {
-  // LCOV_EXCL_START
   void base_command::call(
     const std::shared_ptr<state> &state,
     const request_types type,
@@ -33,5 +32,4 @@ namespace throttr
 
     batch.emplace_back(&state::failed_response_, 1);
   }
-  // LCOV_EXCL_STOP
 } // namespace throttr

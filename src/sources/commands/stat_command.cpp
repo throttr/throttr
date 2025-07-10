@@ -39,15 +39,13 @@ namespace throttr
 
     const auto _request = request_stat::from_buffer(view);
 
-    const request_key _key{
-      std::string_view(reinterpret_cast<const char *>(_request.key_.data()), _request.key_.size())}; // NOSONAR
+    const request_key _key{std::string_view(reinterpret_cast<const char *>(_request.key_.data()), _request.key_.size())};
     const auto _find = state->finder_->find_or_fail(state, _key);
-    if (!_find.has_value()) // LCOV_EXCL_LINE
+    if (!_find.has_value())
     {
       batch.reserve(batch.size() + 1);
       batch.emplace_back(boost::asio::const_buffer(&state::failed_response_, 1));
 
-      // LCOV_EXCL_START
 #ifndef NDEBUG
       fmt::println(
         "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST STAT session_id={} META key={} RESPONSE ok=false",
@@ -57,7 +55,6 @@ namespace throttr
         _key.key_);
 #endif
       return;
-      // LCOV_EXCL_STOP
     }
 
     const auto _it = _find.value();
@@ -102,7 +99,6 @@ namespace throttr
     }
 #endif
 
-    // LCOV_EXCL_START
 #ifndef NDEBUG
     fmt::println(
       "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST STAT session_id={} META key={} RESPONSE ok=true META read_per_minute={} "
@@ -124,6 +120,5 @@ namespace throttr
       0);
 #endif
 #endif
-    // LCOV_EXCL_STOP
   }
 } // namespace throttr

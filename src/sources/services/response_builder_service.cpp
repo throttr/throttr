@@ -100,7 +100,7 @@ namespace throttr
 
     using namespace boost::endian;
 
-    if (measure) // LCOV_EXCL_LINE Note: Partially tested.
+    if (measure)
       return {33, 5};
 
     const auto _key_length = static_cast<std::byte>(entry->key_.size());
@@ -143,7 +143,7 @@ namespace throttr
     fragment_container _fragment;
     std::vector<fragment_container> _fragments;
     std::size_t _current_fragment_size = 0;
-    constexpr std::size_t _max_fragment_size = 2048; // LCOV_EXCL_LINE
+    constexpr std::size_t _max_fragment_size = 2048;
 
     std::size_t _global_batch_size = 2;        // This is status + fragments count
     std::size_t _global_write_buffer_size = 8; // This is fragment count
@@ -182,7 +182,7 @@ namespace throttr
     _fragmenter(state->agent_tcp_connections_, state->agent_tcp_connections_mutex_);
     _fragmenter(state->agent_unix_connections_, state->agent_unix_connections_mutex_);
 
-    if (!std::get<0>(_fragment).empty() || !std::get<1>(_fragment).empty()) // LCOV_EXCL_LINE Note: Partially tested.
+    if (!std::get<0>(_fragment).empty() || !std::get<1>(_fragment).empty())
       _fragments.push_back(std::move(_fragment));
 
     const auto _fragments_count = boost::endian::native_to_little(_fragments.size());
@@ -247,19 +247,17 @@ namespace throttr
     std::size_t _buffer_required_size = 0;
     std::size_t _batch_required_size = 2; // status + fragment count
 
-    for (auto &_item : _index) // LCOV_EXCL_LINE Note: Partially tested.
+    for (auto &_item : _index)
     {
-      // LCOV_EXCL_START
       if (_item.expired_)
         continue;
-        // LCOV_EXCL_STOP
 
 #ifdef ENABLED_FEATURE_METRICS
       _item.metrics_->reads_.fetch_add(1, std::memory_order_relaxed);
 #endif
 
       const auto [_item_size, _item_batch_size] = serialize_entry(nullptr, &_item, _offset, true);
-      if (_fragment_size + _item_size > max_fragment_size) // LCOV_EXCL_LINE Note: Partially tested.
+      if (_fragment_size + _item_size > max_fragment_size)
       {
         _fragments.push_back(_fragment_items);
         _fragment_size = 0;
@@ -275,7 +273,7 @@ namespace throttr
       _batch_required_size += _item_batch_size;
     }
 
-    if (!_fragment_items.empty()) // LCOV_EXCL_LINE Note: Partially tested.
+    if (!_fragment_items.empty())
     {
       _fragments.push_back(std::move(_fragment_items));
     }
@@ -299,13 +297,13 @@ namespace throttr
     }
 
     std::size_t _i = 0;
-    for (const auto &_fragment : _fragments) // LCOV_EXCL_LINE Note: Partially tested.
+    for (const auto &_fragment : _fragments)
     {
       uint64_t _fragment_index = _i + 1;
       uint64_t _key_count = _fragment.size();
 
       // Convert _fragment_index and _key_count to bytes and insert into the buffer
-      for (const uint64_t _value : {_fragment_index, _key_count}) // LCOV_EXCL_LINE Note: Partially tested.
+      for (const uint64_t _value : {_fragment_index, _key_count})
       {
         const auto _scoped_value = boost::endian::native_to_little(_value);
         std::memcpy(write_buffer.data() + _offset, &_scoped_value, sizeof(uint64_t));
@@ -314,13 +312,13 @@ namespace throttr
       }
 
       // Serialize entries
-      for (const auto *_entry : _fragment) // LCOV_EXCL_LINE Note: Partially tested.
+      for (const auto *_entry : _fragment)
       {
         serialize_entry(&batch, _entry, _offset, false);
       }
 
       // Add key data to the batch
-      for (const auto &_entry : _fragment) // LCOV_EXCL_LINE Note: Partially tested.
+      for (const auto &_entry : _fragment)
       {
         batch.emplace_back(_entry->key_.data(), _entry->key_.size());
       }
@@ -338,7 +336,7 @@ namespace throttr
 
     std::vector<std::string> _channels_list;
     std::vector<std::vector<std::string>> _fragments;
-    std::unordered_map<std::string, std::tuple<uint64_t, uint64_t, uint64_t>> _channel_stats; // NOSONAR
+    std::unordered_map<std::string, std::tuple<uint64_t, uint64_t, uint64_t>> _channel_stats;
 
     std::size_t _write_buffer_size = 0;
     std::size_t _channels_count = 0;
@@ -353,7 +351,7 @@ namespace throttr
 
       _channels_count = _subs.size();
 
-      for (auto _it = _subs.begin(); _it != _subs.end();) // LCOV_EXCL_LINE Note: Partially tested.
+      for (auto _it = _subs.begin(); _it != _subs.end();)
       {
         std::string _current_channel{_it->channel_};
         _read_sum = 0;
@@ -362,8 +360,8 @@ namespace throttr
 
         _write_buffer_size += sizeof(uint64_t) * 3 + 1 + _current_channel.size();
 
-        auto _range = _subs.equal_range(_current_channel);                           // NOSONAR
-        for (auto _range_it = _range.first; _range_it != _range.second; ++_range_it) // LCOV_EXCL_LINE Note: Partially tested.
+        auto _range = _subs.equal_range(_current_channel);
+        for (auto _range_it = _range.first; _range_it != _range.second; ++_range_it)
         {
 #ifdef ENABLED_FEATURE_METRICS
           _read_sum += _range_it->metrics_->read_bytes_.accumulator_.load(std::memory_order_relaxed);
@@ -377,7 +375,6 @@ namespace throttr
 
         _channel_stats[_current_channel] = {_read_sum, _write_sum, _count};
         constexpr std::size_t _channel_size = 1 + 8 + 8 + 8;
-        // LCOV_EXCL_START
         if (_fragment_size + _channel_size > 2048)
         {
           _fragments.push_back(_current_fragment);
@@ -385,7 +382,6 @@ namespace throttr
           _fragment_size = 0;
           _write_buffer_size += sizeof(uint64_t) * 2;
         }
-        // LCOV_EXCL_STOP
 
         _current_fragment.push_back(_current_channel);
         _fragment_size += _channel_size;
