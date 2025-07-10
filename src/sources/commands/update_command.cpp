@@ -38,15 +38,17 @@ namespace throttr
     boost::ignore_unused(type, write_buffer, id);
 
     const auto _request = request_update::from_buffer(view);
-    const request_key _key{
-      std::string_view(reinterpret_cast<const char *>(_request.key_.data()), _request.key_.size())}; // NOSONAR
+
+    const request_key _key{std::string_view(reinterpret_cast<const char *>(_request.key_.data()), _request.key_.size())};
     const std::uint64_t _now = std::chrono::system_clock::now().time_since_epoch().count();
+
+    batch.reserve(batch.size() + 1);
+
     const auto _it = state->finder_->find_or_fail(state, _key);
 
-    if (!_it.has_value()) // LCOV_EXCL_LINE note: Partially covered.
+    if (!_it.has_value())
     {
       batch.emplace_back(&state::failed_response_, 1);
-      // LCOV_EXCL_START
 #ifndef NDEBUG
       fmt::println(
         "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST UPDATE session_id={} META key={} RESPONSE ok=false",
@@ -55,7 +57,6 @@ namespace throttr
         to_string(id),
         span_to_hex(_request.key_));
 #endif
-      // LCOV_EXCL_STOP
       return;
     }
 
@@ -70,7 +71,7 @@ namespace throttr
         switch (_request.attribute_)
         {
           case quota:
-            if (object.entry_.type_ == entry_types::counter) // LCOV_EXCL_LINE Note: Partially tested.
+            if (object.entry_.type_ == entry_types::counter)
             {
               _modified = update_service::apply_quota_change(state, object.entry_, _request);
             }
@@ -82,13 +83,12 @@ namespace throttr
       });
 
 #ifdef ENABLED_FEATURE_METRICS
-    if (_modified) // LCOV_EXCL_LINE Note: Partially tested.
+    if (_modified)
     {
       _it.value()->metrics_->writes_.fetch_add(1, std::memory_order_relaxed);
     }
 #endif
 
-    // LCOV_EXCL_START
 #ifndef NDEBUG
     fmt::println(
       "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST UPDATE session_id={} META key={} attribute={} change={} value={} RESPONSE ok={}",
@@ -101,7 +101,6 @@ namespace throttr
       _request.value_,
       _modified);
 #endif
-    // LCOV_EXCL_STOP
 
     if (_modified)
     {

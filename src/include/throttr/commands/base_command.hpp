@@ -47,7 +47,6 @@ namespace throttr
      * @param write_buffer
      * @param id
      */
-    // LCOV_EXCL_START Note: Other classes extends from this.
     static void call(
       const std::shared_ptr<state> &state,
       request_types type,
@@ -55,7 +54,6 @@ namespace throttr
       std::vector<boost::asio::const_buffer> &batch,
       std::vector<std::byte> &write_buffer,
       boost::uuids::uuid id);
-    // LCOV_EXCL_STOP
   };
 } // namespace throttr
 

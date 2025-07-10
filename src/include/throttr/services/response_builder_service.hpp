@@ -49,14 +49,16 @@ namespace throttr
      * @param batch
      * @param entry
      * @param write_buffer
+     * @param offset
      * @param measure
      * @return
      */
-    static std::size_t write_list_entry_to_buffer(
+    static std::pair<std::size_t, std::size_t> write_list_entry_to_buffer(
       const std::shared_ptr<state> &state,
       std::vector<boost::asio::const_buffer> *batch,
       const entry_wrapper *entry,
       std::vector<std::byte> &write_buffer,
+      std::size_t &offset,
       bool measure);
 
     /**
@@ -66,14 +68,16 @@ namespace throttr
      * @param batch
      * @param entry
      * @param write_buffer
+     * @param offset
      * @param measure
      * @return
      */
-    static std::size_t write_stats_entry_to_buffer(
+    static std::pair<std::size_t, std::size_t> write_stats_entry_to_buffer(
       const std::shared_ptr<state> &state,
       std::vector<boost::asio::const_buffer> *batch,
       const entry_wrapper *entry,
       std::vector<std::byte> &write_buffer,
+      std::size_t &offset,
       bool measure);
 
     /**
@@ -83,57 +87,76 @@ namespace throttr
      * @param batch
      * @param conn
      * @param write_buffer
+     * @param offset
      * @param measure
      * @return
      */
     template<typename Socket>
-    static std::size_t write_connections_entry_to_buffer(
+    static std::pair<std::size_t, std::size_t> write_connections_entry_to_buffer(
       const std::shared_ptr<state> &state,
       std::vector<boost::asio::const_buffer> *batch,
       const connection<Socket> *conn,
       std::vector<std::byte> &write_buffer,
+      std::size_t &offset,
       bool measure)
     {
       boost::ignore_unused(state);
 
+      // 16 bytes uuid
+      // 1 byte client or agent
+      // 1 byte tcp or unix
+      // 1 byte ip version
+      // 16 bytes ip padded
+      // 2 bytes port
+      // 56 bytes io metrics
+      // 144 bytes service metrics
+      // 237 bytes
+
       if (measure)
-        return 227;
+        return {237, 31};
 
       using namespace boost::endian;
 
-      const auto _push = [&](const void *ptr, const std::size_t size) // NOSONAR
-      {
-        const auto _offset = write_buffer.size();
-        const auto *_bytes = static_cast<const std::byte *>(ptr);
-        write_buffer.insert(write_buffer.end(), _bytes, _bytes + size);
-        batch->emplace_back(&write_buffer[_offset], size); // NOSONAR
-      };
-
       // UUID (16 bytes)
-      _push(conn->id_.data(), 16);
+      std::memcpy(write_buffer.data() + offset, conn->id_.data(), 16);
+      batch->emplace_back(write_buffer.data() + offset, 16);
+      offset += 16;
 
       // Type (client or agent)
       const auto _type = static_cast<std::uint8_t>(conn->type_);
-      _push(&_type, 1);
+      std::memcpy(write_buffer.data() + offset, &_type, sizeof(uint8_t));
+      batch->emplace_back(write_buffer.data() + offset, sizeof(uint8_t));
+      offset += sizeof(uint8_t);
 
       // Kind (tcp or unix)
       const auto _kind = static_cast<std::uint8_t>(conn->kind_);
-      _push(&_kind, 1);
+      std::memcpy(write_buffer.data() + offset, &_kind, sizeof(uint8_t));
+      batch->emplace_back(write_buffer.data() + offset, sizeof(uint8_t));
+      offset += sizeof(uint8_t);
 
       // IP version (1 byte)
       const std::uint8_t _ip_version = conn->ip_.contains(':') ? 0x06 : 0x04;
-      _push(&_ip_version, 1);
+      std::memcpy(write_buffer.data() + offset, &_ip_version, sizeof(uint8_t));
+      batch->emplace_back(write_buffer.data() + offset, sizeof(uint8_t));
+      offset += sizeof(uint8_t);
 
       // IP padded to 16 bytes
       std::array<std::uint8_t, 16> _ip_bytes = {};
       const auto &_ip_str = conn->ip_;
       const auto _len = std::min<std::size_t>(_ip_str.size(), 16);
       std::memcpy(_ip_bytes.data(), _ip_str.data(), _len);
-      _push(_ip_bytes.data(), 16);
+
+      std::memcpy(write_buffer.data() + offset, &_ip_bytes, 16);
+      batch->emplace_back(write_buffer.data() + offset, 16);
+      offset += 16;
 
       // Port (2 bytes)
       const uint16_t _port = native_to_little(conn->port_);
-      _push(&_port, sizeof(conn->port_));
+      std::memcpy(write_buffer.data() + offset, &_port, sizeof(uint16_t));
+      batch->emplace_back(write_buffer.data() + offset, sizeof(uint16_t));
+      offset += sizeof(uint16_t);
+
+      // there are 6 emplace back
 
 #ifdef ENABLED_FEATURE_METRICS
       const auto &_metrics = *conn->metrics_;
@@ -142,14 +165,14 @@ namespace throttr
 #endif
 
       for (const uint64_t _val :
-           {conn->connected_at_,
+           {native_to_little(conn->connected_at_),
 #ifdef ENABLED_FEATURE_METRICS
-            _metrics.network_.read_bytes_.accumulator_.load(std::memory_order_relaxed),
-            _metrics.network_.write_bytes_.accumulator_.load(std::memory_order_relaxed),
-            _metrics.network_.published_bytes_.accumulator_.load(std::memory_order_relaxed),
-            _metrics.network_.received_bytes_.accumulator_.load(std::memory_order_relaxed),
-            _metrics.memory_.allocated_bytes_.accumulator_.load(std::memory_order_relaxed),
-            _metrics.memory_.consumed_bytes_.accumulator_.load(std::memory_order_relaxed)})
+            native_to_little(_metrics.network_.read_bytes_.accumulator_.load(std::memory_order_relaxed)),
+            native_to_little(_metrics.network_.write_bytes_.accumulator_.load(std::memory_order_relaxed)),
+            native_to_little(_metrics.network_.published_bytes_.accumulator_.load(std::memory_order_relaxed)),
+            native_to_little(_metrics.network_.received_bytes_.accumulator_.load(std::memory_order_relaxed)),
+            native_to_little(_metrics.memory_.allocated_bytes_.accumulator_.load(std::memory_order_relaxed)),
+            native_to_little(_metrics.memory_.consumed_bytes_.accumulator_.load(std::memory_order_relaxed))})
 #else
             _empty,
             _empty,
@@ -158,11 +181,12 @@ namespace throttr
             _empty,
             _empty})
 #endif
-      {
-        const auto _offset = write_buffer.size();
-        append_uint64_t(write_buffer, native_to_little(_val));
-        batch->emplace_back(&write_buffer[_offset], sizeof(uint64_t));
-      }
+      { // 7 x 8 = 56 bytes on i/o metrics
+
+        std::memcpy(write_buffer.data() + offset, &_val, sizeof(uint64_t));
+        batch->emplace_back(write_buffer.data() + offset, sizeof(uint64_t));
+        offset += sizeof(uint64_t);
+      } // 7 emplace back
 
       constexpr std::array monitored_request_types =
         {request_types::insert,
@@ -182,23 +206,24 @@ namespace throttr
          request_types::connection,
          request_types::channels,
          request_types::channel,
-         request_types::whoami};
+         request_types::whoami}; // 18 x 8 = 144 bytes on service metrics
 
       for (request_types type : monitored_request_types)
       {
         boost::ignore_unused(type);
 #ifdef ENABLED_FEATURE_METRICS
         const auto &metric = conn->metrics_->commands_[static_cast<std::size_t>(type)];
-        const uint64_t _value = metric.accumulator_.load(std::memory_order_relaxed);
+        const uint64_t _value = native_to_little(metric.accumulator_.load(std::memory_order_relaxed));
 #else
         constexpr uint64_t _value = 0;
 #endif
-        const auto _offset = write_buffer.size();
-        append_uint64_t(write_buffer, native_to_little(_value));
-        batch->emplace_back(&write_buffer[_offset], sizeof(uint64_t));
-      }
 
-      return 0;
+        std::memcpy(write_buffer.data() + offset, &_value, sizeof(uint64_t));
+        batch->emplace_back(write_buffer.data() + offset, sizeof(uint64_t));
+        offset += sizeof(uint64_t);
+      } // 18 emplace back
+
+      return {0, 0};
     }
 
     /**
@@ -227,7 +252,9 @@ namespace throttr
       std::vector<boost::asio::const_buffer> &batch,
       std::vector<std::byte> &write_buffer,
       const std::size_t max_fragment_size,
-      const std::function<std::size_t(std::vector<boost::asio::const_buffer> *, const entry_wrapper *, bool)> &serialize_entry);
+      const std::function<
+        std::pair<std::size_t, std::size_t>(std::vector<boost::asio::const_buffer> *, const entry_wrapper *, std::size_t &, bool)>
+        &serialize_entry);
 
     /**
      * Handle fragmented channels response

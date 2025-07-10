@@ -26,7 +26,7 @@
 
 namespace throttr
 {
-  bool create_service::use( // NOSONAR
+  bool create_service::use(
     const std::shared_ptr<state> &state,
     std::span<const std::byte> key,
     std::span<const std::byte> value,
@@ -34,7 +34,7 @@ namespace throttr
     std::span<const std::byte> ttl,
     const entry_types type,
     const boost::uuids::uuid &id,
-    const bool as_insert) // NOSONAR
+    const bool as_insert)
   {
     boost::ignore_unused(as_insert, id);
 
@@ -45,18 +45,15 @@ namespace throttr
     const auto _expires_at = get_expiration_point(_now_ns, ttl_type, ttl);
 
     auto &_index = state->storage_.get<tag_by_key>();
-    const std::vector _key(
-      key.data(),             // NOSONAR
-      key.data() + key.size() // NOSONAR
-    );
+    const std::vector _key(key.data(), key.data() + key.size());
 
     if (!as_insert)
     {
-      const request_key _lookup_key{std::string_view(reinterpret_cast<const char *>(_key.data()), _key.size())}; // NOSONAR
+      const request_key _lookup_key{std::string_view(reinterpret_cast<const char *>(_key.data()), _key.size())};
       auto _it_existing = _index.find(_lookup_key);
-      if (_it_existing != _index.end()) // LCOV_EXCL_LINE Note: Partially tested.
+      if (_it_existing != _index.end())
       {
-        if (_it_existing->entry_.type_ != entry_types::counter) // LCOV_EXCL_LINE Note: Partially tested.
+        if (_it_existing->entry_.type_ != entry_types::counter)
         {
           auto _modified = _index.modify(
             _it_existing,
@@ -117,7 +114,6 @@ namespace throttr
 
     boost::ignore_unused(_it);
 
-    // LCOV_EXCL_START Note: Actually tested
     if (_inserted)
     {
       // OPTIMIZATION AVAILABLE
@@ -142,9 +138,7 @@ namespace throttr
         }
       }
     }
-    // LCOV_EXCL_STOP
 
-    // LCOV_EXCL_START
 #ifndef NDEBUG
     if (_entry_ptr.entry_.type_ == entry_types::counter)
     {
@@ -175,7 +169,6 @@ namespace throttr
         _inserted);
     }
 #endif
-    // LCOV_EXCL_STOP
 
     return _inserted;
   }

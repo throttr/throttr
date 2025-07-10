@@ -29,7 +29,7 @@ namespace throttr
 #endif
 
     const uint64_t _now = std::chrono::system_clock::now().time_since_epoch().count();
-    if (proposed <= _now) // LCOV_EXCL_LINE Note: Partially tested.
+    if (proposed <= _now)
     {
       run(state);
       return;
@@ -59,21 +59,21 @@ namespace throttr
     std::vector<request_key> _to_expire;
     std::vector<request_key> _to_erase;
     std::uint64_t _next_expiration = std::numeric_limits<std::uint64_t>::max();
-    for (const auto &_item : _index) // LCOV_EXCL_LINE Note: Partially tested.
+    for (const auto &_item : _index)
     {
       const auto _expires_ns = _item.entry_.expires_at_.load(std::memory_order_acquire);
 
-      if (_item.expired_) // LCOV_EXCL_LINE Note: Partially tested.
+      if (_item.expired_)
       {
 
         if (constexpr auto _grace_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::seconds(10)).count();
-            _now - _expires_ns > _grace_ns) // LCOV_EXCL_LINE Note: Partially tested.
+            _now - _expires_ns > _grace_ns)
         {
           _to_erase.emplace_back(_item.key());
         }
         continue;
       }
-      if (_item.entry_.expires_at_ <= _now) // LCOV_EXCL_LINE Note: Partially tested.
+      if (_item.entry_.expires_at_ <= _now)
       {
         _to_expire.emplace_back(_item.key());
       }
@@ -83,9 +83,9 @@ namespace throttr
       }
     }
 
-    for (const auto &_key : _to_expire) // LCOV_EXCL_LINE Note: Partially tested.
+    for (const auto &_key : _to_expire)
     {
-      if (auto _it = _index.find(_key); _it != _index.end() && !_it->expired_) // LCOV_EXCL_LINE Note: Partially tested.
+      if (auto _it = _index.find(_key); _it != _index.end() && !_it->expired_)
       {
         _index.modify(
           _it,
@@ -96,9 +96,7 @@ namespace throttr
               "[{}] [{:%Y-%m-%d %H:%M:%S}] GARBAGE COLLECTOR MARKED KEY AS EXPIRED key={}",
               to_string(state->id_),
               std::chrono::system_clock::now(),
-              std::string_view(
-                reinterpret_cast<const char *>(entry.key_.data()), // NOSONAR
-                entry.key_.size()));                               // NOSONAR
+              std::string_view(reinterpret_cast<const char *>(entry.key_.data()), entry.key_.size()));
 #endif
             entry.expired_ = true;
           });
@@ -106,29 +104,27 @@ namespace throttr
     }
 
     auto &_erase_index = state->storage_.get<tag_by_key>();
-    for (const auto &_key : _to_erase) // LCOV_EXCL_LINE Note: Partially tested.
+    for (const auto &_key : _to_erase)
     {
-      if (auto _it = _erase_index.find(_key);         // LCOV_EXCL_LINE Note: Partially tested.
-          _it != _erase_index.end() && _it->expired_) // LCOV_EXCL_LINE Note: Partially tested.
+      if (auto _it = _erase_index.find(_key); _it != _erase_index.end() && _it->expired_)
       {
 #ifndef NDEBUG
         fmt::println(
           "[{}] [{:%Y-%m-%d %H:%M:%S}] GARBAGE COLLECTOR ERASED EXPIRED KEY key={}",
           to_string(state->id_),
           std::chrono::system_clock::now(),
-          std::string_view(reinterpret_cast<const char *>(_it->key_.data()), _it->key_.size())); // NOSONAR
+          std::string_view(reinterpret_cast<const char *>(_it->key_.data()), _it->key_.size()));
 #endif
         _erase_index.erase(_it);
       }
     }
 
-    for (auto &_candidate_index = state->storage_.get<tag_by_key>(); // LCOV_EXCL_LINE Note: Partially tested.
-         const auto &_item : _candidate_index)                       // LCOV_EXCL_LINE Note: Partially tested.
+    for (auto &_candidate_index = state->storage_.get<tag_by_key>(); const auto &_item : _candidate_index)
     {
       const auto _expires_at = _item.entry_.expires_at_.load(std::memory_order_acquire);
       uint64_t _candidate;
 
-      if (_item.expired_) // LCOV_EXCL_LINE Note: Partially tested.
+      if (_item.expired_)
       {
         constexpr auto _grace_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::seconds(10)).count();
         _candidate = _expires_at + _grace_ns;
@@ -144,7 +140,7 @@ namespace throttr
       "[{}] [{:%Y-%m-%d %H:%M:%S}] GARBAGE COLLECTION COMPLETED", to_string(state->id_), std::chrono::system_clock::now());
 #endif
 
-    if (_next_expiration != std::numeric_limits<std::uint64_t>::max()) // LCOV_EXCL_LINE Note: Partially tested.
+    if (_next_expiration != std::numeric_limits<std::uint64_t>::max())
       schedule_timer(state, _next_expiration);
   }
 } // namespace throttr

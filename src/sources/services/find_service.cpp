@@ -25,7 +25,7 @@ namespace throttr
   {
     const auto &_index = state->storage_.get<tag_by_key>();
     auto _it = _index.find(key);
-    if (_it == _index.end() || _it->expired_) // LCOV_EXCL_LINE
+    if (_it == _index.end() || _it->expired_)
     {
       return std::nullopt;
     }
@@ -43,7 +43,7 @@ namespace throttr
     std::vector<boost::asio::const_buffer> &batch)
   {
     const auto _it = find_or_fail(state, key);
-    if (!_it.has_value()) // LCOV_EXCL_LINE
+    if (!_it.has_value())
     {
       batch.emplace_back(boost::asio::const_buffer(&state::failed_response_, 1));
     }

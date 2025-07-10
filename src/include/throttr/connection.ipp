@@ -15,6 +15,8 @@
 
 #pragma once
 
+#include "message.hpp"
+
 #include <boost/asio/bind_allocator.hpp>
 #include <boost/asio/write.hpp>
 #include <boost/core/ignore_unused.hpp>
@@ -32,7 +34,6 @@ namespace throttr
       id_(state->id_generator_()), type_(type), socket_(std::move(socket)), state_(state)
   {
 
-    // LCOV_EXCL_START
     if (socket_.is_open())
     {
       if constexpr (std::is_same_v<Transport, tcp_socket>)
@@ -50,12 +51,10 @@ namespace throttr
       connected_at_ =
         std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
     }
-    // LCOV_EXCL_STOP
   }
 
   template<typename Transport> connection<Transport>::~connection()
   {
-    // LCOV_EXCL_START
 #ifndef NDEBUG
     switch (kind_)
     {
@@ -77,13 +76,11 @@ namespace throttr
         break;
     }
 #endif
-    // LCOV_EXCL_STOP
     state_->leave(this);
   }
 
   template<typename Transport> void connection<Transport>::start()
   {
-    // LCOV_EXCL_START
 #ifndef NDEBUG
     if (type_ == connection_type::client)
     {
@@ -130,7 +127,6 @@ namespace throttr
       }
     }
 #endif
-    // LCOV_EXCL_STOP
 
     state_->join(this);
 
@@ -139,12 +135,12 @@ namespace throttr
 
   template<typename Transport> void connection<Transport>::compact_buffer_if_needed()
   {
-    if (buffer_start_ == buffer_end_) // LCOV_EXCL_LINE note: Partially tested.
+    if (buffer_start_ == buffer_end_)
     {
       buffer_start_ = 0;
       buffer_end_ = 0;
     }
-    else if (buffer_start_ > max_length_ / 2) // LCOV_EXCL_LINE note: Partially tested.
+    else if (buffer_start_ > max_length_ / 2)
     {
       compact_buffer();
     }
@@ -152,14 +148,14 @@ namespace throttr
 
   template<typename Transport> void connection<Transport>::compact_buffer()
   {
-    if (buffer_start_ == buffer_end_) // LCOV_EXCL_LINE note: Partially tested.
-      return;                         // LCOV_EXCL_LINE note: Partially tested.
+    if (buffer_start_ == buffer_end_)
+      return;
     std::memmove(buffer_.data(), buffer_.data() + buffer_start_, buffer_end_ - buffer_start_);
     buffer_end_ -= buffer_start_;
     buffer_start_ = 0;
   }
 
-  template<typename Transport> void connection<Transport>::send(std::shared_ptr<message> batch)
+  template<typename Transport> void connection<Transport>::send(const std::shared_ptr<message> &batch)
   {
     auto self = this->shared_from_this();
     boost::asio::post(socket_.get_executor(), [self, _batch = batch->shared_from_this()]() mutable { self->on_send(_batch); });
@@ -167,7 +163,7 @@ namespace throttr
 
   template<typename Transport> void connection<Transport>::on_read(const boost::system::error_code &error, std::size_t length)
   {
-    if (!error) // LCOV_EXCL_LINE note: Partially tested.
+    if (!error)
     {
 #ifdef ENABLED_FEATURE_METRICS
       metrics_->network_.read_bytes_.mark(length);
@@ -175,28 +171,45 @@ namespace throttr
 
       buffer_end_ += length;
       try_process_next();
-      // LCOV_EXCL_START
     }
     else
     {
       close();
     }
-    // LCOV_EXCL_STOP
   }
 
   template<typename Transport> void connection<Transport>::try_process_next()
   {
+    for (auto it = used_message_pool_.begin(); it != used_message_pool_.end();)
+    {
+      if ((*it)->used_)
+      {
+        (*it)->used_ = false;
+        available_message_pool_.push_back(*it);
+        it = used_message_pool_.erase(it);
+      }
+      else
+      {
+        ++it;
+      }
+    }
+
+    if (available_message_pool_.size() > 8192)
+    {
+      available_message_pool_.resize(8192);
+      available_message_pool_.shrink_to_fit();
+    }
+
     while (true)
     {
       const std::span<const std::byte> _span(buffer_.data() + buffer_start_, buffer_end_ - buffer_start_);
       const std::size_t _msg_size = get_message_size(_span);
-      if (_msg_size == 0 || _span.size() < _msg_size) // LCOV_EXCL_LINE note: Ignored.
+      if (_msg_size == 0 || _span.size() < _msg_size)
         break;
 
       const std::span<const std::byte> _view(buffer_.data() + buffer_start_, _msg_size);
       buffer_start_ += _msg_size;
 
-      // LCOV_EXCL_START
 #ifndef NDEBUG
       switch (kind_)
       {
@@ -220,24 +233,25 @@ namespace throttr
           break;
       }
 #endif
-      // LCOV_EXCL_STOP
 
       const auto _type = static_cast<request_types>(std::to_integer<uint8_t>(_view[0]));
 #ifdef ENABLED_FEATURE_METRICS
       state_->metrics_collector_->commands_[static_cast<std::size_t>(_type)].mark();
       metrics_->commands_[static_cast<std::size_t>(_type)].mark();
 #endif
-      state_->commands_->commands_[static_cast<std::size_t>(
-        _type)](state_, _type, _view, message_->buffers_, message_->write_buffer_, this->id_);
-      // LCOV_EXCL_STOP
-    }
 
-    // LCOV_EXCL_START Note: Partially tested.
-    // The not tested case is when in-while break condition is triggered but no
-    // queue element exists.
-    if (!message_->buffers_.empty())
-      send(message_);
-    // LCOV_EXCL_STOP
+      while (available_message_pool_.size() < 4096)
+        available_message_pool_.push_back(std::make_shared<message>());
+
+      const auto _message = available_message_pool_.front();
+      available_message_pool_.erase(available_message_pool_.begin());
+
+      state_->commands_->commands_[static_cast<std::size_t>(
+        _type)](state_, _type, _view, _message->buffers_, _message->write_buffer_, this->id_);
+
+      used_message_pool_.push_back(_message);
+      send(_message);
+    }
 
     compact_buffer_if_needed();
     do_read();
@@ -256,12 +270,10 @@ namespace throttr
 
   template<typename Transport> void connection<Transport>::do_read()
   {
-    // LCOV_EXCL_START
     if (buffer_end_ == max_length_)
     {
       compact_buffer();
     }
-    // LCOV_EXCL_STOP
 
     auto _self = this->shared_from_this();
     socket_.async_read_some(
@@ -279,7 +291,6 @@ namespace throttr
     metrics_->network_.write_bytes_.mark(length);
 #endif
 
-    // LCOV_EXCL_START
     if (error)
     {
       close();
@@ -288,18 +299,19 @@ namespace throttr
 
     const std::shared_ptr<message> _message = pending_writes_.front();
     pending_writes_.pop_front();
+
+    _message->used_ = true;
+
     if (_message->recyclable_)
     {
       _message->write_buffer_.clear();
       _message->buffers_.clear();
     }
 
-    // LCOV_EXCL_START
     if (!pending_writes_.empty())
     {
       write_next();
     }
-    // LCOV_EXCL_STOP
   }
 
   template<typename Transport> void connection<Transport>::close()
@@ -316,10 +328,8 @@ namespace throttr
   {
     pending_writes_.push_back(batch);
 
-    // LCOV_EXCL_START Note: This is partially tested.
     if (pending_writes_.size() > 1)
       return;
-    // LCOV_EXCL_STOP
 
     write_next();
   }
@@ -327,7 +337,6 @@ namespace throttr
   template<typename Transport> void connection<Transport>::write_next()
 
   {
-    // LCOV_EXCL_START
 #ifndef NDEBUG
     switch (kind_)
     {
@@ -350,7 +359,6 @@ namespace throttr
           buffers_to_hex(pending_writes_.front()->buffers_));
     }
 #endif
-    // LCOV_EXCL_STOP
 
     boost::asio::async_write(
       socket_,

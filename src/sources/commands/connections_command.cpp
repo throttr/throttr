@@ -36,7 +36,6 @@ namespace throttr
 
     state->response_builder_->handle_fragmented_connections_response(state, batch, write_buffer);
 
-    // LCOV_EXCL_START
 #ifndef NDEBUG
     fmt::println(
       "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST CONNECTIONS session_id={} RESPONSE ok=true",
@@ -44,6 +43,5 @@ namespace throttr
       std::chrono::system_clock::now(),
       to_string(id));
 #endif
-    // LCOV_EXCL_STOP
   }
 } // namespace throttr

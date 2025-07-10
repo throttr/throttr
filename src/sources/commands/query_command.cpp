@@ -42,13 +42,14 @@ namespace throttr
 
     const bool _as_query = type == request_types::query;
 
-    const request_key _key{
-      std::string_view(reinterpret_cast<const char *>(_request.key_.data()), _request.key_.size())}; // NOSONAR
-    const auto _find = state->finder_->find_or_fail_for_batch(state, _key, batch);
+    const request_key _key{std::string_view(reinterpret_cast<const char *>(_request.key_.data()), _request.key_.size())};
+    const auto _find = state->finder_->find_or_fail(state, _key);
 
-    if (!_find.has_value()) // LCOV_EXCL_LINE Note: Partially tested.
+    if (!_find.has_value())
     {
-      // LCOV_EXCL_START
+      batch.reserve(batch.size() + 1);
+      batch.emplace_back(boost::asio::const_buffer(&state::failed_response_, 1));
+
 #ifndef NDEBUG
       fmt::println(
         "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST {} session_id={} META key={} RESPONSE ok=false",
@@ -58,63 +59,72 @@ namespace throttr
         to_string(id),
         _key.key_);
 #endif
-      // LCOV_EXCL_STOP
+
       return;
     }
     const auto _it = _find.value();
+
     const value_type _ttl = get_ttl(_it->entry_.expires_at_.load(std::memory_order_relaxed), _it->entry_.ttl_type_);
 
-    // status_
-    batch.emplace_back(&state::success_response_, 1);
+    std::size_t _offset = write_buffer.size();
 
-    if (_as_query) // LCOV_EXCL_LINE
+    if (_as_query)
     {
+      write_buffer.resize(write_buffer.size() + sizeof(value_type) * 2);
+      batch.reserve(batch.size() + 4);
+
+      // status + value + ttl + ttl_type
+      batch.emplace_back(&state::success_response_, 1);
+
       // Value
       {
-        const auto _offset = write_buffer.size();
         const value_type _counter_value = _it->entry_.counter_.load(std::memory_order_relaxed);
-        append_value_type(write_buffer, native_to_little(_counter_value));
-        batch.emplace_back(&write_buffer[_offset], sizeof(value_type));
+        std::memcpy(write_buffer.data() + _offset, &_counter_value, sizeof(value_type));
+        batch.emplace_back(write_buffer.data() + _offset, sizeof(value_type));
+        _offset += sizeof(value_type);
       }
       // TTL Type
       batch.emplace_back(&_it->entry_.ttl_type_, sizeof(_it->entry_.ttl_type_));
       // TTL
       {
-        const auto _offset = write_buffer.size();
-        append_value_type(write_buffer, native_to_little(_ttl));
-        batch.emplace_back(&write_buffer[_offset], sizeof(_ttl));
+        std::memcpy(write_buffer.data() + _offset, &_ttl, sizeof(value_type));
+        batch.emplace_back(write_buffer.data() + _offset, sizeof(_ttl));
       }
     }
     else
     {
+
+      batch.reserve(batch.size() + 5);
+      const auto _buffer = _it->entry_.buffer_.load(std::memory_order_acquire);
+      write_buffer.resize(write_buffer.size() + sizeof(value_type) * 2 + _buffer->size());
+
+      batch.emplace_back(&state::success_response_, 1);
+
       // TTL Type
       batch.emplace_back(&_it->entry_.ttl_type_, sizeof(_it->entry_.ttl_type_));
+
       // TTL
       {
-        const auto _offset = write_buffer.size();
-        append_value_type(write_buffer, native_to_little(_ttl));
-        batch.emplace_back(&write_buffer[_offset], sizeof(_ttl));
+        std::memcpy(write_buffer.data() + _offset, &_ttl, sizeof(value_type));
+        batch.emplace_back(write_buffer.data() + _offset, sizeof(_ttl));
+        _offset += sizeof(value_type);
       }
-
-      const auto _buffer = _it->entry_.buffer_.load(std::memory_order_acquire);
 
       // Size
       {
-        const auto _offset = write_buffer.size();
-        append_value_type(write_buffer, native_to_little(_buffer->size()));
-        batch.emplace_back(&write_buffer[_offset], sizeof(value_type));
+        const auto _buffer_size = native_to_little(_buffer->size());
+        std::memcpy(write_buffer.data() + _offset, &_buffer_size, sizeof(value_type));
+        batch.emplace_back(write_buffer.data() + _offset, sizeof(value_type));
+        _offset += sizeof(value_type);
       }
 
       // Value
       {
-        const auto _offset = write_buffer.size();
-        write_buffer.resize(_offset + _buffer->size());
         std::memcpy(write_buffer.data() + _offset, _buffer->data(), _buffer->size());
         batch.emplace_back(write_buffer.data() + _offset, _buffer->size());
       }
     }
 
-    // LCOV_EXCL_START
 #ifndef NDEBUG
     if (_as_query)
     {

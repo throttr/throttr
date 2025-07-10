@@ -27,15 +27,15 @@ namespace throttr
       metrics_timer_(ioc),
 #endif
       strand_(ioc.get_executor()),
-      commands_(std::make_shared<commands_service>()),                  // NOSONAR Note: Forward declaration.
-      subscriptions_(std::make_shared<subscriptions_service>()),        // NOSONAR Note: Forward declaration.
-      messages_(std::make_shared<messages_service>()),                  // NOSONAR Note: Forward declaration.
-      finder_(std::make_shared<find_service>()),                        // NOSONAR Note: Forward declaration.
-      response_builder_(std::make_shared<response_builder_service>()),  // NOSONAR Note: Forward declaration.
-      garbage_collector_(std::make_shared<garbage_collector_service>()) // NOSONAR Note: Forward declaration.
+      commands_(std::make_shared<commands_service>()),
+      subscriptions_(std::make_shared<subscriptions_service>()),
+      messages_(std::make_shared<messages_service>()),
+      finder_(std::make_shared<find_service>()),
+      response_builder_(std::make_shared<response_builder_service>()),
+      garbage_collector_(std::make_shared<garbage_collector_service>())
 #ifdef ENABLED_FEATURE_METRICS
       ,
-      metrics_collector_(std::make_shared<metrics_collector_service>()) // NOSONAR Note: Forward declaration.
+      metrics_collector_(std::make_shared<metrics_collector_service>())
 #endif
   {
     started_at_ =

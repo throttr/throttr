@@ -22,11 +22,11 @@ namespace throttr
   {
     const auto &_index = subscriptions_.get<by_connection_id>();
     auto it = _index.find(id);
-    while (it != _index.end()) // LCOV_EXCL_LINE Note: Partially tested.
+    while (it != _index.end())
     {
-      if (it->channel_ == channel) // LCOV_EXCL_LINE Note: Partially tested.
+      if (it->channel_ == channel)
         return true;
-      ++it; // LCOV_EXCL_LINE Note: Must be tested.
+      ++it;
     }
     return false;
   }

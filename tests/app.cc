@@ -20,5 +20,5 @@
 
 TEST(Throttr, Version)
 {
-  ASSERT_EQ(throttr::get_version(), "5.0.9");
+  ASSERT_EQ(throttr::get_version(), "5.0.10");
 }

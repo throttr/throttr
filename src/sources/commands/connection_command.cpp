@@ -37,6 +37,8 @@ namespace throttr
     const auto _request = request_connection::from_buffer(view);
     const auto &_uuid = _request.id_;
 
+    std::size_t _offset = write_buffer.size();
+
     boost::uuids::uuid _id{};
     std::memcpy(_id.data, _uuid.data(), _uuid.size());
 
@@ -65,17 +67,17 @@ namespace throttr
       _found_in_agent_unix = _agent_unix_map.contains(_id);
     }
 
-    if (!_found_in_agent_unix) // LCOV_EXCL_LINE
+    if (!_found_in_agent_unix)
     {
       std::lock_guard _lock(state->agent_tcp_connections_mutex_);
       const auto &_agent_tcp_map = state->agent_tcp_connections_;
       _found_in_agent_tcp = _agent_tcp_map.contains(_id);
     }
 
-    if (!_found_in_tcp && !_found_in_unix && !_found_in_agent_unix && !_found_in_agent_tcp) // LCOV_EXCL_LINE
+    if (!_found_in_tcp && !_found_in_unix && !_found_in_agent_unix && !_found_in_agent_tcp)
     {
+      batch.reserve(batch.size() + 1);
       batch.emplace_back(&state::failed_response_, 1);
-      // LCOV_EXCL_START
 #ifndef NDEBUG
       fmt::println(
         "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST CONNECTION session_id={} META id={} RESPONSE ok=false",
@@ -84,19 +86,20 @@ namespace throttr
         to_string(id),
         span_to_hex(_request.id_));
 #endif
-      // LCOV_EXCL_STOP
       return;
     }
 
     if (_found_in_tcp)
     {
+      batch.reserve(batch.size() + 32);
+      write_buffer.resize(write_buffer.size() + 237);
+
       std::lock_guard _lock(state->tcp_connections_mutex_);
       const auto &_tcp_map = state->tcp_connections_;
       const auto *_conn = _tcp_map.find(_id)->second;
       batch.emplace_back(&state::success_response_, 1);
-      response_builder_service::write_connections_entry_to_buffer<tcp_socket>(state, &batch, _conn, write_buffer, false);
+      response_builder_service::write_connections_entry_to_buffer<tcp_socket>(state, &batch, _conn, write_buffer, _offset, false);
 
-      // LCOV_EXCL_START
 #ifndef NDEBUG
       fmt::println(
         "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST CONNECTION session_id={} META id={} RESPONSE ok=true",
@@ -105,29 +108,35 @@ namespace throttr
         to_string(id),
         span_to_hex(_request.id_));
 #endif
-      // LCOV_EXCL_STOP
 
       return;
     }
 
-    if (_found_in_unix) // LCOV_EXCL_LINE
+    if (_found_in_unix)
     {
+      batch.reserve(batch.size() + 32);
+      write_buffer.resize(write_buffer.size() + 237);
+
       std::lock_guard _lock(state->unix_connections_mutex_);
       const auto &_unix_map = state->unix_connections_;
       const auto *_conn = _unix_map.find(_id)->second;
       batch.emplace_back(&state::success_response_, 1);
-      response_builder_service::write_connections_entry_to_buffer<unix_socket>(state, &batch, _conn, write_buffer, false);
+      response_builder_service::write_connections_entry_to_buffer<
+        unix_socket>(state, &batch, _conn, write_buffer, _offset, false);
       return;
     }
 
-    // LCOV_EXCL_START
     if (_found_in_agent_unix)
     {
+      batch.reserve(batch.size() + 32);
+      write_buffer.resize(write_buffer.size() + 237);
+
       std::lock_guard _lock(state->agent_unix_connections_mutex_);
       const auto &_unix_map = state->agent_unix_connections_;
       const auto *_conn = _unix_map.find(_id)->second;
       batch.emplace_back(&state::success_response_, 1);
-      response_builder_service::write_connections_entry_to_buffer<unix_socket>(state, &batch, _conn, write_buffer, false);
+      response_builder_service::write_connections_entry_to_buffer<
+        unix_socket>(state, &batch, _conn, write_buffer, _offset, false);
 
 #ifndef NDEBUG
       fmt::println(
@@ -140,12 +149,15 @@ namespace throttr
 
       return;
     }
+
+    batch.reserve(batch.size() + 32);
+    write_buffer.resize(write_buffer.size() + 237);
 
     std::lock_guard _lock(state->agent_tcp_connections_mutex_);
     const auto &_tcp_map = state->agent_tcp_connections_;
     const auto *_conn = _tcp_map.find(_id)->second;
     batch.emplace_back(&state::success_response_, 1);
-    response_builder_service::write_connections_entry_to_buffer<tcp_socket>(state, &batch, _conn, write_buffer, false);
+    response_builder_service::write_connections_entry_to_buffer<tcp_socket>(state, &batch, _conn, write_buffer, _offset, false);
 
 #ifndef NDEBUG
     fmt::println(
@@ -155,6 +167,5 @@ namespace throttr
       to_string(id),
       span_to_hex(_request.id_));
 #endif
-    // LCOV_EXCL_STOP
   }
 } // namespace throttr

@@ -22,6 +22,7 @@
 #include <deque>
 #include <fmt/chrono.h>
 #include <memory>
+#include <queue>
 #include <span>
 #include <throttr/connection_allocator.hpp>
 #include <throttr/connection_metrics.hpp>
@@ -142,7 +143,7 @@ namespace throttr
      *
      * @param batch
      */
-    void send(std::shared_ptr<message> batch);
+    void send(const std::shared_ptr<message> &batch);
 
   private:
     /**
@@ -203,11 +204,6 @@ namespace throttr
      * Pending writes
      */
     std::deque<std::shared_ptr<message>> pending_writes_;
-
-    /**
-     * Messages pool
-     */
-    std::shared_ptr<message> message_ = std::make_shared<message>();
 
     /**
      * On send

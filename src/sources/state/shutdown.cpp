@@ -23,14 +23,14 @@ namespace throttr
 {
   void state::prepare_for_shutdown(const program_parameters &parameters)
   {
-    if (parameters.persistent_) // LCOV_EXCL_LINE
+    if (parameters.persistent_)
     {
       dump_to_file(storage_, parameters.dump_);
     }
   }
   void state::prepare_for_startup(const program_parameters &parameters)
   {
-    if (parameters.persistent_) // LCOV_EXCL_LINE
+    if (parameters.persistent_)
     {
       restore_from_file(storage_, parameters.dump_);
     }

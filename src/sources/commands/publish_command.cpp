@@ -42,13 +42,13 @@ namespace throttr
 
     const auto &_subs = state->subscriptions_->subscriptions_.get<by_channel_name>();
     const std::string _channel{
-      std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size())}; // NOSONAR
-    const auto _range = _subs.equal_range(_channel);                                                         // NOSONAR
+      std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size())};
+    const auto _range = _subs.equal_range(_channel);
 
-    // LCOV_EXCL_START Note: This means that there are no subscriptions.
+    batch.reserve(batch.size() + 1);
+
     if (_range.first == _range.second)
     {
-      // LCOV_EXCL_START
 #ifndef NDEBUG
       fmt::println(
         "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST PUBLISH session_id={} META channel={} data={} RESPONSE ok=false",
@@ -58,14 +58,14 @@ namespace throttr
         _channel,
         span_to_hex(_payload));
 #endif
-      // LCOV_EXCL_STOP
-      batch.emplace_back(&state::failed_response_, 1); // LCOV_EXCL_LINE
+      batch.emplace_back(&state::failed_response_, 1);
       return;
     }
-    // LCOV_EXCL_STOP
 
     const auto _message = std::make_shared<message>();
     _message->recyclable_ = false;
+    _message->buffers_.reserve(1);
+
     auto &_buffer = _message->write_buffer_;
 
     const auto _payload_size = _payload.size();
@@ -79,7 +79,7 @@ namespace throttr
 
     // Size
     const uint8_t _channel_size = native_to_little(static_cast<uint8_t>(_channel.size()));
-    std::memcpy(_buffer.data() + _offset, &_channel_size, sizeof(uint8_t)); // NOSONAR
+    std::memcpy(_buffer.data() + _offset, &_channel_size, sizeof(uint8_t));
     _offset += sizeof(uint8_t);
 
     // Size
@@ -96,13 +96,13 @@ namespace throttr
 
     _message->buffers_.emplace_back(_buffer.data(), _buffer.size());
 
-    for (auto _it = _range.first; _it != _range.second; ++_it) // LCOV_EXCL_LINE Note: Partially tested.
+    for (auto _it = _range.first; _it != _range.second; ++_it)
     {
       const auto &_sub = *_it;
       const auto &_sub_id = _sub.connection_id_;
 
 #ifdef ENABLED_FEATURE_METRICS
-      const_cast<subscription &>(_sub).metrics_->read_bytes_.mark(_payload.size()); // NOSONAR
+      const_cast<subscription &>(_sub).metrics_->read_bytes_.mark(_payload.size());
 #endif
 
       auto _is_tcp = false;
@@ -130,11 +130,9 @@ namespace throttr
         _is_agent_tcp = state->agent_tcp_connections_.contains(_sub_id);
       }
 
-      // LCOV_EXCL_START
       // This is a strange condition, the subscription exists but the connection is gone...
       if (!_is_tcp && !_is_unix && !_is_agent_tcp && !_is_agent_unix)
         continue;
-      // LCOV_EXCL_STOP
 
       auto _process =
         [](auto &connections, auto &mutex, const auto &sub_id, const auto &scope_id, const auto &payload, const auto &message)
@@ -143,15 +141,13 @@ namespace throttr
 
         std::scoped_lock _lock(mutex);
         const auto _conn_it = connections.find(sub_id);
-        // LCOV_EXCL_START
         if (_conn_it == connections.end())
           return;
-        // LCOV_EXCL_STOP
 
         auto *_conn = _conn_it->second;
 
 #ifdef ENABLED_FEATURE_METRICS
-        if (_conn->id_ == scope_id) // LCOV_EXCL_LINE
+        if (_conn->id_ == scope_id)
           _conn->metrics_->network_.published_bytes_.mark(payload.size());
         else
           _conn->metrics_->network_.received_bytes_.mark(payload.size());
@@ -166,16 +162,13 @@ namespace throttr
       if (_is_unix)
         _process(state->unix_connections_, state->unix_connections_mutex_, _sub_id, id, _payload, _message);
 
-      // LCOV_EXCL_START
       if (_is_agent_tcp)
         _process(state->agent_tcp_connections_, state->agent_tcp_connections_mutex_, _sub_id, id, _payload, _message);
 
       if (_is_agent_unix)
         _process(state->agent_unix_connections_, state->agent_unix_connections_mutex_, _sub_id, id, _payload, _message);
-      // LCOV_EXCL_STOP
     }
 
-    // LCOV_EXCL_START
 #ifndef NDEBUG
     fmt::println(
       "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST PUBLISH session_id={} META channel={} data={} RESPONSE ok=true",
@@ -185,7 +178,6 @@ namespace throttr
       _channel,
       span_to_hex(_payload));
 #endif
-    // LCOV_EXCL_STOP
 
     batch.emplace_back(&state::success_response_, 1);
   }

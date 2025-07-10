@@ -21,7 +21,6 @@
 #include <boost/asio/connect.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/intrusive_ptr.hpp>
-#include <iostream>
 #include <thread>
 #include <throttr/connection.hpp>
 #include <throttr/program_parameters.hpp>
@@ -53,7 +52,6 @@ namespace throttr
     {
     }
 
-    // LCOV_EXCL_START
     /**
      * Start
      */
@@ -125,7 +123,6 @@ namespace throttr
       std::make_shared<connection<tcp_socket>>(std::move(tcp_socket_), state_, connection_type::agent)->start();
       return true;
     }
-    // LCOV_EXCL_STOP
 
   private:
     /**

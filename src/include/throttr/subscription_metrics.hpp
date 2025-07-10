@@ -34,8 +34,6 @@ namespace throttr
      */
     metric write_bytes_;
 
-    // LCOV_EXCL_START
-
     /**
      * Constructor
      */
@@ -51,7 +49,6 @@ namespace throttr
      * Destructor
      */
     ~subscription_metrics() noexcept = default;
-    // LCOV_EXCL_STOP
 #endif
   };
 } // namespace throttr
