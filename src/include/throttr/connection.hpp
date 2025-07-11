@@ -219,6 +219,6 @@ namespace throttr
   };
 } // namespace throttr
 
-#include <throttr/connection.ipp> // NOSONAR
+#include <throttr/connection.ipp>
 
 #endif // THROTTR_CONNECTION_HPP

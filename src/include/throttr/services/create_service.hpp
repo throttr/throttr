@@ -49,7 +49,7 @@ namespace throttr
      * @param as_insert
      * @return
      */
-    static bool use( // NOSONAR
+    static bool use(
       const std::shared_ptr<state> &state,
       std::span<const std::byte> key,
       std::span<const std::byte> value,
@@ -57,7 +57,7 @@ namespace throttr
       std::span<const std::byte> ttl,
       entry_types type,
       const boost::uuids::uuid &id,
-      bool as_insert = false); // NOSONAR
+      bool as_insert = false);
   };
 } // namespace throttr
 

@@ -60,8 +60,7 @@ namespace throttr
     {
       if (entry->entry_.type_ == entry_types::counter)
       {
-        value_type _bytes_used = native_to_little(sizeof(value_type));
-
+        constexpr value_type _bytes_used = native_to_little(sizeof(value_type));
         std::memcpy(write_buffer.data() + offset, &_bytes_used, sizeof(value_type));
         batch->emplace_back(write_buffer.data() + offset, sizeof(value_type));
         offset += sizeof(value_type);
@@ -69,7 +68,7 @@ namespace throttr
       else
       {
         const auto _buffer = entry->entry_.buffer_.load(std::memory_order_acquire);
-        value_type _bytes_used = native_to_little(_buffer->size());
+        const value_type _bytes_used = native_to_little(_buffer->size());
 
         std::memcpy(write_buffer.data() + offset, &_bytes_used, sizeof(value_type));
         batch->emplace_back(write_buffer.data() + offset, sizeof(value_type));

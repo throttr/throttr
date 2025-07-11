@@ -45,7 +45,7 @@ TEST_F(ChannelsTestFixture, OnSuccess)
   // Fragments (P)
   std::vector<std::byte> _header_response(8);
   boost::asio::read(_socket, boost::asio::buffer(_header_response));
-  const auto *_count_ptr = reinterpret_cast<const uint64_t *>(&_header_response[0]); // NOSONAR
+  const auto *_count_ptr = reinterpret_cast<const uint64_t *>(&_header_response[0]);
   const uint64_t _fragment_count = *_count_ptr;
   ASSERT_EQ(boost::endian::little_to_native(_fragment_count), 1);
 
@@ -53,11 +53,11 @@ TEST_F(ChannelsTestFixture, OnSuccess)
   boost::asio::read(_socket, boost::asio::buffer(_fragment_header));
 
   // Fragment
-  const auto *_fragment_count_ptr = reinterpret_cast<const uint64_t *>(&_fragment_header[0]); // NOSONAR
+  const auto *_fragment_count_ptr = reinterpret_cast<const uint64_t *>(&_fragment_header[0]);
   ASSERT_EQ(boost::endian::little_to_native(*_fragment_count_ptr), 1);
 
   // Channels
-  const auto *_channels_count_ptr = reinterpret_cast<const uint64_t *>(&_fragment_header[8]); // NOSONAR
+  const auto *_channels_count_ptr = reinterpret_cast<const uint64_t *>(&_fragment_header[8]);
   ASSERT_EQ(boost::endian::little_to_native(*_channels_count_ptr), 4);
   auto _channel_count = boost::endian::little_to_native(*_channels_count_ptr);
   // Per Channel

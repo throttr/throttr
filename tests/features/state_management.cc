@@ -42,7 +42,7 @@ auto to_bytes = [](const char *str)
 {
   return std::vector<std::byte>{
     reinterpret_cast<const std::byte *>(str),
-    reinterpret_cast<const std::byte *>(str + std::strlen(str)) // NOSONAR
+    reinterpret_cast<const std::byte *>(str + std::strlen(str))
   };
 };
 

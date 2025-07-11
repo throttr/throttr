@@ -69,16 +69,18 @@ namespace throttr
     auto &_buffer = _message->write_buffer_;
 
     const auto _payload_size = _payload.size();
-    const auto _total_size = 1 + sizeof(value_type) + 1 + _payload_size + _channel.size();
+    const auto _total_size = sizeof(uint8_t) + sizeof(uint8_t) + sizeof(value_type) + _channel.size() + _payload_size;
     _buffer.resize(_total_size);
 
     std::size_t _offset = 0;
 
     // Type
-    _buffer[_offset++] = static_cast<std::byte>(request_types::event);
+    constexpr auto event_type = request_types::event;
+    std::memcpy(_buffer.data() + _offset, &event_type, sizeof(uint8_t));
+    _offset += sizeof(uint8_t);
 
     // Size
-    const uint8_t _channel_size = native_to_little(static_cast<uint8_t>(_channel.size()));
+    const uint8_t _channel_size = static_cast<uint8_t>(_channel.size());
     std::memcpy(_buffer.data() + _offset, &_channel_size, sizeof(uint8_t));
     _offset += sizeof(uint8_t);
 
@@ -135,9 +137,11 @@ namespace throttr
         continue;
 
       auto _process =
-        [](auto &connections, auto &mutex, const auto &sub_id, const auto &scope_id, const auto &payload, const auto &message)
+        [_scoped_message =
+           _message
+             ->shared_from_this()](auto &connections, auto &mutex, const auto &sub_id, const auto &scope_id, const auto &payload)
       {
-        boost::ignore_unused(payload);
+        boost::ignore_unused(scope_id, payload);
 
         std::scoped_lock _lock(mutex);
         const auto _conn_it = connections.find(sub_id);
@@ -153,20 +157,20 @@ namespace throttr
           _conn->metrics_->network_.received_bytes_.mark(payload.size());
 #endif
 
-        _conn->send(message);
+        _conn->send(_scoped_message);
       };
 
       if (_is_tcp)
-        _process(state->tcp_connections_, state->tcp_connections_mutex_, _sub_id, id, _payload, _message);
+        _process(state->tcp_connections_, state->tcp_connections_mutex_, _sub_id, id, _payload);
 
       if (_is_unix)
-        _process(state->unix_connections_, state->unix_connections_mutex_, _sub_id, id, _payload, _message);
+        _process(state->unix_connections_, state->unix_connections_mutex_, _sub_id, id, _payload);
 
       if (_is_agent_tcp)
-        _process(state->agent_tcp_connections_, state->agent_tcp_connections_mutex_, _sub_id, id, _payload, _message);
+        _process(state->agent_tcp_connections_, state->agent_tcp_connections_mutex_, _sub_id, id, _payload);
 
       if (_is_agent_unix)
-        _process(state->agent_unix_connections_, state->agent_unix_connections_mutex_, _sub_id, id, _payload, _message);
+        _process(state->agent_unix_connections_, state->agent_unix_connections_mutex_, _sub_id, id, _payload);
     }
 
 #ifndef NDEBUG

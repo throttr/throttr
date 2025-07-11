@@ -51,7 +51,7 @@ namespace throttr
      * @param size
      * @return void*
      */
-    void *allocate(const std::size_t size) // NOSONAR
+    void *allocate(const std::size_t size)
     {
       if (!in_use_ && size < sizeof(storage_))
       {
@@ -66,7 +66,7 @@ namespace throttr
      *
      * @param pointer
      */
-    void deallocate(void *pointer) // NOSONAR
+    void deallocate(void *pointer)
     {
       if (pointer == &storage_)
       {
@@ -85,7 +85,7 @@ namespace throttr
     /**
      * Storage
      */
-    std::byte storage_[16] alignas(16); // NOSONAR
+    std::byte storage_[16] alignas(16);
 
     /**
      * In use
@@ -119,7 +119,7 @@ namespace throttr
     template<typename U>
     explicit connection_handler_allocator(const connection_handler_allocator<U> &other) noexcept : memory_(other.memory_)
     {
-    } // NOSONAR
+    }
 
     /**
      * Allocate

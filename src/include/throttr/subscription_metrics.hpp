@@ -21,7 +21,7 @@
 
 namespace throttr
 {
-  struct subscription_metrics // NOSONAR
+  struct subscription_metrics
   {
 #ifdef ENABLED_FEATURE_METRICS
     /**

@@ -15,8 +15,6 @@
 
 #pragma once
 
-#include "message.hpp"
-
 #include <boost/asio/bind_allocator.hpp>
 #include <boost/asio/write.hpp>
 #include <boost/core/ignore_unused.hpp>
@@ -180,13 +178,13 @@ namespace throttr
 
   template<typename Transport> void connection<Transport>::try_process_next()
   {
-    for (auto it = used_message_pool_.begin(); it != used_message_pool_.end();)
+    for (auto it = state::used_message_pool_.begin(); it != state::used_message_pool_.end();)
     {
       if ((*it)->used_)
       {
         (*it)->used_ = false;
-        available_message_pool_.push_back(*it);
-        it = used_message_pool_.erase(it);
+        state::available_message_pool_.push_back(*it);
+        it = state::used_message_pool_.erase(it);
       }
       else
       {
@@ -194,10 +192,10 @@ namespace throttr
       }
     }
 
-    if (available_message_pool_.size() > 8192)
+    if (state::available_message_pool_.size() > 8192)
     {
-      available_message_pool_.resize(8192);
-      available_message_pool_.shrink_to_fit();
+      state::available_message_pool_.resize(8192);
+      state::available_message_pool_.shrink_to_fit();
     }
 
     while (true)
@@ -240,16 +238,16 @@ namespace throttr
       metrics_->commands_[static_cast<std::size_t>(_type)].mark();
 #endif
 
-      while (available_message_pool_.size() < 4096)
-        available_message_pool_.push_back(std::make_shared<message>());
+      while (state::available_message_pool_.size() < 4096)
+        state::available_message_pool_.push_back(std::make_shared<message>());
 
-      const auto _message = available_message_pool_.front();
-      available_message_pool_.erase(available_message_pool_.begin());
+      const auto _message = state::available_message_pool_.front();
+      state::available_message_pool_.erase(state::available_message_pool_.begin());
 
       state_->commands_->commands_[static_cast<std::size_t>(
         _type)](state_, _type, _view, _message->buffers_, _message->write_buffer_, this->id_);
 
-      used_message_pool_.push_back(_message);
+      state::used_message_pool_.push_back(_message);
       send(_message);
     }
 
