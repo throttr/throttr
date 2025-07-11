@@ -42,8 +42,11 @@ namespace throttr
     std::size_t _offset = write_buffer.size();
 
     const auto &_subs = state->subscriptions_->subscriptions_.get<by_channel_name>();
-    const auto _channel = std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size());
-    auto _range = _subs.equal_range(std::string(_channel));
+
+    std::string _channel(_request.channel_.size(), '\0');
+    std::memcpy(_channel.data(), _request.channel_.data(), _request.channel_.size());
+
+    auto _range = _subs.equal_range(_channel);
 
     if (_range.first == _range.second)
     {

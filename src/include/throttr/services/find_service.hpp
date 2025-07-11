@@ -39,19 +39,6 @@ namespace throttr
      * @return
      */
     static std::optional<storage_iterator> find_or_fail(const std::shared_ptr<state> &state, const request_key &key);
-
-    /**
-     * Find or fail
-     *
-     * @param state
-     * @param key
-     * @param batch
-     * @return
-     */
-    static std::optional<storage_iterator> find_or_fail_for_batch(
-      const std::shared_ptr<state> &state,
-      const request_key &key,
-      std::vector<boost::asio::const_buffer> &batch);
   };
 } // namespace throttr
 

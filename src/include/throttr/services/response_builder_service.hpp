@@ -123,14 +123,12 @@ namespace throttr
       offset += 16;
 
       // Type (client or agent)
-      const auto _type = static_cast<std::uint8_t>(conn->type_);
-      std::memcpy(write_buffer.data() + offset, &_type, sizeof(uint8_t));
+      std::memcpy(write_buffer.data() + offset, &conn->type_, sizeof(uint8_t));
       batch->emplace_back(write_buffer.data() + offset, sizeof(uint8_t));
       offset += sizeof(uint8_t);
 
       // Kind (tcp or unix)
-      const auto _kind = static_cast<std::uint8_t>(conn->kind_);
-      std::memcpy(write_buffer.data() + offset, &_kind, sizeof(uint8_t));
+      std::memcpy(write_buffer.data() + offset, &conn->kind_, sizeof(uint8_t));
       batch->emplace_back(write_buffer.data() + offset, sizeof(uint8_t));
       offset += sizeof(uint8_t);
 

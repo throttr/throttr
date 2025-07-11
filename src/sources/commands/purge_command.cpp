@@ -35,10 +35,14 @@ namespace throttr
     boost::ignore_unused(type, write_buffer, id);
 
     const auto _request = request_purge::from_buffer(view);
-    const request_key _key{std::string_view(reinterpret_cast<const char *>(_request.key_.data()), _request.key_.size())};
+
+    std::string _key(_request.key_.size(), '\0');
+    std::memcpy(_key.data(), _request.key_.data(), _request.key_.size());
+
+    const request_key _request_key{_key};
 
     auto &_index = state->storage_.get<tag_by_key>();
-    const auto _it = _index.find(_key);
+    const auto _it = _index.find(_request_key);
 
     bool _erased = true;
 
@@ -60,7 +64,7 @@ namespace throttr
       to_string(state->id_),
       std::chrono::system_clock::now(),
       to_string(id),
-      _key.key_,
+      _request_key.key_,
       _erased);
 #endif
 

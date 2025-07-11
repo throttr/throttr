@@ -49,41 +49,40 @@ namespace throttr
 
     if (!as_insert)
     {
-      const request_key _lookup_key{std::string_view(reinterpret_cast<const char *>(_key.data()), _key.size())};
-      auto _it_existing = _index.find(_lookup_key);
-      if (_it_existing != _index.end())
+      std::string _scoped_key(key.size(), '\0');
+      std::memcpy(_scoped_key.data(), key.data(), key.size());
+
+      const request_key _lookup_key{_scoped_key};
+      if (const auto _it_existing = _index.find(_lookup_key); _it_existing != _index.end() && _it_existing->entry_.type_ != entry_types::counter)
       {
-        if (_it_existing->entry_.type_ != entry_types::counter)
-        {
-          auto _modified = _index.modify(
-            _it_existing,
-            [&](entry_wrapper &item)
-            {
-              const auto _safe_buffer = std::make_shared<std::vector<std::byte>>(value.begin(), value.end());
-              item.entry_.buffer_.store(_safe_buffer, std::memory_order_release);
-              item.entry_.expires_at_ = _expires_at;
-              item.entry_.ttl_type_ = ttl_type;
+        auto _modified = _index.modify(
+          _it_existing,
+          [value, ttl_type, _expires_at](entry_wrapper &item)
+          {
+            const auto _safe_buffer = std::make_shared<std::vector<std::byte>>(value.begin(), value.end());
+            item.entry_.buffer_.store(_safe_buffer, std::memory_order_release);
+            item.entry_.expires_at_ = _expires_at;
+            item.entry_.ttl_type_ = ttl_type;
 
 #ifdef ENABLED_FEATURE_METRICS
-              item.metrics_->writes_.fetch_add(1, std::memory_order_relaxed);
+            item.metrics_->writes_.fetch_add(1, std::memory_order_relaxed);
 #endif
-            });
+          });
 
 #ifndef NDEBUG
-          fmt::println(
-            "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST SET AGAIN session_id={} META key={} value={}ttl_type={} ttl={} RESPONSE ok=true"
-            "RESPONSE ok={}",
-            to_string(state->id_),
-            std::chrono::system_clock::now(),
-            to_string(id),
-            span_to_hex(key),
-            span_to_hex(value),
-            to_string(ttl_type),
-            span_to_hex(ttl),
-            _modified);
+        fmt::println(
+          "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST SET AGAIN session_id={} META key={} value={}ttl_type={} ttl={} RESPONSE ok=true"
+          "RESPONSE ok={}",
+          to_string(state->id_),
+          std::chrono::system_clock::now(),
+          to_string(id),
+          span_to_hex(key),
+          span_to_hex(value),
+          to_string(ttl_type),
+          span_to_hex(ttl),
+          _modified);
 #endif
-          return _modified;
-        }
+        return _modified;
       }
     }
 

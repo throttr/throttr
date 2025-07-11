@@ -38,7 +38,8 @@ namespace throttr
 
     const auto _request = request_unsubscribe::from_buffer(view);
 
-    const auto _channel = std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size());
+    std::string _channel(_request.channel_.size(), '\0');
+    std::memcpy(_channel.data(), _request.channel_.data(), _request.channel_.size());
 
     batch.reserve(batch.size() + 1);
 

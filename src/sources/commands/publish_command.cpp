@@ -41,13 +41,15 @@ namespace throttr
     const auto &_payload = _request.value_;
 
     const auto &_subs = state->subscriptions_->subscriptions_.get<by_channel_name>();
-    const std::string _channel{
-      std::string_view(reinterpret_cast<const char *>(_request.channel_.data()), _request.channel_.size())};
-    const auto _range = _subs.equal_range(_channel);
+
+    std::string _channel(_request.channel_.size(), '\0');
+    std::memcpy(_channel.data(), _request.channel_.data(), _request.channel_.size());
+
+    const auto [_begin, _end] = _subs.equal_range(_channel);
 
     batch.reserve(batch.size() + 1);
 
-    if (_range.first == _range.second)
+    if (_begin == _end)
     {
 #ifndef NDEBUG
       fmt::println(
@@ -80,8 +82,8 @@ namespace throttr
     _offset += sizeof(uint8_t);
 
     // Size
-    const uint8_t _channel_size = static_cast<uint8_t>(_channel.size());
-    std::memcpy(_buffer.data() + _offset, &_channel_size, sizeof(uint8_t));
+    const auto _channel_size = static_cast<uint8_t>(_channel.size());
+    *(_buffer.data() + _offset) = static_cast<std::byte>(_channel_size);
     _offset += sizeof(uint8_t);
 
     // Size
@@ -98,13 +100,13 @@ namespace throttr
 
     _message->buffers_.emplace_back(_buffer.data(), _buffer.size());
 
-    for (auto _it = _range.first; _it != _range.second; ++_it)
+    for (auto _it = _begin; _it != _end; ++_it)
     {
       const auto &_sub = *_it;
       const auto &_sub_id = _sub.connection_id_;
 
 #ifdef ENABLED_FEATURE_METRICS
-      const_cast<subscription &>(_sub).metrics_->read_bytes_.mark(_payload.size());
+      _sub.metrics_->read_bytes_.mark(_payload.size());
 #endif
 
       auto _is_tcp = false;

@@ -13,6 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+#include <iostream>
 #include <throttr/commands/update_command.hpp>
 
 #include <throttr/services/update_service.hpp>
@@ -39,12 +40,16 @@ namespace throttr
 
     const auto _request = request_update::from_buffer(view);
 
-    const request_key _key{std::string_view(reinterpret_cast<const char *>(_request.key_.data()), _request.key_.size())};
+    std::string _key(_request.key_.size(), '\0');
+    std::memcpy(_key.data(), _request.key_.data(), _request.key_.size());
+
+    const request_key _request_key{_key};
+
     const std::uint64_t _now = std::chrono::system_clock::now().time_since_epoch().count();
 
     batch.reserve(batch.size() + 1);
 
-    const auto _it = state->finder_->find_or_fail(state, _key);
+    const auto _it = find_service::find_or_fail(state, _request_key);
 
     if (!_it.has_value())
     {
@@ -66,7 +71,7 @@ namespace throttr
 
     state->storage_.modify(
       _it.value(),
-      [&](entry_wrapper &object)
+      [_request, state, &_modified, &_now](entry_wrapper &object)
       {
         switch (_request.attribute_)
         {
@@ -95,7 +100,7 @@ namespace throttr
       to_string(state->id_),
       std::chrono::system_clock::now(),
       to_string(id),
-      _key.key_,
+      _request_key.key_,
       to_string(_request.attribute_),
       to_string(_request.change_),
       _request.value_,
