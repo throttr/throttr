@@ -46,9 +46,9 @@ namespace throttr
     std::string _channel(_request.channel_.size(), '\0');
     std::memcpy(_channel.data(), _request.channel_.data(), _request.channel_.size());
 
-    auto _range = _subs.equal_range(_channel);
+    auto [_begin, _end] = _subs.equal_range(_channel);
 
-    if (_range.first == _range.second)
+    if (_begin == _end)
     {
       batch.reserve(batch.size() + 1);
 
@@ -65,7 +65,7 @@ namespace throttr
     }
 
     {
-      const uint64_t _count = std::distance(_range.first, _range.second);
+      const uint64_t _count = std::distance(_begin, _end);
       const uint64_t _count_native = native_to_little(_count);
 
       // 1 status
@@ -84,7 +84,7 @@ namespace throttr
       _offset += sizeof(uint64_t);
     }
 
-    for (auto it = _range.first; it != _range.second; ++it)
+    for (auto it = _begin; it != _end; ++it)
     {
       const auto &_sub = *it;
 
