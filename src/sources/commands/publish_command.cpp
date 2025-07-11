@@ -141,7 +141,7 @@ namespace throttr
            _message
              ->shared_from_this()](auto &connections, auto &mutex, const auto &sub_id, const auto &scope_id, const auto &payload)
       {
-        boost::ignore_unused(payload);
+        boost::ignore_unused(scope_id, payload);
 
         std::scoped_lock _lock(mutex);
         const auto _conn_it = connections.find(sub_id);

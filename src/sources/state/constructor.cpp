@@ -21,6 +21,9 @@
 
 namespace throttr
 {
+  thread_local std::vector<std::shared_ptr<message>> state::available_message_pool_;
+  thread_local std::vector<std::shared_ptr<message>> state::used_message_pool_;
+
   state::state(boost::asio::io_context &ioc) :
       expiration_timer_(ioc),
 #ifdef ENABLED_FEATURE_METRICS

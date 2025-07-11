@@ -44,10 +44,10 @@ namespace throttr
       _threads.emplace_back(
         [self = shared_from_this(), state = state_->shared_from_this()]
         {
-          available_message_pool_.reserve(8192);
+          state::available_message_pool_.reserve(8192);
           for (auto _e = 0; _e < 8192; ++_e)
           {
-            available_message_pool_.emplace_back(std::make_shared<message>());
+            state::available_message_pool_.emplace_back(std::make_shared<message>());
           }
           self->ioc_.run();
         });
@@ -64,10 +64,10 @@ namespace throttr
         ioc_.stop();
       });
 
-    available_message_pool_.reserve(8192);
+    state::available_message_pool_.reserve(8192);
     for (auto _e = 0; _e < 8192; ++_e)
     {
-      available_message_pool_.emplace_back(std::make_shared<message>());
+      state::available_message_pool_.emplace_back(std::make_shared<message>());
     }
 
     ioc_.run();

@@ -18,7 +18,8 @@
 #ifndef THROTTR_STATE_HPP
 #define THROTTR_STATE_HPP
 
-#include "transport.hpp"
+#include <throttr/transport.hpp>
+#include <throttr/message.hpp>
 #include <throttr/services/subscriptions_service.hpp>
 
 #include <atomic>
@@ -342,6 +343,17 @@ namespace throttr
      * Prepare for startup
      */
     void prepare_for_startup(const program_parameters &parameters);
+
+
+    /**
+     * Available message pool
+     */
+    static thread_local std::vector<std::shared_ptr<message>> available_message_pool_;
+
+    /**
+     * Used message pool
+     */
+    static thread_local std::vector<std::shared_ptr<message>> used_message_pool_;
   };
 } // namespace throttr
 
