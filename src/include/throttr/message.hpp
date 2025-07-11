@@ -52,13 +52,18 @@ namespace throttr
     /**
      * Constructor
      */
-    message()
-    {
-    }
+    message() = default;
   };
 
-  inline thread_local std::vector<std::shared_ptr<message>> available_message_pool_;
-  inline thread_local std::vector<std::shared_ptr<message>> used_message_pool_;
+  /**
+   * Available message pool
+   */
+  inline thread_local constexpr std::vector<std::shared_ptr<message>> available_message_pool_;
+
+  /**
+   * Used message pool
+   */
+  inline thread_local constexpr std::vector<std::shared_ptr<message>> used_message_pool_;
 } // namespace throttr
 
 #endif // THROTTR_MESSAGE_HPP

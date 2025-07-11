@@ -48,7 +48,7 @@ TEST_F(ChannelTestFixture, OnSuccess)
   // Numbers of subscribers (Q)
   std::vector<std::byte> _count_buf(8);
   boost::asio::read(_socket, boost::asio::buffer(_count_buf));
-  const auto *_count_ptr = reinterpret_cast<const uint64_t *>(_count_buf.data()); // NOSONAR
+  const auto *_count_ptr = reinterpret_cast<const uint64_t *>(_count_buf.data());
   ASSERT_EQ(boost::endian::little_to_native(*_count_ptr), 1);
 
   // Connection ID

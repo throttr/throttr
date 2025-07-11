@@ -160,7 +160,7 @@ TEST_F(ListTestFixture, OnSuccessMultipleFragments)
 
   for (int _i = 0; _i < 100; ++_i)
   {
-    std::string _key = "key_" + std::to_string(_i); // NOSONAR
+    std::string _key = "key_" + std::to_string(_i);
     _key += std::string(10 - _key.size(), 'X');
     _keys.push_back(_key);
 
@@ -228,18 +228,18 @@ TEST_F(ListTestFixture, OnSuccessMultipleFragments)
       _all_key_sizes.push_back(_key_size);
     }
 
-    for (size_t _k = 0; _k < _fragment_key_sizes.size(); ++_k) // NOSONAR
+    for (size_t _k = 0; _k < _fragment_key_sizes.size(); ++_k)
     {
       std::vector<std::byte> _key(_fragment_key_sizes[_k]);
       boost::asio::read(_socket, boost::asio::buffer(_key));
       _full_response.insert(_full_response.end(), _key.begin(), _key.end());
-      std::string _string_key(reinterpret_cast<const char *>(_key.data()), _key.size()); // NOSONAR
+      std::string _string_key(reinterpret_cast<const char *>(_key.data()), _key.size());
       _read_keys.push_back(_string_key);
     }
   }
 
-  std::sort(_keys.begin(), _keys.end());           // NOSONAR
-  std::sort(_read_keys.begin(), _read_keys.end()); // NOSONAR
+  std::sort(_keys.begin(), _keys.end());
+  std::sort(_read_keys.begin(), _read_keys.end());
 
   ASSERT_EQ(_read_keys.size(), _keys.size());
 

@@ -80,7 +80,7 @@ namespace throttr
   /**
    * State
    */
-  class state : public std::enable_shared_from_this<state> // NOSONAR Too many fields
+  class state : public std::enable_shared_from_this<state>
   {
   public:
     /**
