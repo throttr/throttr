@@ -183,7 +183,7 @@ namespace throttr
       if ((*it)->used_)
       {
         (*it)->used_ = false;
-        state::available_message_pool_.push_back(*it);
+        state::available_message_pool_.push_back(std::move(*it));
         it = state::used_message_pool_.erase(it);
       }
       else
@@ -247,7 +247,7 @@ namespace throttr
       state_->commands_->commands_[static_cast<std::size_t>(
         _type)](state_, _type, _view, _message->buffers_, _message->write_buffer_, this->id_);
 
-      state::used_message_pool_.push_back(_message);
+      state::used_message_pool_.push_back(std::move(_message));
       send(_message);
     }
 

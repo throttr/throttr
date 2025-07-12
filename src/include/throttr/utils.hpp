@@ -21,6 +21,7 @@
 #include <fmt/chrono.h>
 
 #include <boost/asio/buffer.hpp>
+#include <boost/uuid/uuid.hpp>
 #include <throttr/protocol_wrapper.hpp>
 
 namespace throttr

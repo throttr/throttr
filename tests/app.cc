@@ -13,6 +13,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+#include <throttr/utils.hpp>
+
 #include <gtest/gtest.h>
 
 #include <throttr/protocol_wrapper.hpp>
@@ -21,4 +23,20 @@
 TEST(Throttr, Version)
 {
   ASSERT_EQ(throttr::get_version(), "5.0.10");
+}
+
+TEST(Throttr, Translations)
+{
+  ASSERT_EQ(throttr::to_string(throttr::ttl_types::nanoseconds), "nanoseconds");
+  ASSERT_EQ(throttr::to_string(throttr::ttl_types::microseconds), "microseconds");
+  ASSERT_EQ(throttr::to_string(throttr::ttl_types::milliseconds), "milliseconds");
+  ASSERT_EQ(throttr::to_string(throttr::ttl_types::minutes), "minutes");
+  ASSERT_EQ(throttr::to_string(throttr::ttl_types::hours), "hours");
+
+  ASSERT_EQ(throttr::to_string(throttr::attribute_types::quota), "quota");
+  ASSERT_EQ(throttr::to_string(throttr::attribute_types::ttl), "ttl");
+
+  ASSERT_EQ(throttr::to_string(throttr::change_types::increase), "increase");
+  ASSERT_EQ(throttr::to_string(throttr::change_types::decrease), "decrease");
+  ASSERT_EQ(throttr::to_string(throttr::change_types::patch), "patch");
 }

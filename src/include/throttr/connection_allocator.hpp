@@ -18,6 +18,7 @@
 #ifndef THROTTR_CONNECTION_ALLOCATOR_HPP
 #define THROTTR_CONNECTION_ALLOCATOR_HPP
 
+#include <array>
 #include <cstddef>
 
 namespace throttr

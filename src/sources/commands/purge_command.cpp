@@ -69,7 +69,13 @@ namespace throttr
 #endif
 
     if (_erased)
+    {
+      if (auto _buffer_ptr = _it->entry_.buffer_.load(std::memory_order_acquire); _buffer_ptr && !_buffer_ptr->empty())
+      {
+        state::available_buffers_.push_back(std::move(_buffer_ptr));
+      }
       _index.erase(_it);
+    }
 
     batch.reserve(batch.size() + 1);
 

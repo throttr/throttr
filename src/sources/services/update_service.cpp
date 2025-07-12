@@ -13,6 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+#include <boost/asio/bind_allocator.hpp>
 #include <throttr/services/update_service.hpp>
 
 #include <boost/core/ignore_unused.hpp>
@@ -103,10 +104,13 @@ namespace throttr
       state->scheduled_key_.size() == key.size() &&
       std::equal(state->scheduled_key_.begin(), state->scheduled_key_.end(), key.begin()))
     {
-      boost::asio::post(
+
+      boost::asio::dispatch(
         state->strand_,
-        [_state = state->shared_from_this(), _expires_at = entry.expires_at_.load(std::memory_order_relaxed)]
-        { _state->garbage_collector_->schedule_timer(_state, _expires_at); });
+        boost::asio::bind_allocator(
+          connection_handler_allocator<void>(state->update_scheduler_handler_memory_),
+          [_state = state->shared_from_this(), _expires_at = entry.expires_at_.load(std::memory_order_relaxed)]
+          { _state->garbage_collector_->schedule_timer(_state, _expires_at); }));
     }
 
     return true;

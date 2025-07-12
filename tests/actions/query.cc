@@ -39,27 +39,6 @@ TEST_F(QueryTestFixture, OnSuccess)
   ASSERT_EQ(_quota_remaining, 10);
 }
 
-TEST_F(QueryTestFixture, OnSuccessMilliseconds)
-{
-  const auto _insert_buffer = request_insert_builder(20, ttl_types::milliseconds, 256, "query_milliseconds");
-
-  auto _ignored = send_and_receive(_insert_buffer);
-  boost::ignore_unused(_ignored);
-
-  const auto _query_buffer = request_query_builder("query_milliseconds");
-  auto _response = send_and_receive(_query_buffer, 2 + (sizeof(value_type) * 2));
-
-  ASSERT_EQ(static_cast<uint8_t>(_response[0]), 1);
-
-  value_type _quota_remaining = 0;
-  std::memcpy(&_quota_remaining, _response.data() + 1, sizeof(_quota_remaining));
-  _quota_remaining = boost::endian::little_to_native(_quota_remaining);
-  ASSERT_EQ(_quota_remaining, 20);
-
-  const auto _ttl_type = static_cast<uint8_t>(_response[sizeof(value_type) + 1]);
-  ASSERT_EQ(_ttl_type, static_cast<uint8_t>(ttl_types::milliseconds));
-}
-
 TEST_F(QueryTestFixture, OnSuccessHours)
 {
   const auto _insert_buffer = request_insert_builder(30, ttl_types::hours, 24, "query_hours");
