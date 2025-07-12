@@ -274,7 +274,7 @@ namespace throttr
 
     uint64_t _total_subscriptions = 0;
     uint64_t _total_channels = 0;
-    std::set<std::string> _existing_keys;
+    std::set<std::string, std::equal_to<>> _existing_keys;
 
     for (const auto &_index = state->subscriptions_->subscriptions_.get<by_channel_name>(); auto &_item : _index)
     {

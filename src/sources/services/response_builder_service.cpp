@@ -362,8 +362,8 @@ namespace throttr
                               1 +                      // Size
                               _current_channel.size(); // Name
 
-        auto _range = _subs.equal_range(_current_channel);
-        for (auto _range_it = _range.first; _range_it != _range.second; ++_range_it)
+        auto [_begin, _end] = _subs.equal_range(_current_channel);
+        for (auto _range_it = _begin; _range_it != _end; ++_range_it)
         {
 #ifdef ENABLED_FEATURE_METRICS
           _read_sum += _range_it->metrics_->read_bytes_.accumulator_.load(std::memory_order_relaxed);
@@ -388,7 +388,7 @@ namespace throttr
         _current_fragment.push_back(_current_channel);
         _fragment_size += _channel_size;
 
-        _it = _range.second;
+        _it = _end;
       }
 
       if (!_current_fragment.empty())

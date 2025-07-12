@@ -98,7 +98,7 @@ namespace throttr
       const connection<Socket> *conn,
       std::vector<std::byte> &write_buffer,
       std::size_t &offset,
-      bool measure)
+      const bool measure)
     {
       boost::ignore_unused(state);
 
@@ -113,29 +113,27 @@ namespace throttr
       // 237 bytes
 
       if (measure)
-        return {237, 31};
+        return {237, 1};
 
       using namespace boost::endian;
 
+      const std::size_t _start_size = offset;
+
       // UUID (16 bytes)
       std::memcpy(write_buffer.data() + offset, conn->id_.data(), 16);
-      batch->emplace_back(write_buffer.data() + offset, 16);
       offset += 16;
 
       // Type (client or agent)
       std::memcpy(write_buffer.data() + offset, &conn->type_, sizeof(uint8_t));
-      batch->emplace_back(write_buffer.data() + offset, sizeof(uint8_t));
       offset += sizeof(uint8_t);
 
       // Kind (tcp or unix)
       std::memcpy(write_buffer.data() + offset, &conn->kind_, sizeof(uint8_t));
-      batch->emplace_back(write_buffer.data() + offset, sizeof(uint8_t));
       offset += sizeof(uint8_t);
 
       // IP version (1 byte)
       const std::uint8_t _ip_version = conn->ip_.contains(':') ? 0x06 : 0x04;
-      std::memcpy(write_buffer.data() + offset, &_ip_version, sizeof(uint8_t));
-      batch->emplace_back(write_buffer.data() + offset, sizeof(uint8_t));
+      write_buffer[offset] = static_cast<std::byte>(_ip_version);
       offset += sizeof(uint8_t);
 
       // IP padded to 16 bytes
@@ -145,13 +143,11 @@ namespace throttr
       std::memcpy(_ip_bytes.data(), _ip_str.data(), _len);
 
       std::memcpy(write_buffer.data() + offset, &_ip_bytes, 16);
-      batch->emplace_back(write_buffer.data() + offset, 16);
       offset += 16;
 
       // Port (2 bytes)
       const uint16_t _port = native_to_little(conn->port_);
       std::memcpy(write_buffer.data() + offset, &_port, sizeof(uint16_t));
-      batch->emplace_back(write_buffer.data() + offset, sizeof(uint16_t));
       offset += sizeof(uint16_t);
 
       // there are 6 emplace back
@@ -182,7 +178,6 @@ namespace throttr
       { // 7 x 8 = 56 bytes on i/o metrics
 
         std::memcpy(write_buffer.data() + offset, &_val, sizeof(uint64_t));
-        batch->emplace_back(write_buffer.data() + offset, sizeof(uint64_t));
         offset += sizeof(uint64_t);
       } // 7 emplace back
 
@@ -217,9 +212,10 @@ namespace throttr
 #endif
 
         std::memcpy(write_buffer.data() + offset, &_value, sizeof(uint64_t));
-        batch->emplace_back(write_buffer.data() + offset, sizeof(uint64_t));
         offset += sizeof(uint64_t);
       } // 18 emplace back
+
+      batch->emplace_back(write_buffer.data() + _start_size, offset - _start_size);
 
       return {0, 0};
     }
