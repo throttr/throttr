@@ -19,7 +19,6 @@
 #define THROTTR_CONNECTION_ALLOCATOR_HPP
 
 #include <cstddef>
-#include <iostream>
 
 namespace throttr
 {
@@ -54,7 +53,7 @@ namespace throttr
      */
     void *allocate(const std::size_t size)
     {
-      if (!in_use_ && size < sizeof(storage_))
+      if (!in_use_ && size <= 512)
       {
         in_use_ = true;
         return &storage_;
@@ -86,7 +85,7 @@ namespace throttr
     /**
      * Storage
      */
-    std::byte storage_[512] alignas(16);
+    std::array<std::byte, 512> storage_;
 
     /**
      * In use
