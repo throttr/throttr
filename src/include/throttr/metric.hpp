@@ -96,7 +96,9 @@ namespace throttr
     /**
      * Destructor default
      */
-    ~metric() noexcept {}
+    ~metric() noexcept
+    {
+    }
 
     /**
      * Copy constructor

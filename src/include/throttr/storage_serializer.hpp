@@ -23,6 +23,12 @@
 
 namespace throttr
 {
+  class serialize_exception final : public std::runtime_error
+  {
+  public:
+    using std::runtime_error::runtime_error;
+  };
+
   /**
    * Dump current storage to binary file
    * @param storage

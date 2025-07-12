@@ -30,16 +30,7 @@ namespace throttr
       metrics_timer_(ioc),
 #endif
       strand_(ioc.get_executor()),
-      commands_(std::make_shared<commands_service>()),
-      subscriptions_(std::make_shared<subscriptions_service>()),
-      messages_(std::make_shared<messages_service>()),
-      finder_(std::make_shared<find_service>()),
-      response_builder_(std::make_shared<response_builder_service>()),
-      garbage_collector_(std::make_shared<garbage_collector_service>())
-#ifdef ENABLED_FEATURE_METRICS
-      ,
-      metrics_collector_(std::make_shared<metrics_collector_service>())
-#endif
+      response_builder_(std::make_shared<response_builder_service>())
   {
     started_at_ =
       std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();

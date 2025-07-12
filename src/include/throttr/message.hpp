@@ -53,7 +53,6 @@ namespace throttr
      * Constructor
      */
     message() = default;
-
   };
 } // namespace throttr
 

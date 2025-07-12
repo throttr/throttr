@@ -25,6 +25,15 @@
 
 namespace throttr
 {
+  struct transparent_hash
+  {
+    using is_transparent = void;
+    std::size_t operator()(const std::string_view key) const noexcept
+    {
+      return std::hash<std::string_view>{}(key);
+    }
+  };
+
   std::pair<std::size_t, std::size_t> response_builder_service::write_list_entry_to_buffer(
     const std::shared_ptr<state> &state,
     std::vector<boost::asio::const_buffer> *batch,
@@ -327,7 +336,7 @@ namespace throttr
 
     std::vector<std::string> _channels_list;
     std::vector<std::vector<std::string>> _fragments;
-    std::unordered_map<std::string, std::tuple<uint64_t, uint64_t, uint64_t>> _channel_stats;
+    std::unordered_map<std::string, std::tuple<uint64_t, uint64_t, uint64_t>, transparent_hash, std::equal_to<>> _channel_stats;
 
     std::size_t _write_buffer_size = 0;
     std::size_t _channels_count = 0;

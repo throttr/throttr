@@ -61,9 +61,7 @@ namespace throttr
     [[nodiscard]] request_key key() const
     {
       return {
-        std::string_view(
-          reinterpret_cast<const char *>(key_.data()),
-          key_.size()),
+        std::string_view(reinterpret_cast<const char *>(key_.data()), key_.size()),
       };
     }
 
