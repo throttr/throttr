@@ -39,12 +39,17 @@ namespace throttr
 
     const auto _request = request_stat::from_buffer(view);
 
-    const request_key _key{std::string_view(reinterpret_cast<const char *>(_request.key_.data()), _request.key_.size())};
-    const auto _find = state->finder_->find_or_fail(state, _key);
+    std::string _key(_request.key_.size(), '\0');
+    std::memcpy(_key.data(), _request.key_.data(), _request.key_.size());
+
+    const request_key _request_key{_key};
+
+    const auto _find = find_service::find_or_fail(state, _request_key);
+
     if (!_find.has_value())
     {
       batch.reserve(batch.size() + 1);
-      batch.emplace_back(boost::asio::const_buffer(&state::failed_response_, 1));
+      batch.emplace_back(&state::failed_response_, 1);
 
 #ifndef NDEBUG
       fmt::println(
@@ -52,7 +57,7 @@ namespace throttr
         to_string(state->id_),
         std::chrono::system_clock::now(),
         to_string(id),
-        _key.key_);
+        _request_key.key_);
 #endif
       return;
     }
@@ -62,7 +67,7 @@ namespace throttr
 
     std::size_t _offset = write_buffer.size();
 
-    write_buffer.resize(write_buffer.size() + sizeof(uint64_t) * 4); // 4 uint64_t metrics
+    write_buffer.resize(_offset + sizeof(uint64_t) * 4); // 4 uint64_t metrics
     batch.reserve(batch.size() + 5);                                 // status + 4 metrics
 
     batch.emplace_back(&state::success_response_, 1);
@@ -107,7 +112,7 @@ namespace throttr
       to_string(state->id_),
       std::chrono::system_clock::now(),
       to_string(id),
-      _key.key_,
+      _request_key.key_,
 #ifdef ENABLED_FEATURE_METRICS
       metrics.reads_per_minute_.load(),
       metrics.writes_per_minute_.load(),

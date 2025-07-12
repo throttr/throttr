@@ -15,7 +15,6 @@
 
 #include <throttr/services/find_service.hpp>
 
-#include <boost/core/ignore_unused.hpp>
 #include <throttr/state.hpp>
 #include <throttr/utils.hpp>
 
@@ -34,19 +33,6 @@ namespace throttr
     _it->metrics_->reads_.fetch_add(1, std::memory_order_relaxed);
 #endif
 
-    return _it;
-  }
-
-  std::optional<storage_iterator> find_service::find_or_fail_for_batch(
-    const std::shared_ptr<state> &state,
-    const request_key &key,
-    std::vector<boost::asio::const_buffer> &batch)
-  {
-    const auto _it = find_or_fail(state, key);
-    if (!_it.has_value())
-    {
-      batch.emplace_back(boost::asio::const_buffer(&state::failed_response_, 1));
-    }
     return _it;
   }
 } // namespace throttr

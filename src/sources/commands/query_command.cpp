@@ -42,8 +42,13 @@ namespace throttr
 
     const bool _as_query = type == request_types::query;
 
-    const request_key _key{std::string_view(reinterpret_cast<const char *>(_request.key_.data()), _request.key_.size())};
-    const auto _find = state->finder_->find_or_fail(state, _key);
+
+    std::string _key(_request.key_.size(), '\0');
+    std::memcpy(_key.data(), _request.key_.data(), _request.key_.size());
+
+    const request_key _request_key{_key};
+
+    const auto _find = state->finder_->find_or_fail(state, _request_key);
 
     if (!_find.has_value())
     {
@@ -57,7 +62,7 @@ namespace throttr
         std::chrono::system_clock::now(),
         _as_query ? "QUERY" : "GET",
         to_string(id),
-        _key.key_);
+        _request_key.key_);
 #endif
 
       return;
@@ -134,7 +139,7 @@ namespace throttr
         to_string(state->id_),
         std::chrono::system_clock::now(),
         to_string(id),
-        _key.key_,
+        _request_key.key_,
         _quota,
         to_string(_it->entry_.ttl_type_),
         _ttl);
@@ -147,7 +152,7 @@ namespace throttr
         to_string(state->id_),
         std::chrono::system_clock::now(),
         to_string(id),
-        _key.key_,
+        _request_key.key_,
         span_to_hex(std::span(_buffer->data(), _buffer->size())),
         to_string(_it->entry_.ttl_type_),
         _ttl);
