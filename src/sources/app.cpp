@@ -47,15 +47,14 @@ namespace throttr
           state::available_message_pool_.reserve(8192);
           for (auto _e = 0; _e < 8192; ++_e)
           {
-            state::available_message_pool_.emplace_back(std::make_shared<message>());
+            state::available_message_pool_.push_back(std::make_shared<message>());
           }
 
-          state::available_buffers_.reserve(8192);
-          for (auto _e = 0; _e < 8192; ++_e)
+          state::available_buffers_.reserve(64);
+          for (auto _e = 0; _e < 64; ++_e)
           {
-            auto _buffer = std::make_shared<std::vector<std::byte>>();
-            _buffer->reserve(std::numeric_limits<value_type>::max());
-            state::available_buffers_.emplace_back(std::move(_buffer));
+            auto _buffer = std::make_shared<std::vector<std::byte>>(std::numeric_limits<value_type>::max());
+            state::available_buffers_.push_back(std::move(_buffer));
           }
           self->ioc_.run();
         });
@@ -75,15 +74,14 @@ namespace throttr
     state::available_message_pool_.reserve(8192);
     for (auto _e = 0; _e < 8192; ++_e)
     {
-      state::available_message_pool_.emplace_back(std::make_shared<message>());
+      state::available_message_pool_.push_back(std::make_shared<message>());
     }
 
-    state::available_buffers_.reserve(8192);
-    for (auto _e = 0; _e < 8192; ++_e)
+    state::available_buffers_.reserve(64);
+    for (auto _e = 0; _e < 64; ++_e)
     {
-      auto _buffer = std::make_shared<std::vector<std::byte>>();
-      _buffer->reserve(std::numeric_limits<value_type>::max());
-      state::available_buffers_.emplace_back(std::move(_buffer));
+      auto _buffer = std::make_shared<std::vector<std::byte>>(std::numeric_limits<value_type>::max());
+      state::available_buffers_.push_back(std::move(_buffer));
     }
 
     ioc_.run();

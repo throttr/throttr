@@ -120,7 +120,7 @@ namespace throttr
     /**
      * Constructor
      */
-    entry() : type_(entry_types::counter), buffer_(std::make_shared<std::vector<std::byte>>()){};
+    entry() : type_(entry_types::counter), buffer_(nullptr){};
   };
 } // namespace throttr
 

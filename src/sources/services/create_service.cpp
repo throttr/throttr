@@ -63,10 +63,9 @@ namespace throttr
           _it_existing,
           [value, ttl_type, _expires_at](entry_wrapper &item)
           {
-            while (state::available_buffers_.size() < 4096)
+            while (state::available_buffers_.size() < 64)
             {
-              auto _scoped_buff = std::make_shared<std::vector<std::byte>>();
-              _scoped_buff->reserve(std::numeric_limits<value_type>::max());
+              auto _scoped_buff = std::make_shared<std::vector<std::byte>>(std::numeric_limits<value_type>::max());
               state::available_buffers_.push_back(std::move(_scoped_buff));
             }
 
@@ -115,10 +114,9 @@ namespace throttr
     }
     else
     {
-      while (state::available_buffers_.size() < 4096)
+      while (state::available_buffers_.size() < 64)
       {
-        auto _scoped_buff = std::make_shared<std::vector<std::byte>>();
-        _scoped_buff->reserve(std::numeric_limits<value_type>::max());
+        auto _scoped_buff = std::make_shared<std::vector<std::byte>>(std::numeric_limits<value_type>::max());
         state::available_buffers_.push_back(std::move(_scoped_buff));
       }
 
