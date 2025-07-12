@@ -134,13 +134,9 @@ namespace throttr
    */
   inline std::string to_string(const attribute_types type)
   {
-    switch (type)
-    {
-      case attribute_types::quota:
-        return "quota";
-      default:
-        return "ttl";
-    }
+    if (type == attribute_types::quota)
+      return "quota";
+    return "ttl";
   }
 
   /**
