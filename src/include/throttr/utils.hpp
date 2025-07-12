@@ -101,38 +101,6 @@ namespace throttr
   }
 
   /**
-   * Span to hex
-   *
-   * @param buffer
-   * @return std::string
-   */
-  static std::string string_to_hex(const std::string &buffer)
-  {
-    std::string out;
-    for (const auto c : buffer)
-    {
-      fmt::format_to(std::back_inserter(out), "{:02X} ", c);
-    }
-    return out;
-  }
-
-  /**
-   * ID to hex
-   *
-   * @param buffer
-   * @return std::string
-   */
-  static std::string id_to_hex(const std::array<std::byte, 16> buffer)
-  {
-    std::string out;
-    for (const auto b : buffer)
-    {
-      fmt::format_to(std::back_inserter(out), "{:02X} ", std::to_integer<uint8_t>(b));
-    }
-    return out;
-  }
-
-  /**
    * To string
    *
    * @param type
@@ -153,10 +121,8 @@ namespace throttr
         return "seconds";
       case minutes:
         return "minutes";
-      case hours:
-        return "hours";
       default:
-        return "unknown";
+        return "hours";
     }
   }
 
@@ -172,10 +138,8 @@ namespace throttr
     {
       case attribute_types::quota:
         return "quota";
-      case attribute_types::ttl:
-        return "ttl";
       default:
-        return "unknown";
+        return "ttl";
     }
   }
 
@@ -193,10 +157,8 @@ namespace throttr
         return "increase";
       case change_types::decrease:
         return "decrease";
-      case change_types::patch:
-        return "patch";
       default:
-        return "unknown";
+        return "patch";
     }
   }
 } // namespace throttr

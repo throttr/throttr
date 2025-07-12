@@ -47,10 +47,10 @@ namespace throttr
       case ttl_types::nanoseconds:
         offset_ns = _value;
         break;
-      case ttl_types::milliseconds:
+      case ttl_types::microseconds:
         offset_ns = duration_cast<nanoseconds>(microseconds(_value)).count();
         break;
-      case ttl_types::microseconds:
+      case ttl_types::milliseconds:
         offset_ns = duration_cast<nanoseconds>(milliseconds(_value)).count();
         break;
       case ttl_types::minutes:

@@ -181,6 +181,34 @@ TEST(StateManagementTest, CalculateExpirationPointNanoseconds)
   ASSERT_NEAR(_diff, 32, 16);
 }
 
+TEST(StateManagementTest, CalculateExpirationPointMicroseconds)
+{
+  const auto _now_tp = std::chrono::system_clock::now();
+  const auto _now_ns = _now_tp.time_since_epoch().count();
+
+  constexpr value_type _expiration_value = 32;
+  std::vector<std::byte> _expiration_bytes(sizeof(value_type));
+  std::memcpy(_expiration_bytes.data(), &_expiration_value, sizeof(value_type));
+  const auto _expires_ns = get_expiration_point(_now_ns, ttl_types::microseconds, _expiration_bytes);
+
+  const auto _diff = static_cast<int64_t>(_expires_ns - _now_ns);
+  ASSERT_NEAR(_diff, 32'000, 16'000);
+}
+
+TEST(StateManagementTest, CalculateExpirationPointMilliseconds)
+{
+  const auto _now_tp = std::chrono::system_clock::now();
+  const auto _now_ns = _now_tp.time_since_epoch().count();
+
+  constexpr value_type _expiration_value = 32;
+  std::vector<std::byte> _expiration_bytes(sizeof(value_type));
+  std::memcpy(_expiration_bytes.data(), &_expiration_value, sizeof(value_type));
+  const auto _expires_ns = get_expiration_point(_now_ns, ttl_types::milliseconds, _expiration_bytes);
+
+  const auto _diff = static_cast<int64_t>(_expires_ns - _now_ns);
+  ASSERT_NEAR(_diff, 32'000'000, 16'000'000);
+}
+
 TEST(StateManagementTest, CalculateExpirationPointSeconds)
 {
   const auto _now_tp = std::chrono::system_clock::now();
@@ -209,6 +237,28 @@ TEST(StateManagementTest, CalculateTTLRemainingNanosecondsNotExpired)
   ASSERT_GE(_ttl, 0);
 }
 
+TEST(StateManagementTest, CalculateTTLRemainingMicrosecondsNotExpired)
+{
+  const auto _now_tp = std::chrono::system_clock::now();
+  const auto _now_ns = _now_tp.time_since_epoch().count();
+
+  const auto _expires_ns = _now_ns + std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::microseconds(10)).count();
+
+  const auto _ttl = get_ttl(_expires_ns, ttl_types::microseconds);
+  ASSERT_GE(_ttl, 0);
+}
+
+TEST(StateManagementTest, CalculateTTLRemainingMillisecondsNotExpired)
+{
+  const auto _now_tp = std::chrono::system_clock::now();
+  const auto _now_ns = _now_tp.time_since_epoch().count();
+
+  const auto _expires_ns = _now_ns + std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::milliseconds(10)).count();
+
+  const auto _ttl = get_ttl(_expires_ns, ttl_types::milliseconds);
+  ASSERT_GE(_ttl, 0);
+}
+
 TEST(StateManagementTest, CalculateTTLRemainingSecondsNotExpired)
 {
   const auto _now_tp = std::chrono::system_clock::now();
@@ -230,6 +280,32 @@ TEST(StateManagementTest, CalculateTTLRemainingNanosecondsExpired)
   std::this_thread::sleep_for(std::chrono::nanoseconds(1000));
 
   const auto _quota = get_ttl(_expires_ns, ttl_types::nanoseconds);
+  ASSERT_EQ(_quota, 0);
+}
+
+TEST(StateManagementTest, CalculateTTLRemainingMicrosecondsExpired)
+{
+  const auto _now_tp = std::chrono::system_clock::now();
+  const auto _now_ns = _now_tp.time_since_epoch().count();
+
+  const auto _expires_ns = _now_ns - std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::microseconds(10)).count();
+
+  std::this_thread::sleep_for(std::chrono::microseconds(1000));
+
+  const auto _quota = get_ttl(_expires_ns, ttl_types::microseconds);
+  ASSERT_EQ(_quota, 0);
+}
+
+TEST(StateManagementTest, CalculateTTLRemainingMillisecondsExpired)
+{
+  const auto _now_tp = std::chrono::system_clock::now();
+  const auto _now_ns = _now_tp.time_since_epoch().count();
+
+  const auto _expires_ns = _now_ns - std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::milliseconds(10)).count();
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+  const auto _quota = get_ttl(_expires_ns, ttl_types::milliseconds);
   ASSERT_EQ(_quota, 0);
 }
 
