@@ -19,6 +19,7 @@
 #define THROTTR_CONNECTION_ALLOCATOR_HPP
 
 #include <cstddef>
+#include <iostream>
 
 namespace throttr
 {
@@ -85,7 +86,7 @@ namespace throttr
     /**
      * Storage
      */
-    std::byte storage_[16] alignas(16);
+    std::byte storage_[512] alignas(16);
 
     /**
      * In use
