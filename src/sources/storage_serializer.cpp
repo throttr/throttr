@@ -19,6 +19,7 @@
 #include <throttr/protocol_wrapper.hpp>
 #include <throttr/storage.hpp>
 #include <throttr/storage_serializer.hpp>
+#include <utility>
 
 namespace throttr
 {
@@ -35,9 +36,8 @@ namespace throttr
     template<typename T> void write_raw(std::ofstream &out, const T &value)
     {
       static_assert(std::is_trivially_copyable_v<T>);
-      for (std::array<std::byte, sizeof(T)> _bytes = std::bit_cast<std::array<std::byte, sizeof(T)>>(value);
-           std::byte _b : _bytes)
-        out.put(static_cast<char>(_b));
+      for (auto _bytes = std::bit_cast<std::array<std::byte, sizeof(T)>>(value); const std::byte _b : _bytes)
+        out.put(static_cast<char>(std::to_underlying(_b)));
     }
 
     template<typename T> void read_raw(std::ifstream &in, T &value)
