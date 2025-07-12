@@ -45,10 +45,14 @@ namespace throttr
       static_assert(std::is_trivially_copyable_v<T>);
       std::array<std::byte, sizeof(T)> _bytes{};
       char c = 0;
-      std::generate(_bytes.begin(), _bytes.end(), [&in, &c]() {
-        in.get(c);
-        return static_cast<std::byte>(c);
-      });
+      std::generate(
+        _bytes.begin(),
+        _bytes.end(),
+        [&in, &c]()
+        {
+          in.get(c);
+          return static_cast<std::byte>(c);
+        });
       value = std::bit_cast<T>(_bytes);
     }
 
