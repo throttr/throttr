@@ -44,12 +44,11 @@ namespace throttr
     {
       static_assert(std::is_trivially_copyable_v<T>);
       std::array<std::byte, sizeof(T)> _bytes{};
-      for (std::size_t _i = 0; _i < _bytes.size(); ++_i)
-      {
-        char _c = 0;
-        in.get(_c);
-        _bytes[_i] = static_cast<std::byte>(_c);
-      }
+      char c = 0;
+      std::generate(_bytes.begin(), _bytes.end(), [&in, &c]() {
+        in.get(c);
+        return static_cast<std::byte>(c);
+      });
       value = std::bit_cast<T>(_bytes);
     }
 
@@ -62,8 +61,8 @@ namespace throttr
 
     void write_bytes(std::ofstream &out, const std::vector<std::byte> &buffer)
     {
-      for (std::byte _b : buffer)
-        out.put(static_cast<char>(_b));
+      for (const std::byte _b : buffer)
+        out.put(std::to_integer<char>(_b));
     }
 
     void read_bytes(std::ifstream &in, std::vector<std::byte> &buffer, std::size_t size)
