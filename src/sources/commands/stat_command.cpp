@@ -68,7 +68,7 @@ namespace throttr
     std::size_t _offset = write_buffer.size();
 
     write_buffer.resize(_offset + sizeof(uint64_t) * 4); // 4 uint64_t metrics
-    batch.reserve(batch.size() + 5);                                 // status + 4 metrics
+    batch.reserve(batch.size() + 5);                     // status + 4 metrics
 
     batch.emplace_back(&state::success_response_, 1);
 

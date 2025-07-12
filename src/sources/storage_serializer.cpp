@@ -24,31 +24,32 @@ namespace throttr
 {
   namespace
   {
-    constexpr const char *MAGIC_ = "THRT";
+    constexpr auto MAGIC_ = "THRT";
     constexpr uint8_t VERSION_ = 1;
 
-    inline uint8_t get_value_size_code()
+    auto get_value_size_code() -> uint8_t
     {
-      if constexpr (sizeof(value_type) == 1)
-        return 1;
-      else if constexpr (sizeof(value_type) == 2)
-        return 2;
-      else if constexpr (sizeof(value_type) == 4)
-        return 4;
-      else if constexpr (sizeof(value_type) == 8)
-        return 8;
-      else
-        static_assert(sizeof(value_type) == 1 || sizeof(value_type) == 2 || sizeof(value_type) == 4 || sizeof(value_type) == 8);
+      return sizeof(value_type);
     }
 
     template<typename T> void write_raw(std::ofstream &out, const T &value)
     {
-      out.write(reinterpret_cast<const char *>(&value), sizeof(T));
+      static_assert(std::is_trivially_copyable_v<T>);
+      for (std::array<std::byte, sizeof(T)> _bytes = std::bit_cast<std::array<std::byte, sizeof(T)>>(value);
+           std::byte _b : _bytes)
+        out.put(static_cast<char>(_b));
     }
 
     template<typename T> void read_raw(std::ifstream &in, T &value)
     {
-      in.read(reinterpret_cast<char *>(&value), sizeof(T));
+      static_assert(std::is_trivially_copyable_v<T>);
+      std::array<std::byte, sizeof(T)> _bytes{};
+      char c = 0;
+      std::generate(_bytes.begin(), _bytes.end(), [&in, &c]() {
+        in.get(c);
+        return static_cast<std::byte>(c);
+      });
+      value = std::bit_cast<T>(_bytes);
     }
 
     uint64_t read_metric(std::ifstream &_in)
@@ -60,13 +61,19 @@ namespace throttr
 
     void write_bytes(std::ofstream &out, const std::vector<std::byte> &buffer)
     {
-      out.write(reinterpret_cast<const char *>(buffer.data()), buffer.size());
+      for (const std::byte _b : buffer)
+        out.put(std::to_integer<char>(_b));
     }
 
     void read_bytes(std::ifstream &in, std::vector<std::byte> &buffer, std::size_t size)
     {
       buffer.resize(size);
-      in.read(reinterpret_cast<char *>(buffer.data()), size);
+      for (std::size_t i = 0; i < size; ++i)
+      {
+        char c = 0;
+        in.get(c);
+        buffer[i] = static_cast<std::byte>(c);
+      }
     }
   } // namespace
 
@@ -74,7 +81,7 @@ namespace throttr
   {
     std::ofstream _out(filename, std::ios::binary);
     if (!_out)
-      throw std::runtime_error("Unable to open dump file for writing");
+      throw serialize_exception("Unable to open dump file for writing");
 
     _out.write(MAGIC_, 4);
     write_raw(_out, VERSION_);
@@ -121,7 +128,10 @@ namespace throttr
         const auto _buffer_ptr = _e.entry_.buffer_.load();
         value_type _buffer_size = static_cast<value_type>(_buffer_ptr->size());
         write_raw(_out, _buffer_size);
-        _out.write(reinterpret_cast<const char *>(_buffer_ptr->data()), _buffer_size);
+        for (std::byte _b : *_buffer_ptr)
+        {
+          _out.put(static_cast<char>(_b));
+        }
       }
     }
   }
@@ -130,22 +140,22 @@ namespace throttr
   {
     std::ifstream _in(filename, std::ios::binary);
     if (!_in)
-      throw std::runtime_error("Unable to open dump file for reading");
+      throw serialize_exception("Unable to open dump file for reading");
 
-    char _magic[4];
-    _in.read(_magic, 4);
-    if (std::string_view(_magic, 4) != MAGIC_)
-      throw std::runtime_error("Invalid dump file format");
+    std::string _magic(4, '\0');
+    _in.read(_magic.data(), 4);
+    if (std::string_view(_magic) != MAGIC_)
+      throw serialize_exception("Invalid dump file format");
 
     uint8_t _version = 0;
     read_raw(_in, _version);
     if (_version != VERSION_)
-      throw std::runtime_error("Unsupported dump file version");
+      throw serialize_exception("Unsupported dump file version");
 
     uint8_t _file_value_size = 0;
     read_raw(_in, _file_value_size);
     if (_file_value_size != get_value_size_code())
-      throw std::runtime_error("Mismatched value_size in dump file");
+      throw serialize_exception("Mismatched value_size in dump file");
 
     uint32_t _count = 0;
     read_raw(_in, _count);
@@ -163,11 +173,11 @@ namespace throttr
 
       uint8_t _type_raw;
       read_raw(_in, _type_raw);
-      entry_types _type = static_cast<entry_types>(_type_raw);
+      auto _type = static_cast<entry_types>(_type_raw);
 
       uint8_t _ttl_raw;
       read_raw(_in, _ttl_raw);
-      ttl_types _ttl_type = static_cast<ttl_types>(_ttl_raw);
+      auto _ttl_type = static_cast<ttl_types>(_ttl_raw);
 
       entry _new_entry;
       _new_entry.type_ = _type;

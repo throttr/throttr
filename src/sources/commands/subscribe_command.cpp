@@ -48,8 +48,7 @@ namespace throttr
     batch.emplace_back(_inserted ? &state::success_response_ : &state::failed_response_, 1);
 
 #ifndef NDEBUG
-    const auto _channel_view =
-      std::string_view(_channel);
+    const auto _channel_view = std::string_view(_channel);
     fmt::println(
       "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST SUBSCRIBE session_id={} META channel={} RESPONSE ok={}",
       to_string(state->id_),

@@ -18,9 +18,8 @@
 #ifndef THROTTR_STATE_HPP
 #define THROTTR_STATE_HPP
 
-#include <throttr/transport.hpp>
 #include <throttr/message.hpp>
-#include <throttr/services/subscriptions_service.hpp>
+#include <throttr/transport.hpp>
 
 #include <atomic>
 #include <boost/asio/buffer.hpp>
@@ -33,6 +32,17 @@
 #include <throttr/connection_type.hpp>
 #include <throttr/program_parameters.hpp>
 #include <throttr/protocol_wrapper.hpp>
+
+#include <throttr/services/commands_service.hpp>
+#include <throttr/services/find_service.hpp>
+#include <throttr/services/garbage_collector_service.hpp>
+#include <throttr/services/messages_service.hpp>
+#include <throttr/services/subscriptions_service.hpp>
+
+#ifdef ENABLED_FEATURE_METRICS
+#include <throttr/services/metrics_collector_service.hpp>
+#endif
+
 #include <throttr/storage.hpp>
 
 #include <vector>
@@ -204,22 +214,22 @@ namespace throttr
     /**
      * Commands service
      */
-    std::shared_ptr<commands_service> commands_;
+    std::shared_ptr<commands_service> commands_ = std::make_shared<commands_service>();
 
     /**
      * Subscriptions service
      */
-    std::shared_ptr<subscriptions_service> subscriptions_;
+    std::shared_ptr<subscriptions_service> subscriptions_ = std::make_shared<subscriptions_service>();
 
     /**
      * Messages service
      */
-    std::shared_ptr<messages_service> messages_;
+    std::shared_ptr<messages_service> messages_ = std::make_shared<messages_service>();
 
     /**
      * Find service
      */
-    std::shared_ptr<find_service> finder_;
+    std::shared_ptr<find_service> finder_ = std::make_shared<find_service>();
 
     /**
      * Response builder service
@@ -229,13 +239,13 @@ namespace throttr
     /**
      * Garbage collector service
      */
-    std::shared_ptr<garbage_collector_service> garbage_collector_;
+    std::shared_ptr<garbage_collector_service> garbage_collector_ = std::make_shared<garbage_collector_service>();
 
 #ifdef ENABLED_FEATURE_METRICS
     /**
      * Metrics collector service
      */
-    std::shared_ptr<metrics_collector_service> metrics_collector_;
+    std::shared_ptr<metrics_collector_service> metrics_collector_ = std::make_shared<metrics_collector_service>();
 #endif
 
     /**
@@ -343,7 +353,6 @@ namespace throttr
      * Prepare for startup
      */
     void prepare_for_startup(const program_parameters &parameters);
-
 
     /**
      * Available message pool

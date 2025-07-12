@@ -42,7 +42,6 @@ namespace throttr
 
     const bool _as_query = type == request_types::query;
 
-
     std::string _key(_request.key_.size(), '\0');
     std::memcpy(_key.data(), _request.key_.data(), _request.key_.size());
 

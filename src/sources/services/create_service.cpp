@@ -53,7 +53,8 @@ namespace throttr
       std::memcpy(_scoped_key.data(), key.data(), key.size());
 
       const request_key _lookup_key{_scoped_key};
-      if (const auto _it_existing = _index.find(_lookup_key); _it_existing != _index.end() && _it_existing->entry_.type_ != entry_types::counter)
+      if (const auto _it_existing = _index.find(_lookup_key);
+          _it_existing != _index.end() && _it_existing->entry_.type_ != entry_types::counter)
       {
         auto _modified = _index.modify(
           _it_existing,

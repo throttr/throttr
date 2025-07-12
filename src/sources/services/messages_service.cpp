@@ -13,8 +13,10 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+#include <boost/endian/conversion.hpp>
 #include <throttr/protocol_wrapper.hpp>
 #include <throttr/services/messages_service.hpp>
+#include <utility>
 
 namespace throttr
 {
@@ -48,10 +50,8 @@ namespace throttr
       return 0;
     const auto _key_size = std::to_integer<uint8_t>(buffer[2 + sizeof(value_type)]);
     value_type _value_size = 0;
-    for (std::size_t i = 0; i < sizeof(value_type); ++i)
-    {
-      _value_size |= static_cast<value_type>(std::to_integer<uint8_t>(buffer[3 + sizeof(value_type) + i])) << (8 * i);
-    }
+    std::memcpy(&_value_size, buffer.data() + 3 + sizeof(value_type), sizeof(value_type));
+    _value_size = boost::endian::little_to_native(_value_size);
     return request_set_header_size + _key_size + _value_size;
   }
 
@@ -126,10 +126,8 @@ namespace throttr
       return 0;
     const auto _channel_size = std::to_integer<uint8_t>(buffer[1]);
     value_type _value_size = 0;
-    for (std::size_t i = 0; i < sizeof(value_type); ++i)
-    {
-      _value_size |= static_cast<value_type>(std::to_integer<uint8_t>(buffer[2 + i])) << (8 * i);
-    }
+    std::memcpy(&_value_size, buffer.data() + 2, sizeof(value_type));
+    _value_size = boost::endian::little_to_native(_value_size);
     return request_publish_header_size + _channel_size + _value_size;
   }
 
@@ -155,12 +153,10 @@ namespace throttr
   {
     if (buffer.size() < request_event_header_size)
       return 0;
-    const auto _channel_size = static_cast<uint8_t>(buffer[1]);
+    const uint8_t _channel_size = std::to_underlying(buffer[1]);
     value_type _value_size = 0;
-    for (std::size_t i = 0; i < sizeof(value_type); ++i)
-    {
-      _value_size |= static_cast<value_type>(std::to_integer<uint8_t>(buffer[2 + i])) << (8 * i);
-    }
+    std::memcpy(&_value_size, buffer.data() + 2, sizeof(value_type));
+    _value_size = boost::endian::little_to_native(_value_size);
     return request_event_header_size + _channel_size + _value_size;
   }
 
