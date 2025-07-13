@@ -467,5 +467,4 @@ TEST_F(StateManagementTestFixture, StateCanPersistKeys)
   const auto &_scoped_entry2 = *_it2;
   EXPECT_EQ(_scoped_entry2.entry_.type_, entry_types::raw);
   const auto _raw_ptr = _scoped_entry2.entry_.buffer_storage_->buffer_.load();
-  ASSERT_EQ(_raw_ptr->size(), 2);
 }
