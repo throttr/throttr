@@ -235,7 +235,7 @@ namespace throttr
       batch_queue_.push_back(_message);
     }
 
-    for (auto & _message : batch_queue_)
+    for (auto &_message : batch_queue_)
       send(_message);
 
     compact_buffer_if_needed();
