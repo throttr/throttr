@@ -145,6 +145,10 @@ namespace throttr
      */
     void send(const std::shared_ptr<message> &batch);
 
+    /**
+     * Batch queue
+     */
+    std::deque<std::shared_ptr<message>> batch_queue_;
   private:
     /**
      * Handler memory
