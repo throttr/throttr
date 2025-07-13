@@ -19,6 +19,7 @@
 #include <boost/asio/write.hpp>
 #include <boost/core/ignore_unused.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include <boost/beast/core/bind_handler.hpp>
 #include <throttr/services/commands_service.hpp>
 #include <throttr/services/messages_service.hpp>
 #include <throttr/services/metrics_collector_service.hpp>
@@ -157,11 +158,12 @@ namespace throttr
     buffer_start_ = 0;
   }
 
-  template<typename Transport> void connection<Transport>::send(const std::shared_ptr<message> &batch)
+  template<typename Transport> void connection<Transport>::send(const std::shared_ptr<message> & batch)
   {
-    auto self = this->shared_from_this();
-
-    boost::asio::post(socket_.get_executor(), [self, _batch = batch->shared_from_this()]() mutable { self->on_send(_batch); });
+    boost::asio::post(
+      socket_.get_executor(),
+      boost::beast::bind_front_handler(&connection::on_send, this->shared_from_this(), batch)
+    );
   }
 
   template<typename Transport> void connection<Transport>::on_read(const boost::system::error_code &error, std::size_t length)
@@ -260,7 +262,7 @@ namespace throttr
     socket_.async_read_some(
       boost::asio::buffer(buffer_.data() + buffer_end_, max_length_ - buffer_end_),
       boost::asio::bind_allocator(
-        custom_allocator<int>(handler_memory_),
+        custom_allocator<int>(read_memory_),
         [_self](const boost::system::error_code &ec, const std::size_t length) { _self->on_read(ec, length); }));
   }
 
@@ -347,7 +349,7 @@ namespace throttr
       socket_,
       pending_writes_.front()->buffers_,
       boost::asio::bind_allocator(
-        custom_allocator<int>(handler_memory_),
+        custom_allocator<int>(write_memory_),
         [_self = this->shared_from_this()](const boost::system::error_code &ec, const std::size_t length)
         { _self->on_write(ec, length); }));
   }

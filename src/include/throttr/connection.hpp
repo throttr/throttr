@@ -148,13 +148,18 @@ namespace throttr
      *
      * @param batch
      */
-    void send(const std::shared_ptr<message> &batch);
+    void send(const std::shared_ptr<message> & batch);
 
   private:
     /**
-     * Handler memory
+     * Read memory
      */
-    custom_handler_memory handler_memory_;
+    custom_handler_memory read_memory_;
+
+    /**
+     * Write memory
+     */
+    custom_handler_memory write_memory_;
 
     /**
      * On read

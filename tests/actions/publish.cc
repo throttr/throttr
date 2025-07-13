@@ -23,12 +23,15 @@ class PublishTestFixture : public ServiceTestFixture
 
 TEST_F(PublishTestFixture, OnSuccess)
 {
-  boost::asio::io_context _io_context;
-  auto _subscriber = make_connection(_io_context);
-  auto _tcp_subscriber = make_tcp_connection(_io_context);
-  auto _publisher = make_connection(_io_context);
+  boost::asio::io_context _subscriber_io_context;
+  boost::asio::io_context _tcp_subscriber_io_context;
+  boost::asio::io_context _publisher_io_context;
+  auto _subscriber = make_connection(_subscriber_io_context);
+  auto _tcp_subscriber = make_connection(_tcp_subscriber_io_context);
+  auto _publisher = make_connection(_publisher_io_context);
 
   const auto _subscribe_buffer = request_subscribe_builder("news");
+
   boost::asio::write(_subscriber, boost::asio::buffer(_subscribe_buffer.data(), _subscribe_buffer.size()));
   boost::asio::write(_tcp_subscriber, boost::asio::buffer(_subscribe_buffer.data(), _subscribe_buffer.size()));
   boost::asio::write(_publisher, boost::asio::buffer(_subscribe_buffer.data(), _subscribe_buffer.size()));
