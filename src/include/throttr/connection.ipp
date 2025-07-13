@@ -186,8 +186,6 @@ namespace throttr
     messages_pool::recycle();
     messages_pool::fit();
 
-    batch_queue_.clear();
-
     while (true)
     {
       const std::span<const std::byte> _span(buffer_.data() + buffer_start_, buffer_end_ - buffer_start_);
@@ -233,11 +231,8 @@ namespace throttr
       state_->commands_->commands_[static_cast<std::size_t>(
         _type)](state_, _type, _view, _message->buffers_, _message->write_buffer_, this->id_);
 
-      batch_queue_.push_back(_message);
-    }
-
-    for (auto &_message : batch_queue_)
       send(_message);
+    }
 
     compact_buffer_if_needed();
     do_read();
@@ -291,12 +286,6 @@ namespace throttr
 
     _message->used_ = true;
 
-    if (_message->recyclable_)
-    {
-      _message->write_buffer_.clear();
-      _message->buffers_.clear();
-    }
-
     if (!pending_writes_.empty())
     {
       write_next();
@@ -324,8 +313,13 @@ namespace throttr
   }
 
   template<typename Transport> void connection<Transport>::write_next()
-
   {
+    std::scoped_lock _write_guard(mutex_);
+
+
+    if (pending_writes_.empty())
+      return;
+
 #ifndef NDEBUG
     switch (kind_)
     {

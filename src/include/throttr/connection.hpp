@@ -72,6 +72,11 @@ namespace throttr
      */
     connection_type type_;
 
+    /**
+     * Mutex
+     */
+    std::mutex mutex_;
+
 #ifdef ENABLED_FEATURE_METRICS
     /**
      * Metrics
@@ -144,11 +149,6 @@ namespace throttr
      * @param batch
      */
     void send(const std::shared_ptr<message> &batch);
-
-    /**
-     * Batch queue
-     */
-    std::deque<std::shared_ptr<message>> batch_queue_;
 
   private:
     /**
