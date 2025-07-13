@@ -283,7 +283,7 @@ namespace throttr
       return;
     }
 
-    if (pending_writes_.size() == 0)
+    if (pending_writes_.empty())
       return;
 
     const std::shared_ptr<message> _message = pending_writes_.front();
