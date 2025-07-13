@@ -26,7 +26,7 @@ namespace throttr
     /**
      * Prepares
      */
-    static void prepares(std::size_t initial = 64);
+    static void prepares(std::size_t initial = 16);
 
     /**
      * Recycle
@@ -38,7 +38,7 @@ namespace throttr
      *
      * @return
      */
-    static std::shared_ptr<reusable_buffer> take_one(std::size_t count = 1024);
+    static std::shared_ptr<reusable_buffer> take_one(std::size_t count = 16);
   };
 } // namespace throttr
 

@@ -121,7 +121,7 @@ namespace throttr
     /**
      * Constructor
      */
-    explicit entry(entry_types type, std::span<const std::byte> value);
+    explicit entry(entry_types type, std::span<const std::byte> value, ttl_types ttl_type, uint64_t expires_at);
 
     /**
      * Destructor

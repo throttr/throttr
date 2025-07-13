@@ -185,10 +185,7 @@ namespace throttr
 
       std::vector<std::byte> _value_storage(sizeof(value_type));
       std::span<const std::byte> _value(_value_storage);
-      entry _new_entry(_type, _value);
-      _new_entry.type_ = _type;
-      _new_entry.expires_at_.store(_expires_at);
-      _new_entry.ttl_type_ = _ttl_type;
+      entry _new_entry(_type, _value, _ttl_type, _expires_at);
 
 #ifdef ENABLED_FEATURE_METRICS
       auto _metrics = std::make_shared<entry_metrics>();
@@ -216,11 +213,9 @@ namespace throttr
       }
 
 #ifdef ENABLED_FEATURE_METRICS
-      auto _entry_wrapper = entry_wrapper{std::move(_key), std::move(_new_entry)};
-      _entry_wrapper.metrics_ = _metrics;
-      storage.insert(_entry_wrapper);
+      storage.emplace(std::move(_key), _type, _value, _ttl_type, _expires_at);
 #else
-      storage.insert(entry_wrapper{std::move(_key), std::move(_new_entry)});
+      storage.emplace(std::move(_key), _type, _value, _ttl_type, _expires_at);
 #endif
     }
   }

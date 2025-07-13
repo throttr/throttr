@@ -19,6 +19,7 @@
 #define THROTTR_MESSAGE_HPP
 
 #include <boost/asio/buffer.hpp>
+#include <iostream>
 #include <vector>
 
 namespace throttr
@@ -52,7 +53,11 @@ namespace throttr
     /**
      * Constructor
      */
-    message() = default;
+    message()
+    {
+    }
+
+    ~message(){};
   };
 } // namespace throttr
 

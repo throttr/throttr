@@ -32,6 +32,8 @@ namespace throttr
       strand_(ioc.get_executor()),
       response_builder_(std::make_shared<response_builder_service>())
   {
+    storage_.reserve(1024);
+
     started_at_ =
       std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
   }

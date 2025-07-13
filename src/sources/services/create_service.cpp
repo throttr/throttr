@@ -91,17 +91,7 @@ namespace throttr
       }
     }
 
-    entry _entry(type, value);
-    _entry.ttl_type_ = ttl_type;
-    _entry.expires_at_ = _expires_at;
-
-    const auto _entry_ptr = entry_wrapper{_key, _entry};
-
-#ifdef ENABLED_FEATURE_METRICS
-    _entry_ptr.metrics_->writes_.fetch_add(1, std::memory_order_relaxed);
-#endif
-
-    auto [_it, _inserted] = state->storage_.insert(_entry_ptr);
+    auto [_it, _inserted] = state->storage_.emplace(_key, type, value, ttl_type, _expires_at);
 
     boost::ignore_unused(_it);
 
@@ -133,30 +123,26 @@ namespace throttr
     }
 
 #ifndef NDEBUG
-    if (_entry_ptr.entry_.type_ == entry_types::counter)
+    if (as_insert)
     {
-      const value_type _counter_value = _entry_ptr.entry_.counter_.load(std::memory_order_relaxed);
       fmt::println(
-        "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST INSERT session_id={} META key={} value={}ttl_type={} ttl={} RESPONSE ok={}",
+        "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST INSERT session_id={} META key={} ttl_type={} ttl={} RESPONSE ok={}",
         to_string(state->id_),
         std::chrono::system_clock::now(),
         to_string(id),
         span_to_hex(key),
-        _counter_value,
         to_string(ttl_type),
         span_to_hex(ttl),
         _inserted);
     }
     else
     {
-      const auto _buffer = _entry_ptr.entry_.buffer_storage_->buffer_.load(std::memory_order_relaxed);
       fmt::println(
-        "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST SET session_id={} META key={} value={}ttl_type={} ttl={} RESPONSE ok={}",
+        "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST SET session_id={} META key={} ttl_type={} ttl={} RESPONSE ok={}",
         to_string(state->id_),
         std::chrono::system_clock::now(),
         to_string(id),
         span_to_hex(key),
-        span_to_hex(*_buffer),
         to_string(ttl_type),
         span_to_hex(ttl),
         _inserted);

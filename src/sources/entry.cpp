@@ -1,11 +1,18 @@
+#include <throttr/utils.hpp>
+
+#include <iostream>
 #include <throttr/entry.hpp>
 
 #include <boost/endian/conversion.hpp>
 
 namespace throttr
 {
-  entry::entry(const entry_types type, const std::span<const std::byte> value) :
-      type_(type), buffer_storage_(buffers_pool::take_one())
+  entry::entry(
+    const entry_types type,
+    const std::span<const std::byte> value,
+    const ttl_types ttl_type,
+    const uint64_t expires_at) :
+      type_(type), buffer_storage_(buffers_pool::take_one()), ttl_type_(ttl_type), expires_at_(expires_at)
   {
     if (type == entry_types::raw)
     {
@@ -27,10 +34,7 @@ namespace throttr
 
   entry::~entry()
   {
-    if (type_ == entry_types::raw)
-    {
-      buffer_storage_->can_be_reused_ = true;
-    }
+    buffer_storage_->can_be_reused_ = true;
   }
 
   void entry::update_buffer(const std::span<const std::byte> value) const

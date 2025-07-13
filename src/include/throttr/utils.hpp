@@ -146,6 +146,19 @@ namespace throttr
    * @param type
    * @return
    */
+  inline std::string to_string(const entry_types type)
+  {
+    if (type == entry_types::raw)
+      return "raw";
+    return "counter";
+  }
+
+  /**
+   * To string
+   *
+   * @param type
+   * @return
+   */
   inline std::string to_string(const change_types type)
   {
     switch (type)

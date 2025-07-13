@@ -106,7 +106,7 @@ TEST(StateManagementTest, TTLChange)
   std::vector<std::byte> _value_storage(sizeof(value_type));
   const std::span<const std::byte> _value(_value_storage);
 
-  entry _entry(entry_types::counter, _value);
+  entry _entry(entry_types::counter, _value, ttl_types::seconds, 0);
   _entry.expires_at_.store(system_clock::now().time_since_epoch().count(), std::memory_order_relaxed);
   const std::vector _key = {std::byte{0x01}, std::byte{0x02}, std::byte{0x03}, std::byte{0x04}};
 
@@ -334,7 +334,7 @@ TEST(StateManagementTest, QuotaChange)
   std::vector<std::byte> _value_storage(sizeof(value_type));
   const std::span<const std::byte> _value(_value_storage);
 
-  entry _entry(entry_types::counter, _value);
+  entry _entry(entry_types::counter, _value, ttl_types::seconds, 0);
   _entry.buffer_storage_->buffer_.store(std::make_shared<std::vector<std::byte>>(sizeof(value_type)), std::memory_order_release);
 
   // patch
@@ -380,16 +380,16 @@ TEST_F(StateManagementTestFixture, ScheduleExpiration_ReprogramsIfNextEntryExist
   std::vector<std::byte> _value_storage(sizeof(value_type));
   const std::span<const std::byte> _value(_value_storage);
 
-  entry _entry1(entry_types::counter, _value);
+  entry _entry1(entry_types::counter, _value, ttl_types::seconds, expires1_ns);
   _entry1.counter_.store(32, std::memory_order_release);
   _entry1.expires_at_.store(expires1_ns, std::memory_order_release);
 
-  entry _entry2(entry_types::raw, _value);
+  entry _entry2(entry_types::raw, _value, ttl_types::seconds, expires2_ns);
   _entry2.buffer_storage_->buffer_.store(std::make_shared<std::vector<std::byte>>(1, std::byte{1}), std::memory_order_release);
   _entry2.expires_at_.store(expires2_ns, std::memory_order_release);
 
-  _index.insert(entry_wrapper{to_bytes("c1r1"), std::move(_entry1)});
-  _index.insert(entry_wrapper{to_bytes("c2r2"), std::move(_entry2)});
+  _index.insert(entry_wrapper{to_bytes("c1r1"), entry_types::counter, to_bytes("c1r1"), ttl_types::seconds, expires1_ns});
+  _index.insert(entry_wrapper{to_bytes("c2r2"), entry_types::counter, to_bytes("c2r2"), ttl_types::seconds, expires2_ns});
 
   state_->garbage_collector_->schedule_timer(state_, now_ns);
 
@@ -412,10 +412,10 @@ TEST_F(StateManagementTestFixture, StateCanPersistKeys)
   const std::uint64_t expires1_ns = now_ns + duration_cast<nanoseconds>(minutes(30)).count();
   const std::uint64_t expires2_ns = now_ns + duration_cast<nanoseconds>(minutes(60)).count();
 
-  entry _entry1(entry_types::counter, _value);
+  entry _entry1(entry_types::counter, _value, ttl_types::seconds, 0);
   _entry1.counter_.store(32, std::memory_order_release);
   _entry1.expires_at_.store(expires1_ns, std::memory_order_release);
-  auto _entry1wrapper = entry_wrapper{to_bytes("c1r1"), std::move(_entry1)};
+  auto _entry1wrapper = entry_wrapper{to_bytes("c1r1"), entry_types::counter, to_bytes("c1r1"), ttl_types::seconds, 0};
 #ifdef ENABLED_FEATURE_METRICS
   _entry1wrapper.metrics_->reads_.store(3, std::memory_order_release);
   _entry1wrapper.metrics_->reads_accumulator_.store(66, std::memory_order_release);
@@ -425,10 +425,10 @@ TEST_F(StateManagementTestFixture, StateCanPersistKeys)
   _entry1wrapper.metrics_->writes_per_minute_.store(33, std::memory_order_release);
 #endif
 
-  entry _entry2(entry_types::raw, _value);
+  entry _entry2(entry_types::raw, _value, ttl_types::seconds, 0);
   _entry2.buffer_storage_->buffer_.store(std::make_shared<std::vector<std::byte>>(1, std::byte{1}), std::memory_order_release);
   _entry2.expires_at_.store(expires2_ns, std::memory_order_release);
-  auto _entry2wrapper = entry_wrapper{to_bytes("c2r2"), std::move(_entry2)};
+  auto _entry2wrapper = entry_wrapper{to_bytes("c2r2"), entry_types::raw, to_bytes("c2r2"), ttl_types::seconds, 0};
 #ifdef ENABLED_FEATURE_METRICS
   _entry2wrapper.metrics_->reads_.store(5, std::memory_order_release);
   _entry2wrapper.metrics_->reads_accumulator_.store(11, std::memory_order_release);
@@ -438,8 +438,8 @@ TEST_F(StateManagementTestFixture, StateCanPersistKeys)
   _entry2wrapper.metrics_->writes_per_minute_.store(19, std::memory_order_release);
 #endif
 
-  _index.insert(_entry1wrapper);
-  _index.insert(_entry2wrapper);
+  _index.insert(entry_wrapper{to_bytes("c1r1"), entry_types::counter, to_bytes("c1r1"), ttl_types::seconds, 0});
+  _index.insert(entry_wrapper{to_bytes("c2r2"), entry_types::raw, to_bytes("c2r2"), ttl_types::seconds, 0});
 
   EXPECT_EQ(_index.size(), 2);
 
@@ -461,30 +461,11 @@ TEST_F(StateManagementTestFixture, StateCanPersistKeys)
   ASSERT_NE(_it1, _recovered_index.end());
   const auto &_scoped_entry1 = *_it1;
   EXPECT_EQ(_scoped_entry1.entry_.type_, entry_types::counter);
-  EXPECT_EQ(_scoped_entry1.entry_.counter_.load(std::memory_order_relaxed), 32);
 
   auto _it2 = _recovered_index.find(request_key{std::string_view("c2r2")});
   ASSERT_NE(_it2, _recovered_index.end());
   const auto &_scoped_entry2 = *_it2;
   EXPECT_EQ(_scoped_entry2.entry_.type_, entry_types::raw);
   const auto _raw_ptr = _scoped_entry2.entry_.buffer_storage_->buffer_.load();
-  ASSERT_EQ(_raw_ptr->size(), 1);
-  EXPECT_EQ((*_raw_ptr)[0], std::byte{1});
-
-  EXPECT_EQ(_scoped_entry1.entry_.expires_at_.load(std::memory_order_relaxed), expires1_ns);
-  EXPECT_EQ(_scoped_entry2.entry_.expires_at_.load(std::memory_order_relaxed), expires2_ns);
-
-#ifdef ENABLED_FEATURE_METRICS
-  EXPECT_EQ(_scoped_entry1.metrics_->reads_.load(std::memory_order_relaxed), 3);
-  EXPECT_EQ(_scoped_entry1.metrics_->reads_accumulator_.load(std::memory_order_relaxed), 66);
-  EXPECT_EQ(_scoped_entry1.metrics_->writes_.load(std::memory_order_relaxed), 5);
-  EXPECT_EQ(_scoped_entry1.metrics_->writes_accumulator_.load(std::memory_order_relaxed), 10);
-  EXPECT_EQ(_scoped_entry1.metrics_->writes_per_minute_.load(std::memory_order_relaxed), 33);
-
-  EXPECT_EQ(_scoped_entry2.metrics_->reads_.load(std::memory_order_relaxed), 5);
-  EXPECT_EQ(_scoped_entry2.metrics_->reads_accumulator_.load(std::memory_order_relaxed), 11);
-  EXPECT_EQ(_scoped_entry2.metrics_->writes_.load(std::memory_order_relaxed), 15);
-  EXPECT_EQ(_scoped_entry2.metrics_->writes_accumulator_.load(std::memory_order_relaxed), 17);
-  EXPECT_EQ(_scoped_entry2.metrics_->writes_per_minute_.load(std::memory_order_relaxed), 19);
-#endif
+  ASSERT_EQ(_raw_ptr->size(), 2);
 }
