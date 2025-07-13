@@ -76,7 +76,7 @@ namespace throttr
       }
       else
       {
-        const auto _buffer = entry->entry_.buffer_.load(std::memory_order_acquire);
+        const auto _buffer = entry->entry_.buffer_storage_->buffer_.load(std::memory_order_acquire);
         const value_type _bytes_used = native_to_little(_buffer->size());
 
         std::memcpy(write_buffer.data() + offset, &_bytes_used, sizeof(value_type));

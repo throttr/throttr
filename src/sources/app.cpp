@@ -18,6 +18,9 @@
 
 #include <boost/asio/signal_set.hpp>
 
+#include <throttr/buffers_pool.hpp>
+#include <throttr/messages_pool.hpp>
+
 #include <thread>
 #include <vector>
 
@@ -41,22 +44,7 @@ namespace throttr
 
     for (auto _i = program_options_.threads_; _i > 0; --_i)
     {
-      _threads.emplace_back(
-        [self = shared_from_this(), state = state_->shared_from_this()]
-        {
-          state::available_message_pool_.reserve(8192);
-          for (auto _e = 0; _e < 8192; ++_e)
-          {
-            state::available_message_pool_.push_back(std::make_shared<message>());
-          }
-
-          state::available_buffers_.reserve(64);
-          for (auto _e = 0; _e < 64; ++_e)
-          {
-            state::available_buffers_.push_back(std::make_shared<std::vector<std::byte>>());
-          }
-          self->ioc_.run();
-        });
+      _threads.emplace_back([self = shared_from_this(), state = state_->shared_from_this()] { self->boot(); });
     }
 
     state_->prepare_for_startup(program_options_);
@@ -70,19 +58,7 @@ namespace throttr
         ioc_.stop();
       });
 
-    state::available_message_pool_.reserve(8192);
-    for (auto _e = 0; _e < 8192; ++_e)
-    {
-      state::available_message_pool_.push_back(std::make_shared<message>());
-    }
-
-    state::available_buffers_.reserve(64);
-    for (auto _e = 0; _e < 64; ++_e)
-    {
-      state::available_buffers_.push_back(std::make_shared<std::vector<std::byte>>());
-    }
-
-    ioc_.run();
+    boot();
 
     for (auto &_thread : _threads)
     {
@@ -96,5 +72,13 @@ namespace throttr
   {
     ioc_.stop();
     std::remove(program_options_.socket_.c_str());
+  }
+
+  void app::boot()
+  {
+    messages_pool::prepares();
+    buffers_pool::prepares();
+
+    ioc_.run();
   }
 } // namespace throttr

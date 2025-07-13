@@ -22,8 +22,12 @@
 #include <throttr/services/commands_service.hpp>
 #include <throttr/services/messages_service.hpp>
 #include <throttr/services/metrics_collector_service.hpp>
+
 #include <throttr/state.hpp>
 #include <throttr/utils.hpp>
+
+#include <throttr/buffers_pool.hpp>
+#include <throttr/messages_pool.hpp>
 
 namespace throttr
 {
@@ -178,25 +182,8 @@ namespace throttr
 
   template<typename Transport> void connection<Transport>::try_process_next()
   {
-    for (auto it = state::used_message_pool_.begin(); it != state::used_message_pool_.end();)
-    {
-      if ((*it)->used_)
-      {
-        (*it)->used_ = false;
-        state::available_message_pool_.push_back(*it);
-        it = state::used_message_pool_.erase(it);
-      }
-      else
-      {
-        ++it;
-      }
-    }
-
-    if (state::available_message_pool_.size() > 8192)
-    {
-      state::available_message_pool_.resize(8192);
-      state::available_message_pool_.shrink_to_fit();
-    }
+    messages_pool::recycle();
+    messages_pool::fit();
 
     while (true)
     {
@@ -238,16 +225,10 @@ namespace throttr
       metrics_->commands_[static_cast<std::size_t>(_type)].mark();
 #endif
 
-      while (state::available_message_pool_.size() < 4096)
-        state::available_message_pool_.push_back(std::make_shared<message>());
-
-      const auto _message = state::available_message_pool_.front();
-      state::available_message_pool_.erase(state::available_message_pool_.begin());
+      const auto _message = messages_pool::take_one();
 
       state_->commands_->commands_[static_cast<std::size_t>(
         _type)](state_, _type, _view, _message->buffers_, _message->write_buffer_, this->id_);
-
-      state::used_message_pool_.push_back(_message);
       send(_message);
     }
 
@@ -277,7 +258,7 @@ namespace throttr
     socket_.async_read_some(
       boost::asio::buffer(buffer_.data() + buffer_end_, max_length_ - buffer_end_),
       boost::asio::bind_allocator(
-        connection_handler_allocator<int>(handler_memory_),
+        custom_allocator<int>(handler_memory_),
         [_self](const boost::system::error_code &ec, const std::size_t length) { _self->on_read(ec, length); }));
   }
 
@@ -362,7 +343,7 @@ namespace throttr
       socket_,
       pending_writes_.front()->buffers_,
       boost::asio::bind_allocator(
-        connection_handler_allocator<int>(handler_memory_),
+        custom_allocator<int>(handler_memory_),
         [_self = this->shared_from_this()](const boost::system::error_code &ec, const std::size_t length)
         { _self->on_write(ec, length); }));
   }

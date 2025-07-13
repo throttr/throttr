@@ -242,7 +242,7 @@ namespace throttr
       else
       {
         _total_buffers++;
-        _total_allocated_bytes_on_buffers += _item.entry_.buffer_.load(std::memory_order_acquire)->size();
+        _total_allocated_bytes_on_buffers += _item.entry_.buffer_storage_->buffer_.load(std::memory_order_acquire)->size();
       }
       _total_keys++;
     }

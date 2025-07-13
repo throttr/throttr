@@ -21,14 +21,8 @@
 
 namespace throttr
 {
-  thread_local std::vector<std::shared_ptr<message>> state::available_message_pool_;
-  thread_local std::vector<std::shared_ptr<message>> state::used_message_pool_;
-
-  thread_local connection_handler_memory state::create_scheduler_handler_memory_;
-  thread_local connection_handler_memory state::update_scheduler_handler_memory_;
-
-  thread_local std::vector<std::shared_ptr<std::vector<std::byte>>> state::available_buffers_;
-  thread_local std::vector<std::shared_ptr<std::vector<std::byte>>> state::used_buffers_;
+  thread_local custom_handler_memory state::create_scheduler_handler_memory_;
+  thread_local custom_handler_memory state::update_scheduler_handler_memory_;
 
   state::state(boost::asio::io_context &ioc) :
       expiration_timer_(ioc),

@@ -13,7 +13,7 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include "throttr/connection_allocator.hpp"
+#include "throttr/custom_allocator.hpp"
 
 #include <boost/asio/bind_allocator.hpp>
 #include <throttr/services/create_service.hpp>
@@ -50,6 +50,8 @@ namespace throttr
     auto &_index = state->storage_.get<tag_by_key>();
     const std::vector _key(key.data(), key.data() + key.size());
 
+    buffers_pool::recycle();
+
     if (!as_insert)
     {
       std::string _scoped_key(key.size(), '\0');
@@ -63,19 +65,7 @@ namespace throttr
           _it_existing,
           [value, ttl_type, _expires_at](entry_wrapper &item)
           {
-            while (state::available_buffers_.size() < 64)
-            {
-              auto _scoped_buff = std::make_shared<std::vector<std::byte>>(std::numeric_limits<value_type>::max());
-              state::available_buffers_.push_back(std::move(_scoped_buff));
-            }
-
-            const auto _buffer = state::available_buffers_.front();
-            state::available_buffers_.erase(state::available_buffers_.begin());
-
-            _buffer->resize(value.size());
-            std::memcpy(_buffer->data(), value.data(), value.size());
-
-            item.entry_.buffer_.store(_buffer, std::memory_order_release);
+            item.entry_.update_buffer(value);
             item.entry_.expires_at_ = _expires_at;
             item.entry_.ttl_type_ = ttl_type;
 
@@ -101,33 +91,9 @@ namespace throttr
       }
     }
 
-    entry _entry;
-    _entry.type_ = type;
+    entry _entry(type, value);
     _entry.ttl_type_ = ttl_type;
     _entry.expires_at_ = _expires_at;
-
-    if (_entry.type_ == entry_types::counter)
-    {
-      value_type _parsed_value = 0;
-      std::memcpy(&_parsed_value, value.data(), sizeof(value_type));
-      _entry.counter_.store(little_to_native(_parsed_value), std::memory_order_relaxed);
-    }
-    else
-    {
-      while (state::available_buffers_.size() < 64)
-      {
-        auto _scoped_buff = std::make_shared<std::vector<std::byte>>(std::numeric_limits<value_type>::max());
-        state::available_buffers_.push_back(std::move(_scoped_buff));
-      }
-
-      const auto _buffer = state::available_buffers_.front();
-      state::available_buffers_.erase(state::available_buffers_.begin());
-
-      _buffer->resize(value.size());
-      std::memcpy(_buffer->data(), value.data(), value.size());
-
-      _entry.buffer_.store(_buffer, std::memory_order_release);
-    }
 
     const auto _entry_ptr = entry_wrapper{_key, _entry};
 
@@ -157,7 +123,7 @@ namespace throttr
             boost::asio::dispatch(
               state->strand_,
               boost::asio::bind_allocator(
-                connection_handler_allocator<void>(state->create_scheduler_handler_memory_),
+                custom_allocator<void>(state->create_scheduler_handler_memory_),
                 [_state = state->shared_from_this(), _expires_at]
                 { _state->garbage_collector_->schedule_timer(_state, _expires_at); }));
           }
@@ -183,7 +149,7 @@ namespace throttr
     }
     else
     {
-      auto _buffer = _entry_ptr.entry_.buffer_.load(std::memory_order_relaxed);
+      const auto _buffer = _entry_ptr.entry_.buffer_storage_->buffer_.load(std::memory_order_relaxed);
       fmt::println(
         "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST SET session_id={} META key={} value={}ttl_type={} ttl={} RESPONSE ok={}",
         to_string(state->id_),

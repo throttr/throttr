@@ -43,7 +43,7 @@
 #include <throttr/services/metrics_collector_service.hpp>
 #endif
 
-#include <throttr/connection_allocator.hpp>
+#include <throttr/custom_allocator.hpp>
 #include <throttr/storage.hpp>
 
 #include <vector>
@@ -356,34 +356,14 @@ namespace throttr
     void prepare_for_startup(const program_parameters &parameters);
 
     /**
-     * Available message pool
-     */
-    static thread_local std::vector<std::shared_ptr<message>> available_message_pool_;
-
-    /**
-     * Used message pool
-     */
-    static thread_local std::vector<std::shared_ptr<message>> used_message_pool_;
-
-    /**
      * Create scheduler handler memory
      */
-    static thread_local connection_handler_memory create_scheduler_handler_memory_;
+    static thread_local custom_handler_memory create_scheduler_handler_memory_;
 
     /**
      * Update scheduler handler memory
      */
-    static thread_local connection_handler_memory update_scheduler_handler_memory_;
-
-    /**
-     * Available buffers pool
-     */
-    static thread_local std::vector<std::shared_ptr<std::vector<std::byte>>> available_buffers_;
-
-    /**
-     * Used buffers pool
-     */
-    static thread_local std::vector<std::shared_ptr<std::vector<std::byte>>> used_buffers_;
+    static thread_local custom_handler_memory update_scheduler_handler_memory_;
   };
 } // namespace throttr
 

@@ -24,9 +24,9 @@
 #include <memory>
 #include <queue>
 #include <span>
-#include <throttr/connection_allocator.hpp>
 #include <throttr/connection_metrics.hpp>
 #include <throttr/connection_type.hpp>
+#include <throttr/custom_allocator.hpp>
 #include <throttr/message.hpp>
 #include <throttr/state.hpp>
 
@@ -149,7 +149,7 @@ namespace throttr
     /**
      * Handler memory
      */
-    connection_handler_memory handler_memory_;
+    custom_handler_memory handler_memory_;
 
     /**
      * On read

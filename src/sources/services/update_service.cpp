@@ -108,7 +108,7 @@ namespace throttr
       boost::asio::dispatch(
         state->strand_,
         boost::asio::bind_allocator(
-          connection_handler_allocator<void>(state->update_scheduler_handler_memory_),
+          custom_allocator<void>(state->update_scheduler_handler_memory_),
           [_state = state->shared_from_this(), _expires_at = entry.expires_at_.load(std::memory_order_relaxed)]
           { _state->garbage_collector_->schedule_timer(_state, _expires_at); }));
     }
