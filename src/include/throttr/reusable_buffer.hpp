@@ -36,12 +36,12 @@ namespace throttr
     /**
      * Buffer
      */
-    std::atomic<std::shared_ptr<std::vector<std::byte>>> buffer_;
+    std::atomic<std::shared_ptr<std::vector<std::byte>>> buffer_ = std::make_shared<std::vector<std::byte>>();
 
     /**
      * Constructor
      */
-    reusable_buffer() : buffer_(std::make_shared<std::vector<std::byte>>()){};
+    reusable_buffer() = default;
   };
 } // namespace throttr
 

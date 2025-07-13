@@ -53,11 +53,12 @@ namespace throttr
     /**
      * Constructor
      */
-    message()
-    {
-    }
+    message() = default;
 
-    ~message(){};
+    /**
+     * Destructor
+     */
+    ~message() = default;
   };
 } // namespace throttr
 
