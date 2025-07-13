@@ -161,10 +161,7 @@ namespace throttr
   {
     auto self = this->shared_from_this();
 
-    boost::asio::post(
-      socket_.get_executor(),
-      boost::asio::bind_allocator(
-        custom_allocator<int>(handler_memory_), [self, _batch = batch->shared_from_this()]() mutable { self->on_send(_batch); }));
+    boost::asio::post(socket_.get_executor(), [self, _batch = batch->shared_from_this()]() mutable { self->on_send(_batch); });
   }
 
   template<typename Transport> void connection<Transport>::on_read(const boost::system::error_code &error, std::size_t length)
@@ -285,6 +282,9 @@ namespace throttr
       close();
       return;
     }
+
+    if (pending_writes_.size() == 0)
+      return;
 
     const std::shared_ptr<message> _message = pending_writes_.front();
     pending_writes_.pop_front();
