@@ -20,7 +20,7 @@
 
 #include <boost/asio/bind_executor.hpp>
 
-#include "throttr/connection.hpp"
+#include <throttr/connection.hpp>
 
 namespace throttr
 {

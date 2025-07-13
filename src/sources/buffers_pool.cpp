@@ -1,6 +1,4 @@
-#include "throttr/messages_pool.hpp"
-
-#include "throttr/state.hpp"
+#include <throttr/state.hpp>
 
 #include <throttr/buffers_pool.hpp>
 
