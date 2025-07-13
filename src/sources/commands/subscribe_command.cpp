@@ -34,6 +34,7 @@ namespace throttr
     const boost::uuids::uuid id)
   {
     boost::ignore_unused(type, write_buffer);
+
     std::scoped_lock _lock(state->subscriptions_->mutex_);
 
     const auto _request = request_subscribe::from_buffer(view);
