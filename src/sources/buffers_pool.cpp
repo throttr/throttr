@@ -26,6 +26,7 @@ namespace throttr
   void buffers_pool::prepares(const std::size_t initial)
   {
     available_.reserve(initial);
+    used_.reserve(initial);
     for (std::size_t _e = 0; _e < initial; ++_e)
     {
       auto _reusable_buffer = std::make_shared<reusable_buffer>();

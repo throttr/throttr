@@ -35,7 +35,6 @@ namespace throttr
   connection<Transport>::connection(Transport socket, const std::shared_ptr<state> &state, const connection_type type) :
       id_(state->id_generator_()), type_(type), socket_(std::move(socket)), state_(state)
   {
-
     if (socket_.is_open())
     {
       if constexpr (std::is_same_v<Transport, tcp_socket>)

@@ -25,6 +25,7 @@ namespace throttr
   void messages_pool::prepares(const std::size_t initial)
   {
     available_.reserve(initial);
+    used_.reserve(initial);
     for (std::size_t _e = 0; _e < initial; ++_e)
     {
       auto _message = std::make_shared<message>();

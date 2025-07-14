@@ -142,7 +142,10 @@ namespace throttr
       std::tuple<std::vector<const connection<tcp_socket> *>, std::vector<const connection<unix_socket> *>>;
 
     fragment_container _fragment;
+    std::get<0>(_fragment).reserve(1024);
+    std::get<1>(_fragment).reserve(1024);
     std::vector<fragment_container> _fragments;
+    _fragments.reserve(64);
     std::size_t _current_fragment_size = 0;
     constexpr std::size_t _max_fragment_size = 2048;
 
@@ -242,7 +245,9 @@ namespace throttr
     std::size_t _offset = write_buffer.size();
 
     std::vector<const entry_wrapper *> _fragment_items;
+    _fragment_items.reserve(1024);
     std::vector<std::vector<const entry_wrapper *>> _fragments;
+    _fragments.reserve(32);
 
     std::size_t _buffer_required_size = sizeof(uint64_t); // fragments count
     std::size_t _batch_required_size = 2;                 // status + fragment count
@@ -272,7 +277,7 @@ namespace throttr
         _fragment_size = 0;
 
         // This clear the container to keep the entries until a fragment is completed
-        _fragment_items = {};
+        _fragment_items.clear();
 
         // Fragment requires two prefix slots
         _batch_required_size += 2; // fragment index + keys count
@@ -346,7 +351,9 @@ namespace throttr
     std::size_t _offset = write_buffer.size();
 
     std::vector<std::string> _channels_list;
+    _channels_list.reserve(1024);
     std::vector<std::vector<std::string>> _fragments;
+    _fragments.reserve(32);
     std::unordered_map<std::string, std::tuple<uint64_t, uint64_t, uint64_t>, transparent_hash, std::equal_to<>> _channel_stats;
 
     std::size_t _write_buffer_size = 0;
@@ -359,6 +366,7 @@ namespace throttr
       uint64_t _count = 0;
       std::size_t _fragment_size = 0;
       std::vector<std::string> _current_fragment;
+      _current_fragment.reserve(1024);
 
       _channels_count = _subs.size();
 
