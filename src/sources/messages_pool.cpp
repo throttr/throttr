@@ -69,7 +69,9 @@ namespace throttr
 
   std::shared_ptr<message> messages_pool::take_one(const std::size_t count)
   {
-    while (available_.size() < (count / 2))
+    const bool _should_refill = available_.size() == 0;
+
+    while (_should_refill && available_.size() < count)
     {
       const auto _scoped_message = std::make_shared<message>();
       _scoped_message->recyclable_ = true;

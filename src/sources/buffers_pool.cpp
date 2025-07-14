@@ -68,7 +68,9 @@ namespace throttr
 
   std::shared_ptr<reusable_buffer> buffers_pool::take_one(const std::size_t count)
   {
-    while (available_.size() < (count / 2))
+    const bool _should_refill = available_.size() == 0;
+
+    while (_should_refill && available_.size() < count)
     {
       auto _reusable_buffer = std::make_shared<reusable_buffer>();
       _reusable_buffer->recyclable_ = true;
