@@ -64,42 +64,6 @@ namespace throttr
       return;
     }
 
-    const auto _message = std::make_shared<message>();
-    _message->recyclable_ = false;
-    _message->buffers_.reserve(1);
-
-    auto &_buffer = _message->write_buffer_;
-
-    const auto _payload_size = _payload.size();
-    const auto _total_size = sizeof(uint8_t) + sizeof(uint8_t) + sizeof(value_type) + _channel.size() + _payload_size;
-    _buffer.resize(_total_size);
-
-    std::size_t _offset = 0;
-
-    // Type
-    constexpr auto event_type = request_types::event;
-    std::memcpy(_buffer.data() + _offset, &event_type, sizeof(uint8_t));
-    _offset += sizeof(uint8_t);
-
-    // Size
-    const auto _channel_size = static_cast<uint8_t>(_channel.size());
-    *(_buffer.data() + _offset) = static_cast<std::byte>(_channel_size);
-    _offset += sizeof(uint8_t);
-
-    // Size
-    const value_type _size = native_to_little(static_cast<value_type>(_payload_size));
-    std::memcpy(_buffer.data() + _offset, &_size, sizeof(value_type));
-    _offset += sizeof(value_type);
-
-    // Channel
-    std::memcpy(_buffer.data() + _offset, _channel.data(), _channel_size);
-    _offset += _channel_size;
-
-    // Value
-    std::memcpy(_buffer.data() + _offset, _payload.data(), _payload_size);
-
-    _message->buffers_.emplace_back(_buffer.data(), _buffer.size());
-
     for (auto _it = _begin; _it != _end; ++_it)
     {
       const auto &_sub = *_it;
@@ -137,6 +101,41 @@ namespace throttr
       // This is a strange condition, the subscription exists but the connection is gone...
       if (!_is_tcp && !_is_unix && !_is_agent_tcp && !_is_agent_unix)
         continue;
+
+      const auto _message = messages_pool::take_one();
+      _message->buffers_.reserve(1);
+
+      auto &_buffer = _message->write_buffer_;
+
+      const auto _payload_size = _payload.size();
+      const auto _total_size = sizeof(uint8_t) + sizeof(uint8_t) + sizeof(value_type) + _channel.size() + _payload_size;
+      _buffer.resize(_total_size);
+
+      std::size_t _offset = 0;
+
+      // Type
+      constexpr auto event_type = request_types::event;
+      std::memcpy(_buffer.data() + _offset, &event_type, sizeof(uint8_t));
+      _offset += sizeof(uint8_t);
+
+      // Size
+      const auto _channel_size = static_cast<uint8_t>(_channel.size());
+      *(_buffer.data() + _offset) = static_cast<std::byte>(_channel_size);
+      _offset += sizeof(uint8_t);
+
+      // Size
+      const value_type _size = native_to_little(static_cast<value_type>(_payload_size));
+      std::memcpy(_buffer.data() + _offset, &_size, sizeof(value_type));
+      _offset += sizeof(value_type);
+
+      // Channel
+      std::memcpy(_buffer.data() + _offset, _channel.data(), _channel_size);
+      _offset += _channel_size;
+
+      // Value
+      std::memcpy(_buffer.data() + _offset, _payload.data(), _payload_size);
+
+      _message->buffers_.emplace_back(_buffer.data(), _buffer.size());
 
       auto _process =
         [_scoped_message =

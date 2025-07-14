@@ -98,7 +98,7 @@ test_ttl_change(
 TEST(StateManagementTest, TTLChange)
 {
   buffers_pool::prepares();
-  
+
   using namespace throttr;
   using namespace std::chrono;
 
