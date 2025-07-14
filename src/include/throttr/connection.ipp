@@ -33,7 +33,7 @@ namespace throttr
 {
   template<typename Transport>
   connection<Transport>::connection(Transport socket, const std::shared_ptr<state> &state, const connection_type type) :
-      id_(state->id_generator_()), type_(type), socket_(std::move(socket)), state_(state)
+      id_(state->id_generator_()), type_(type), socket_(std::move(socket)), state_(state), message_(messages_pool::take_one())
   {
 
     if (socket_.is_open())
@@ -185,6 +185,8 @@ namespace throttr
     messages_pool::recycle();
     messages_pool::fit();
 
+    const auto _message = messages_pool::take_one();
+
     while (true)
     {
       const std::span<const std::byte> _span(buffer_.data() + buffer_start_, buffer_end_ - buffer_start_);
@@ -225,12 +227,17 @@ namespace throttr
       metrics_->commands_[static_cast<std::size_t>(_type)].mark();
 #endif
 
-      const auto _message = messages_pool::take_one();
-
       state_->commands_->commands_[static_cast<std::size_t>(
         _type)](state_, _type, _view, _message->buffers_, _message->write_buffer_, this->id_);
+    }
 
+    if (_message->buffers_.size() > 0)
+    {
       send(_message);
+    }
+    else
+    {
+      _message->in_use_ = false;
     }
 
     compact_buffer_if_needed();
