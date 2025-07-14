@@ -316,8 +316,6 @@ namespace throttr
 
   template<typename Transport> void connection<Transport>::write_next()
   {
-    std::scoped_lock _write_guard(mutex_);
-
     if (pending_writes_.empty())
       return;
 
