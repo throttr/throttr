@@ -22,7 +22,7 @@
 
 TEST(Throttr, Version)
 {
-  ASSERT_EQ(throttr::get_version(), "5.0.10");
+  ASSERT_EQ(throttr::get_version(), "5.0.11");
 }
 
 TEST(Throttr, Translations)
