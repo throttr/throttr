@@ -228,14 +228,10 @@ namespace throttr
         _type)](state_, _type, _view, _message->buffers_, _message->write_buffer_, this->id_);
     }
 
-    if (_message->buffers_.size() > 0)
-    {
-      send(_message);
-    }
-    else
-    {
+    if (_message->buffers_.empty())
       _message->in_use_ = false;
-    }
+    else
+      send(_message);
 
     compact_buffer_if_needed();
     do_read();

@@ -65,7 +65,7 @@ namespace throttr
     recycle();
     fit();
 
-    const bool _should_refill = available_.size() == 0;
+    const bool _should_refill = available_.empty();
 
     while (_should_refill && available_.size() < count)
     {
