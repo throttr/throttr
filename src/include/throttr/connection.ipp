@@ -33,7 +33,7 @@ namespace throttr
 {
   template<typename Transport>
   connection<Transport>::connection(Transport socket, const std::shared_ptr<state> &state, const connection_type type) :
-      id_(state->id_generator_()), type_(type), socket_(std::move(socket)), state_(state), message_(messages_pool::take_one())
+      id_(state->id_generator_()), type_(type), socket_(std::move(socket)), state_(state)
   {
 
     if (socket_.is_open())
