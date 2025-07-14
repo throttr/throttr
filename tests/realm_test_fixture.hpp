@@ -139,7 +139,7 @@ protected:
   {
     const auto _whoami_buffer = request_whoami_builder();
 
-    std::vector<std::byte> _id_response(17);
+    std::vector _id_response(17, std::byte{0});
     boost::asio::write(socket, boost::asio::buffer(_whoami_buffer.data(), _whoami_buffer.size()));
     boost::asio::read(socket, boost::asio::buffer(_id_response.data(), _id_response.size()));
 
@@ -161,7 +161,8 @@ protected:
     boost::asio::io_context _io_context;
     auto _socket = make_client_connection(_io_context);
     boost::asio::write(_socket, boost::asio::buffer(message.data(), message.size()));
-    std::vector<std::byte> _response(length);
+
+    std::vector _response(length, std::byte{0});
     boost::asio::read(_socket, boost::asio::buffer(_response.data(), _response.size()));
     return _response;
   }

@@ -105,7 +105,7 @@ TEST(StateManagementTest, TTLChange)
   boost::asio::io_context _ioc;
   auto _state = std::make_shared<state>(_ioc);
 
-  std::vector<std::byte> _value_storage(sizeof(value_type));
+  std::vector _value_storage(sizeof(value_type), std::byte{0});
   const std::span<const std::byte> _value(_value_storage);
 
   entry _entry(entry_types::counter, _value, ttl_types::seconds, 0);
@@ -334,7 +334,7 @@ TEST(StateManagementTest, QuotaChange)
   boost::asio::io_context _ioc;
   auto _state = std::make_shared<state>(_ioc);
 
-  std::vector<std::byte> _value_storage(sizeof(value_type));
+  std::vector _value_storage(sizeof(value_type), std::byte{0});
   const std::span<const std::byte> _value(_value_storage);
 
   entry _entry(entry_types::counter, _value, ttl_types::seconds, 0);
@@ -380,8 +380,7 @@ TEST_F(StateManagementTestFixture, ScheduleExpiration_ReprogramsIfNextEntryExist
   const std::uint64_t now_ns = system_clock::now().time_since_epoch().count();
   const std::uint64_t expires1_ns = now_ns;
   const std::uint64_t expires2_ns = now_ns + duration_cast<nanoseconds>(seconds(5)).count();
-
-  std::vector<std::byte> _value_storage(sizeof(value_type));
+  std::vector _value_storage(sizeof(value_type), std::byte{0});
   const std::span<const std::byte> _value(_value_storage);
 
   entry _entry1(entry_types::counter, _value, ttl_types::seconds, expires1_ns);
@@ -410,7 +409,7 @@ TEST_F(StateManagementTestFixture, StateCanPersistKeys)
   auto &_storage = state_->storage_;
   auto &_index = _storage.get<tag_by_key>();
 
-  std::vector<std::byte> _value_storage(sizeof(value_type));
+  std::vector _value_storage(sizeof(value_type), std::byte{0});
   std::span<const std::byte> _value(_value_storage);
 
   const std::uint64_t now_ns = system_clock::now().time_since_epoch().count();
