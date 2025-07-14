@@ -86,7 +86,7 @@ namespace throttr
     /**
      * Storage
      */
-    std::array<std::byte, 81920> storage_;
+    alignas(alignof(std::max_align_t)) std::array<std::byte, 81920> storage_;
 
     /**
      * In use
