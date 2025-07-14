@@ -306,6 +306,8 @@ namespace throttr
 
   template<typename Transport> void connection<Transport>::on_send(const std::shared_ptr<message> &batch)
   {
+    std::scoped_lock _write_guard(mutex_);
+
     pending_writes_.push_back(batch);
 
     if (pending_writes_.size() > 1)
@@ -316,8 +318,6 @@ namespace throttr
 
   template<typename Transport> void connection<Transport>::write_next()
   {
-    std::scoped_lock _write_guard(mutex_);
-
     if (pending_writes_.empty())
       return;
 
