@@ -163,7 +163,7 @@ namespace throttr
      */
     template<typename U> bool operator!=(const custom_allocator<U> &other) const noexcept
     {
-      return !(*this == other);
+      return &memory_ != &other.memory_;
     }
 
   private:

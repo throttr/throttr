@@ -39,7 +39,13 @@ namespace throttr
     if (available_.size() > count)
     {
       available_.erase(available_.begin() + count, available_.end());
-      available_.shrink_to_fit();
+    }
+
+    while (available_.size() < count)
+    {
+      auto _reusable_buffer = std::make_shared<reusable_buffer>();
+      _reusable_buffer->recyclable_ = true;
+      available_.push_back(_reusable_buffer);
     }
   }
 
@@ -51,7 +57,6 @@ namespace throttr
       {
         const auto _scoped_buffer = (*it)->buffer_.load(std::memory_order_relaxed);
         _scoped_buffer->clear();
-        _scoped_buffer->shrink_to_fit();
         available_.push_back(*it);
         it = used_.erase(it);
       }
@@ -62,7 +67,7 @@ namespace throttr
 
   std::shared_ptr<reusable_buffer> buffers_pool::take_one(const std::size_t count)
   {
-    while (available_.size() < count)
+    while (available_.size() < (count / 2))
     {
       auto _reusable_buffer = std::make_shared<reusable_buffer>();
       _reusable_buffer->recyclable_ = true;
