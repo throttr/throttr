@@ -272,7 +272,7 @@ namespace throttr
         _fragment_size = 0;
 
         // This clear the container to keep the entries until a fragment is completed
-        _fragment_items = {};
+        _fragment_items.clear();
 
         // Fragment requires two prefix slots
         _batch_required_size += 2; // fragment index + keys count
@@ -345,7 +345,6 @@ namespace throttr
   {
     std::size_t _offset = write_buffer.size();
 
-    std::vector<std::string> _channels_list;
     std::vector<std::vector<std::string>> _fragments;
     std::unordered_map<std::string, std::tuple<uint64_t, uint64_t, uint64_t>, transparent_hash, std::equal_to<>> _channel_stats;
 
@@ -364,16 +363,15 @@ namespace throttr
 
       for (auto _it = _subs.begin(); _it != _subs.end();)
       {
-        std::string _current_channel{_it->channel_};
         _read_sum = 0;
         _write_sum = 0;
         _count = 0;
 
-        _write_buffer_size += sizeof(uint64_t) * 3 +   // Read + Writes + Connections
-                              1 +                      // Size
-                              _current_channel.size(); // Name
+        _write_buffer_size += sizeof(uint64_t) * 3 + // Read + Writes + Connections
+                              1 +                    // Size
+                              _it->channel_.size();  // Name
 
-        auto [_begin, _end] = _subs.equal_range(_current_channel);
+        auto [_begin, _end] = _subs.equal_range(_it->channel_);
         for (auto _range_it = _begin; _range_it != _end; ++_range_it)
         {
 #ifdef ENABLED_FEATURE_METRICS
@@ -386,7 +384,7 @@ namespace throttr
           ++_count;
         }
 
-        _channel_stats[_current_channel] = {_read_sum, _write_sum, _count};
+        _channel_stats[_it->channel_] = {_read_sum, _write_sum, _count};
         constexpr std::size_t _channel_size = 1 + 8 + 8 + 8;
         if (_fragment_size + _channel_size > 2048)
         {
@@ -396,7 +394,7 @@ namespace throttr
           _write_buffer_size += sizeof(uint64_t) * 2;
         }
 
-        _current_fragment.push_back(_current_channel);
+        _current_fragment.push_back(_it->channel_);
         _fragment_size += _channel_size;
 
         _it = _end;

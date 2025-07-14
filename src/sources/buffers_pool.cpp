@@ -19,13 +19,14 @@
 
 namespace throttr
 {
-  thread_local std::vector<std::shared_ptr<reusable_buffer>> buffers_pool::available_;
+  thread_local boost::circular_buffer<std::shared_ptr<reusable_buffer>> buffers_pool::available_;
 
-  thread_local std::vector<std::shared_ptr<reusable_buffer>> buffers_pool::used_;
+  thread_local boost::circular_buffer<std::shared_ptr<reusable_buffer>> buffers_pool::used_;
 
   void buffers_pool::prepares(const std::size_t initial)
   {
-    available_.reserve(initial);
+    available_.set_capacity(initial * 2);
+    used_.set_capacity(initial * 2);
     for (std::size_t _e = 0; _e < initial; ++_e)
     {
       auto _reusable_buffer = std::make_shared<reusable_buffer>();
@@ -36,19 +37,23 @@ namespace throttr
 
   void buffers_pool::recycle()
   {
-    for (auto it = used_.begin(); it != used_.end();)
-    {
-      if (!(*it)->in_use_)
+    auto _end = std::remove_if(
+      used_.begin(),
+      used_.end(),
+      [&](const auto &buf)
       {
-        const auto _scoped_buffer = (*it)->buffer_.load(std::memory_order_relaxed);
-        _scoped_buffer->clear();
-        _scoped_buffer->shrink_to_fit();
-        available_.push_back(*it);
-        it = used_.erase(it);
-      }
-      else
-        ++it;
-    }
+        if (!buf->in_use_)
+        {
+          const auto _scoped_buffer = buf->buffer_.load(std::memory_order_relaxed);
+          _scoped_buffer->clear();
+          _scoped_buffer->shrink_to_fit();
+          available_.push_back(buf);
+          return true;
+        }
+        return false;
+      });
+
+    used_.erase(_end, used_.end());
   }
 
   void buffers_pool::fit(const std::size_t count)
@@ -56,7 +61,6 @@ namespace throttr
     if (available_.size() > count)
     {
       available_.erase(available_.begin() + count, available_.end());
-      available_.shrink_to_fit();
     }
   }
 
@@ -74,11 +78,11 @@ namespace throttr
       available_.push_back(_scoped_reusable_buffer);
     }
 
-    const auto _reusable_buffer = available_.front();
+    const auto _reusable_buffer = available_.back();
     _reusable_buffer->in_use_ = true;
     used_.push_back(_reusable_buffer);
 
-    available_.erase(available_.begin());
+    available_.pop_back();
 
     return _reusable_buffer;
   }

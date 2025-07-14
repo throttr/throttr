@@ -97,6 +97,8 @@ test_ttl_change(
 
 TEST(StateManagementTest, TTLChange)
 {
+  buffers_pool::prepares();
+
   using namespace throttr;
   using namespace std::chrono;
 
@@ -328,6 +330,7 @@ TEST(StateManagementTest, CalculateTTLRemainingSecondsExpired)
 
 TEST(StateManagementTest, QuotaChange)
 {
+  buffers_pool::prepares();
   boost::asio::io_context _ioc;
   auto _state = std::make_shared<state>(_ioc);
 
@@ -369,6 +372,7 @@ TEST(StateManagementTest, QuotaChange)
 
 TEST_F(StateManagementTestFixture, ScheduleExpiration_ReprogramsIfNextEntryExists)
 {
+  buffers_pool::prepares();
   using namespace std::chrono;
   auto &_storage = state_->storage_;
   auto &_index = _storage.get<tag_by_key>();
@@ -401,6 +405,7 @@ TEST_F(StateManagementTestFixture, ScheduleExpiration_ReprogramsIfNextEntryExist
 
 TEST_F(StateManagementTestFixture, StateCanPersistKeys)
 {
+  buffers_pool::prepares();
   using namespace std::chrono;
   auto &_storage = state_->storage_;
   auto &_index = _storage.get<tag_by_key>();

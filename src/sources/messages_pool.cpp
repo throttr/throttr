@@ -13,18 +13,20 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+#include <algorithm>
 #include <throttr/message.hpp>
 #include <throttr/messages_pool.hpp>
 
 namespace throttr
 {
-  thread_local std::vector<std::shared_ptr<message>> messages_pool::available_;
+  thread_local boost::circular_buffer<std::shared_ptr<message>> messages_pool::available_;
 
-  thread_local std::vector<std::shared_ptr<message>> messages_pool::used_;
+  thread_local boost::circular_buffer<std::shared_ptr<message>> messages_pool::used_;
 
   void messages_pool::prepares(const std::size_t initial)
   {
-    available_.reserve(initial);
+    available_.set_capacity(initial * 2);
+    used_.set_capacity(initial * 2);
     for (std::size_t _e = 0; _e < initial; ++_e)
     {
       auto _message = std::make_shared<message>();
@@ -35,20 +37,24 @@ namespace throttr
 
   void messages_pool::recycle()
   {
-    for (auto it = used_.begin(); it != used_.end();)
-    {
-      if (!(*it)->in_use_)
+    const auto _end = std::remove_if(
+      used_.begin(),
+      used_.end(),
+      [&](const auto &msg)
       {
-        (*it)->buffers_.clear();
-        (*it)->buffers_.shrink_to_fit();
-        (*it)->write_buffer_.clear();
-        (*it)->write_buffer_.shrink_to_fit();
-        available_.push_back(*it);
-        it = used_.erase(it);
-      }
-      else
-        ++it;
-    }
+        if (!msg->in_use_)
+        {
+          msg->buffers_.clear();
+          msg->buffers_.shrink_to_fit();
+          msg->write_buffer_.clear();
+          msg->write_buffer_.shrink_to_fit();
+          available_.push_back(msg);
+          return true;
+        }
+        return false;
+      });
+
+    used_.erase(_end, used_.end());
   }
 
   void messages_pool::fit(const std::size_t count)
@@ -56,7 +62,6 @@ namespace throttr
     if (available_.size() > count)
     {
       available_.erase(available_.begin() + count, available_.end());
-      available_.shrink_to_fit();
     }
   }
 
@@ -74,10 +79,11 @@ namespace throttr
       available_.push_back(_scoped_message);
     }
 
-    const auto _message = available_.front();
+    const auto _message = available_.back();
     _message->in_use_ = true;
     used_.push_back(_message);
-    available_.erase(available_.begin());
+
+    available_.pop_back();
 
     return _message;
   }

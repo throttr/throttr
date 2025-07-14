@@ -16,8 +16,7 @@
 #ifndef THROTTR__BUFFERS_POOL_HPP
 #define THROTTR__BUFFERS_POOL_HPP
 
-#include <vector>
-
+#include <boost/circular_buffer.hpp>
 #include <throttr/reusable_buffer.hpp>
 
 namespace throttr
@@ -31,22 +30,22 @@ namespace throttr
     /**
      * Available
      */
-    static thread_local std::vector<std::shared_ptr<reusable_buffer>> available_;
+    static thread_local boost::circular_buffer<std::shared_ptr<reusable_buffer>> available_;
 
     /**
      * Used
      */
-    static thread_local std::vector<std::shared_ptr<reusable_buffer>> used_;
+    static thread_local boost::circular_buffer<std::shared_ptr<reusable_buffer>> used_;
 
     /**
      * Prepares
      */
-    static void prepares(std::size_t initial = 2048);
+    static void prepares(std::size_t initial = 20480);
 
     /**
      * Fit
      */
-    static void fit(std::size_t count = 2048);
+    static void fit(std::size_t count = 20480);
 
     /**
      * Recycle
@@ -58,7 +57,7 @@ namespace throttr
      *
      * @return
      */
-    static std::shared_ptr<reusable_buffer> take_one(std::size_t count = 2048);
+    static std::shared_ptr<reusable_buffer> take_one(std::size_t count = 20480);
   };
 } // namespace throttr
 
