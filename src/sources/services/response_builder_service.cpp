@@ -290,9 +290,6 @@ namespace throttr
     {
       _fragments.push_back(std::move(_fragment_items));
       _batch_required_size += 2; // fragment index + keys count
-
-      std::vector<const entry_wrapper *> new_container;
-      _fragment_items.swap(new_container);
     }
 
     _buffer_required_size += _fragments.size() * (sizeof(std::uint64_t) * 2);
