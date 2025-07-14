@@ -16,6 +16,7 @@
 #ifndef THROTTR__MESSAGES_POOL_HPP
 #define THROTTR__MESSAGES_POOL_HPP
 
+#include <boost/circular_buffer.hpp>
 #include <memory>
 #include <vector>
 
@@ -32,12 +33,12 @@ namespace throttr
     /**
      * Available
      */
-    static thread_local std::vector<std::shared_ptr<message>> available_;
+    static thread_local boost::circular_buffer<std::shared_ptr<message>> available_;
 
     /**
      * Used
      */
-    static thread_local std::vector<std::shared_ptr<message>> used_;
+    static thread_local boost::circular_buffer<std::shared_ptr<message>> used_;
 
     /**
      * Prepares

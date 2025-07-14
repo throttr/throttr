@@ -58,9 +58,7 @@ namespace throttr
     auto &_index = state->storage_.get<tag_by_key>();
 
     std::vector<request_key> _to_expire;
-    _to_expire.reserve(1024);
     std::vector<request_key> _to_erase;
-    _to_erase.reserve(1024);
     std::uint64_t _next_expiration = std::numeric_limits<std::uint64_t>::max();
     for (const auto &_item : _index)
     {

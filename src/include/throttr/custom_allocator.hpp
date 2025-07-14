@@ -54,7 +54,7 @@ namespace throttr
      */
     void *allocate(const std::size_t size)
     {
-      if (!in_use_ && size <= 512)
+      if (!in_use_ && size <= 81920)
       {
         in_use_ = true;
         return &storage_;
@@ -86,7 +86,7 @@ namespace throttr
     /**
      * Storage
      */
-    std::array<std::byte, 512> storage_;
+    std::array<std::byte, 81920> storage_;
 
     /**
      * In use

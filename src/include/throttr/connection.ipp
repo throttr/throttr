@@ -35,6 +35,8 @@ namespace throttr
   connection<Transport>::connection(Transport socket, const std::shared_ptr<state> &state, const connection_type type) :
       id_(state->id_generator_()), type_(type), socket_(std::move(socket)), state_(state)
   {
+    pending_writes_.set_capacity(1024);
+
     if (socket_.is_open())
     {
       if constexpr (std::is_same_v<Transport, tcp_socket>)
@@ -158,8 +160,10 @@ namespace throttr
 
   template<typename Transport> void connection<Transport>::send(const std::shared_ptr<message> &batch)
   {
-    boost::asio::
-      post(socket_.get_executor(), boost::beast::bind_front_handler(&connection::on_send, this->shared_from_this(), batch));
+    boost::asio::post(
+      socket_.get_executor(),
+      boost::asio::bind_allocator(
+        custom_allocator<int>(memory_), boost::beast::bind_front_handler(&connection::on_send, this->shared_from_this(), batch)));
   }
 
   template<typename Transport> void connection<Transport>::on_read(const boost::system::error_code &error, std::size_t length)
@@ -181,8 +185,6 @@ namespace throttr
 
   template<typename Transport> void connection<Transport>::try_process_next()
   {
-    const auto _message = messages_pool::take_one();
-
     while (true)
     {
       const std::span<const std::byte> _span(buffer_.data() + buffer_start_, buffer_end_ - buffer_start_);
@@ -223,14 +225,13 @@ namespace throttr
       metrics_->commands_[static_cast<std::size_t>(_type)].mark();
 #endif
 
+      const auto _message = messages_pool::take_one();
+
       state_->commands_->commands_[static_cast<std::size_t>(
         _type)](state_, _type, _view, _message->buffers_, _message->write_buffer_, this->id_);
-    }
 
-    if (_message->buffers_.empty())
-      _message->in_use_ = false;
-    else
       send(_message);
+    }
 
     compact_buffer_if_needed();
     do_read();
@@ -258,7 +259,7 @@ namespace throttr
     socket_.async_read_some(
       boost::asio::buffer(buffer_.data() + buffer_end_, max_length_ - buffer_end_),
       boost::asio::bind_allocator(
-        custom_allocator<int>(read_memory_),
+        custom_allocator<int>(memory_),
         [_self](const boost::system::error_code &ec, const std::size_t length) { _self->on_read(ec, length); }));
   }
 
@@ -280,7 +281,7 @@ namespace throttr
       return;
 
     const std::shared_ptr<message> _message = pending_writes_.front();
-    pending_writes_.pop_front();
+    pending_writes_.erase(pending_writes_.begin());
 
     if (_message->recyclable_)
     {
@@ -347,7 +348,7 @@ namespace throttr
       socket_,
       pending_writes_.front()->buffers_,
       boost::asio::bind_allocator(
-        custom_allocator<int>(write_memory_),
+        custom_allocator<int>(memory_),
         [_self = this->shared_from_this()](const boost::system::error_code &ec, const std::size_t length)
         { _self->on_write(ec, length); }));
   }

@@ -142,10 +142,7 @@ namespace throttr
       std::tuple<std::vector<const connection<tcp_socket> *>, std::vector<const connection<unix_socket> *>>;
 
     fragment_container _fragment;
-    std::get<0>(_fragment).reserve(1024);
-    std::get<1>(_fragment).reserve(1024);
     std::vector<fragment_container> _fragments;
-    _fragments.reserve(64);
     std::size_t _current_fragment_size = 0;
     constexpr std::size_t _max_fragment_size = 2048;
 
@@ -245,9 +242,7 @@ namespace throttr
     std::size_t _offset = write_buffer.size();
 
     std::vector<const entry_wrapper *> _fragment_items;
-    _fragment_items.reserve(1024);
     std::vector<std::vector<const entry_wrapper *>> _fragments;
-    _fragments.reserve(32);
 
     std::size_t _buffer_required_size = sizeof(uint64_t); // fragments count
     std::size_t _batch_required_size = 2;                 // status + fragment count
@@ -350,10 +345,7 @@ namespace throttr
   {
     std::size_t _offset = write_buffer.size();
 
-    std::vector<std::string> _channels_list;
-    _channels_list.reserve(1024);
     std::vector<std::vector<std::string>> _fragments;
-    _fragments.reserve(32);
     std::unordered_map<std::string, std::tuple<uint64_t, uint64_t, uint64_t>, transparent_hash, std::equal_to<>> _channel_stats;
 
     std::size_t _write_buffer_size = 0;
@@ -366,22 +358,20 @@ namespace throttr
       uint64_t _count = 0;
       std::size_t _fragment_size = 0;
       std::vector<std::string> _current_fragment;
-      _current_fragment.reserve(1024);
 
       _channels_count = _subs.size();
 
       for (auto _it = _subs.begin(); _it != _subs.end();)
       {
-        std::string _current_channel{_it->channel_};
         _read_sum = 0;
         _write_sum = 0;
         _count = 0;
 
-        _write_buffer_size += sizeof(uint64_t) * 3 +   // Read + Writes + Connections
-                              1 +                      // Size
-                              _current_channel.size(); // Name
+        _write_buffer_size += sizeof(uint64_t) * 3 + // Read + Writes + Connections
+                              1 +                    // Size
+                              _it->channel_.size();  // Name
 
-        auto [_begin, _end] = _subs.equal_range(_current_channel);
+        auto [_begin, _end] = _subs.equal_range(_it->channel_);
         for (auto _range_it = _begin; _range_it != _end; ++_range_it)
         {
 #ifdef ENABLED_FEATURE_METRICS
@@ -394,7 +384,7 @@ namespace throttr
           ++_count;
         }
 
-        _channel_stats[_current_channel] = {_read_sum, _write_sum, _count};
+        _channel_stats[_it->channel_] = {_read_sum, _write_sum, _count};
         constexpr std::size_t _channel_size = 1 + 8 + 8 + 8;
         if (_fragment_size + _channel_size > 2048)
         {
@@ -404,7 +394,7 @@ namespace throttr
           _write_buffer_size += sizeof(uint64_t) * 2;
         }
 
-        _current_fragment.push_back(_current_channel);
+        _current_fragment.push_back(_it->channel_);
         _fragment_size += _channel_size;
 
         _it = _end;

@@ -30,6 +30,8 @@
 #include <throttr/message.hpp>
 #include <throttr/state.hpp>
 
+#include <boost/circular_buffer.hpp>
+
 namespace throttr
 {
   /**
@@ -152,14 +154,9 @@ namespace throttr
 
   private:
     /**
-     * Read memory
+     * Memory
      */
-    custom_handler_memory read_memory_;
-
-    /**
-     * Write memory
-     */
-    custom_handler_memory write_memory_;
+    custom_handler_memory memory_;
 
     /**
      * On read
@@ -213,7 +210,7 @@ namespace throttr
     /**
      * Pending writes
      */
-    std::deque<std::shared_ptr<message>> pending_writes_;
+    boost::circular_buffer<std::shared_ptr<message>> pending_writes_;
 
     /**
      * On send
