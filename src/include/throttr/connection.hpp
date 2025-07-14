@@ -74,11 +74,6 @@ namespace throttr
      */
     connection_type type_;
 
-    /**
-     * Mutex
-     */
-    std::mutex mutex_;
-
 #ifdef ENABLED_FEATURE_METRICS
     /**
      * Metrics
