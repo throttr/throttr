@@ -94,6 +94,7 @@ protected:
     tcp::resolver _resolver(io_context);
     const auto _endpoints = _resolver.resolve("127.0.0.1", std::to_string(app_->state_->exposed_port_));
     boost::asio::connect(_socket, _endpoints);
+    _socket.set_option(tcp::no_delay(true));
     return _socket;
   }
 

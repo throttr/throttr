@@ -68,11 +68,29 @@ namespace throttr
      * Entry wrapper
      *
      * @param k
-     * @param e
+     * @param type
+     * @param value
+     * @param ttl_type
+     * @param expires_at
      */
-    entry_wrapper(std::vector<std::byte> k, entry e) : key_(std::move(k)), entry_(std::move(e))
+    entry_wrapper(
+      std::vector<std::byte> k,
+      const entry_types type,
+      const std::span<const std::byte> value,
+      const ttl_types ttl_type,
+      const uint64_t expires_at) :
+        key_(std::move(k)), entry_(type, value, ttl_type, expires_at)
     {
+#ifdef ENABLED_FEATURE_METRICS
+      metrics_->writes_.fetch_add(1, std::memory_order_relaxed);
+#endif
     }
+
+    entry_wrapper(const entry_wrapper &) = delete;
+    entry_wrapper &operator=(const entry_wrapper &) = delete;
+
+    entry_wrapper(entry_wrapper &&) = default;
+    entry_wrapper &operator=(entry_wrapper &&) = default;
   };
 } // namespace throttr
 

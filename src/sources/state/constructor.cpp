@@ -21,8 +21,8 @@
 
 namespace throttr
 {
-  thread_local std::vector<std::shared_ptr<message>> state::available_message_pool_;
-  thread_local std::vector<std::shared_ptr<message>> state::used_message_pool_;
+  thread_local custom_handler_memory state::create_scheduler_handler_memory_;
+  thread_local custom_handler_memory state::update_scheduler_handler_memory_;
 
   state::state(boost::asio::io_context &ioc) :
       expiration_timer_(ioc),
@@ -32,6 +32,8 @@ namespace throttr
       strand_(ioc.get_executor()),
       response_builder_(std::make_shared<response_builder_service>())
   {
+    storage_.reserve(1024);
+
     started_at_ =
       std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
   }

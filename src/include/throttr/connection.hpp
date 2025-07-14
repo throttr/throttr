@@ -24,9 +24,9 @@
 #include <memory>
 #include <queue>
 #include <span>
-#include <throttr/connection_allocator.hpp>
 #include <throttr/connection_metrics.hpp>
 #include <throttr/connection_type.hpp>
+#include <throttr/custom_allocator.hpp>
 #include <throttr/message.hpp>
 #include <throttr/state.hpp>
 
@@ -71,6 +71,11 @@ namespace throttr
      * Type
      */
     connection_type type_;
+
+    /**
+     * Mutex
+     */
+    std::mutex mutex_;
 
 #ifdef ENABLED_FEATURE_METRICS
     /**
@@ -147,9 +152,14 @@ namespace throttr
 
   private:
     /**
-     * Handler memory
+     * Read memory
      */
-    connection_handler_memory handler_memory_;
+    custom_handler_memory read_memory_;
+
+    /**
+     * Write memory
+     */
+    custom_handler_memory write_memory_;
 
     /**
      * On read
@@ -170,7 +180,7 @@ namespace throttr
      * @param buffer
      * @return
      */
-    std::size_t get_message_size(std::span<const std::byte> buffer) const;
+    [[nodiscard]] std::size_t get_message_size(std::span<const std::byte> buffer) const;
 
     /**
      * Do read

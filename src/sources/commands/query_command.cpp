@@ -99,7 +99,7 @@ namespace throttr
     {
 
       batch.reserve(batch.size() + 5);
-      const auto _buffer = _it->entry_.buffer_.load(std::memory_order_acquire);
+      const auto _buffer = _it->entry_.buffer_storage_->buffer_.load(std::memory_order_acquire);
       write_buffer.resize(write_buffer.size() + sizeof(value_type) * 2 + _buffer->size());
 
       batch.emplace_back(&state::success_response_, 1);
@@ -145,7 +145,7 @@ namespace throttr
     }
     else
     {
-      const auto _buffer = _it->entry_.buffer_.load(std::memory_order_acquire);
+      const auto _buffer = _it->entry_.buffer_storage_->buffer_.load(std::memory_order_acquire);
       fmt::println(
         "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST GET session_id={} META key={} RESPONSE ok=true META value={} ttl_type={} ttl={}",
         to_string(state->id_),

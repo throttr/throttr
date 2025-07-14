@@ -66,6 +66,11 @@ namespace throttr
      * @return void
      */
     void stop();
+
+    /**
+     * Warm
+     */
+    void boot();
   };
 } // namespace throttr
 

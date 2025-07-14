@@ -13,6 +13,9 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+#include <throttr/custom_allocator.hpp>
+
+#include <boost/asio/bind_allocator.hpp>
 #include <throttr/services/create_service.hpp>
 
 #include <boost/core/ignore_unused.hpp>
@@ -47,6 +50,9 @@ namespace throttr
     auto &_index = state->storage_.get<tag_by_key>();
     const std::vector _key(key.data(), key.data() + key.size());
 
+    buffers_pool::recycle();
+    buffers_pool::fit();
+
     if (!as_insert)
     {
       std::string _scoped_key(key.size(), '\0');
@@ -60,8 +66,7 @@ namespace throttr
           _it_existing,
           [value, ttl_type, _expires_at](entry_wrapper &item)
           {
-            const auto _safe_buffer = std::make_shared<std::vector<std::byte>>(value.begin(), value.end());
-            item.entry_.buffer_.store(_safe_buffer, std::memory_order_release);
+            item.entry_.update_buffer(value);
             item.entry_.expires_at_ = _expires_at;
             item.entry_.ttl_type_ = ttl_type;
 
@@ -87,30 +92,7 @@ namespace throttr
       }
     }
 
-    entry _entry;
-    _entry.type_ = type;
-    _entry.ttl_type_ = ttl_type;
-    _entry.expires_at_ = _expires_at;
-
-    if (_entry.type_ == entry_types::counter)
-    {
-      value_type _parsed_value = 0;
-      std::memcpy(&_parsed_value, value.data(), sizeof(value_type));
-      _entry.counter_.store(little_to_native(_parsed_value), std::memory_order_relaxed);
-    }
-    else
-    {
-      _entry.buffer_
-        .store(std::make_shared<std::vector<std::byte>>(value.data(), value.data() + value.size()), std::memory_order_release);
-    }
-
-    const auto _entry_ptr = entry_wrapper{_key, _entry};
-
-#ifdef ENABLED_FEATURE_METRICS
-    _entry_ptr.metrics_->writes_.fetch_add(1, std::memory_order_relaxed);
-#endif
-
-    auto [_it, _inserted] = state->storage_.insert(_entry_ptr);
+    auto [_it, _inserted] = state->storage_.emplace(_key, type, value, ttl_type, _expires_at);
 
     boost::ignore_unused(_it);
 
@@ -129,10 +111,12 @@ namespace throttr
         {
           if (_expires_at <= _item.entry_.expires_at_)
           {
-            boost::asio::post(
+            boost::asio::dispatch(
               state->strand_,
-              [_state = state->shared_from_this(), _expires_at]
-              { _state->garbage_collector_->schedule_timer(_state, _expires_at); });
+              boost::asio::bind_allocator(
+                custom_allocator<void>(state->create_scheduler_handler_memory_),
+                [_state = state->shared_from_this(), _expires_at]
+                { _state->garbage_collector_->schedule_timer(_state, _expires_at); }));
           }
           break;
         }
@@ -140,30 +124,26 @@ namespace throttr
     }
 
 #ifndef NDEBUG
-    if (_entry_ptr.entry_.type_ == entry_types::counter)
+    if (as_insert)
     {
-      const value_type _counter_value = _entry_ptr.entry_.counter_.load(std::memory_order_relaxed);
       fmt::println(
-        "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST INSERT session_id={} META key={} value={}ttl_type={} ttl={} RESPONSE ok={}",
+        "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST INSERT session_id={} META key={} ttl_type={} ttl={} RESPONSE ok={}",
         to_string(state->id_),
         std::chrono::system_clock::now(),
         to_string(id),
         span_to_hex(key),
-        _counter_value,
         to_string(ttl_type),
         span_to_hex(ttl),
         _inserted);
     }
     else
     {
-      auto _buffer = _entry_ptr.entry_.buffer_.load(std::memory_order_relaxed);
       fmt::println(
-        "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST SET session_id={} META key={} value={}ttl_type={} ttl={} RESPONSE ok={}",
+        "[{}] [{:%Y-%m-%d %H:%M:%S}] REQUEST SET session_id={} META key={} ttl_type={} ttl={} RESPONSE ok={}",
         to_string(state->id_),
         std::chrono::system_clock::now(),
         to_string(id),
         span_to_hex(key),
-        span_to_hex(*_buffer),
         to_string(ttl_type),
         span_to_hex(ttl),
         _inserted);

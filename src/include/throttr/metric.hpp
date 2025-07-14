@@ -19,6 +19,7 @@
 #define THROTTR_COMMAND_METRICS_HPP
 
 #include <atomic>
+#include <iostream>
 
 namespace throttr
 {

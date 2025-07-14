@@ -117,7 +117,7 @@ protected:
     }
   }
 
-  [[nodiscard]] unix_socket make_connection(boost::asio::io_context &io_context) const
+  [[nodiscard]] unix_socket make_client_connection(boost::asio::io_context &io_context) const
   {
     unix_socket _socket(io_context);
     const unix_endpoint _endpoint(worker_->program_options_.socket_);
@@ -158,7 +158,7 @@ protected:
   [[nodiscard]] std::vector<std::byte> send_and_receive(const std::vector<std::byte> &message, const int length = 1) const
   {
     boost::asio::io_context _io_context;
-    auto _socket = make_connection(_io_context);
+    auto _socket = make_client_connection(_io_context);
     boost::asio::write(_socket, boost::asio::buffer(message.data(), message.size()));
     std::vector<std::byte> _response(length);
     boost::asio::read(_socket, boost::asio::buffer(_response.data(), _response.size()));

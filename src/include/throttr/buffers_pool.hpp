@@ -13,53 +13,53 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#pragma once
+#ifndef THROTTR__BUFFERS_POOL_HPP
+#define THROTTR__BUFFERS_POOL_HPP
 
-#ifndef THROTTR_ENTRY_METRICS_HPP
-#define THROTTR_ENTRY_METRICS_HPP
+#include <vector>
 
-#include <atomic>
-#include <iostream>
+#include <throttr/reusable_buffer.hpp>
 
 namespace throttr
 {
-#ifdef ENABLED_FEATURE_METRICS
   /**
-   * Entry metrics
+   * Buffers pool
    */
-  struct entry_metrics
+  class buffers_pool
   {
+  public:
     /**
-     * Reads
+     * Available
      */
-    std::atomic<uint64_t> reads_ = 0;
+    static thread_local std::vector<std::shared_ptr<reusable_buffer>> available_;
 
     /**
-     * Writes
+     * Used
      */
-    std::atomic<uint64_t> writes_ = 0;
+    static thread_local std::vector<std::shared_ptr<reusable_buffer>> used_;
 
     /**
-     * Reads accumulator
+     * Prepares
      */
-    std::atomic<uint64_t> reads_accumulator_ = 0;
+    static void prepares(std::size_t initial = 16);
 
     /**
-     * Write accumulator
+     * Fit
      */
-    std::atomic<uint64_t> writes_accumulator_ = 0;
+    static void fit(std::size_t count = 16);
 
     /**
-     * Reads per minute (RPM)
+     * Recycle
      */
-    std::atomic<uint64_t> reads_per_minute_ = 0;
+    static void recycle();
 
     /**
-     * Writes per minute (WPM)
+     * Take one
+     *
+     * @return
      */
-    std::atomic<uint64_t> writes_per_minute_ = 0;
+    static std::shared_ptr<reusable_buffer> take_one(std::size_t count = 16);
   };
-#endif
 } // namespace throttr
 
-#endif // THROTTR_ENTRY_METRICS_HPP
+#endif // THROTTR__BUFFERS_POOL_HPP

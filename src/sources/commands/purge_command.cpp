@@ -69,7 +69,9 @@ namespace throttr
 #endif
 
     if (_erased)
+    {
       _index.erase(_it);
+    }
 
     batch.reserve(batch.size() + 1);
 

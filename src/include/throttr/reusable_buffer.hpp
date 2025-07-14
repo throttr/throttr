@@ -13,53 +13,41 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#pragma once
-
-#ifndef THROTTR_ENTRY_METRICS_HPP
-#define THROTTR_ENTRY_METRICS_HPP
+#ifndef THROTTR__REUSABLE_BUFFER_HPP
+#define THROTTR__REUSABLE_BUFFER_HPP
 
 #include <atomic>
-#include <iostream>
+#include <memory>
+#include <vector>
 
 namespace throttr
 {
-#ifdef ENABLED_FEATURE_METRICS
   /**
-   * Entry metrics
+   * Reusable buffer
    */
-  struct entry_metrics
+  class reusable_buffer : public std::enable_shared_from_this<reusable_buffer>
   {
+  public:
     /**
-     * Reads
+     * Recyclable
      */
-    std::atomic<uint64_t> reads_ = 0;
+    bool recyclable_ = false;
 
     /**
-     * Writes
+     * In use
      */
-    std::atomic<uint64_t> writes_ = 0;
+    bool in_use_ = false;
 
     /**
-     * Reads accumulator
+     * Buffer
      */
-    std::atomic<uint64_t> reads_accumulator_ = 0;
+    std::atomic<std::shared_ptr<std::vector<std::byte>>> buffer_ = std::make_shared<std::vector<std::byte>>();
 
     /**
-     * Write accumulator
+     * Constructor
      */
-    std::atomic<uint64_t> writes_accumulator_ = 0;
-
-    /**
-     * Reads per minute (RPM)
-     */
-    std::atomic<uint64_t> reads_per_minute_ = 0;
-
-    /**
-     * Writes per minute (WPM)
-     */
-    std::atomic<uint64_t> writes_per_minute_ = 0;
+    reusable_buffer() = default;
   };
-#endif
 } // namespace throttr
 
-#endif // THROTTR_ENTRY_METRICS_HPP
+#endif // THROTTR__REUSABLE_BUFFER_HPP

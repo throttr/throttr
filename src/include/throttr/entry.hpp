@@ -17,6 +17,7 @@
 #define THROTTR__ENTRY_HPP
 
 #include <atomic>
+#include <throttr/buffers_pool.hpp>
 #include <throttr/protocol_wrapper.hpp>
 
 namespace throttr
@@ -40,7 +41,7 @@ namespace throttr
     /**
      * Buffer
      */
-    std::atomic<std::shared_ptr<std::vector<std::byte>>> buffer_;
+    std::shared_ptr<reusable_buffer> buffer_storage_;
 
     /**
      * TTL type
@@ -58,7 +59,7 @@ namespace throttr
      */
     entry(entry &&other) noexcept :
         type_(other.type_),
-        buffer_(other.buffer_.load(std::memory_order_acquire)),
+        buffer_storage_(other.buffer_storage_),
         ttl_type_(other.ttl_type_),
         expires_at_(other.expires_at_.load(std::memory_order_relaxed))
     {
@@ -76,7 +77,7 @@ namespace throttr
       if (this != &other)
       {
         type_ = other.type_;
-        buffer_ = other.buffer_.load(std::memory_order_acquire);
+        buffer_storage_ = other.buffer_storage_;
         ttl_type_ = other.ttl_type_;
         expires_at_ = other.expires_at_.load(std::memory_order_relaxed);
         counter_.store(other.counter_.load(std::memory_order_relaxed), std::memory_order_relaxed);
@@ -91,7 +92,7 @@ namespace throttr
      */
     entry(const entry &other) :
         type_(other.type_),
-        buffer_(other.buffer_.load(std::memory_order_acquire)),
+        buffer_storage_(other.buffer_storage_),
         ttl_type_(other.ttl_type_),
         expires_at_(other.expires_at_.load(std::memory_order_relaxed))
     {
@@ -109,7 +110,7 @@ namespace throttr
       if (this != &other)
       {
         type_ = other.type_;
-        buffer_ = other.buffer_.load(std::memory_order_acquire);
+        buffer_storage_ = other.buffer_storage_;
         ttl_type_ = other.ttl_type_;
         expires_at_ = other.expires_at_.load(std::memory_order_relaxed);
         counter_.store(other.counter_.load(std::memory_order_relaxed), std::memory_order_relaxed);
@@ -120,7 +121,19 @@ namespace throttr
     /**
      * Constructor
      */
-    entry() : type_(entry_types::counter), buffer_(std::make_shared<std::vector<std::byte>>()){};
+    explicit entry(entry_types type, std::span<const std::byte> value, ttl_types ttl_type, uint64_t expires_at);
+
+    /**
+     * Destructor
+     */
+    ~entry();
+
+    /**
+     * Update buffer
+     *
+     * @param value
+     */
+    void update_buffer(std::span<const std::byte> value) const;
   };
 } // namespace throttr
 

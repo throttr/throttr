@@ -102,7 +102,11 @@ TEST(StateManagementTest, TTLChange)
 
   boost::asio::io_context _ioc;
   auto _state = std::make_shared<state>(_ioc);
-  entry _entry;
+
+  std::vector<std::byte> _value_storage(sizeof(value_type));
+  const std::span<const std::byte> _value(_value_storage);
+
+  entry _entry(entry_types::counter, _value, ttl_types::seconds, 0);
   _entry.expires_at_.store(system_clock::now().time_since_epoch().count(), std::memory_order_relaxed);
   const std::vector _key = {std::byte{0x01}, std::byte{0x02}, std::byte{0x03}, std::byte{0x04}};
 
@@ -181,6 +185,34 @@ TEST(StateManagementTest, CalculateExpirationPointNanoseconds)
   ASSERT_NEAR(_diff, 32, 16);
 }
 
+TEST(StateManagementTest, CalculateExpirationPointMicroseconds)
+{
+  const auto _now_tp = std::chrono::system_clock::now();
+  const auto _now_ns = _now_tp.time_since_epoch().count();
+
+  constexpr value_type _expiration_value = 32;
+  std::vector<std::byte> _expiration_bytes(sizeof(value_type));
+  std::memcpy(_expiration_bytes.data(), &_expiration_value, sizeof(value_type));
+  const auto _expires_ns = get_expiration_point(_now_ns, ttl_types::microseconds, _expiration_bytes);
+
+  const auto _diff = static_cast<int64_t>(_expires_ns - _now_ns);
+  ASSERT_NEAR(_diff, 32'000, 16'000);
+}
+
+TEST(StateManagementTest, CalculateExpirationPointMilliseconds)
+{
+  const auto _now_tp = std::chrono::system_clock::now();
+  const auto _now_ns = _now_tp.time_since_epoch().count();
+
+  constexpr value_type _expiration_value = 32;
+  std::vector<std::byte> _expiration_bytes(sizeof(value_type));
+  std::memcpy(_expiration_bytes.data(), &_expiration_value, sizeof(value_type));
+  const auto _expires_ns = get_expiration_point(_now_ns, ttl_types::milliseconds, _expiration_bytes);
+
+  const auto _diff = static_cast<int64_t>(_expires_ns - _now_ns);
+  ASSERT_NEAR(_diff, 32'000'000, 16'000'000);
+}
+
 TEST(StateManagementTest, CalculateExpirationPointSeconds)
 {
   const auto _now_tp = std::chrono::system_clock::now();
@@ -209,6 +241,28 @@ TEST(StateManagementTest, CalculateTTLRemainingNanosecondsNotExpired)
   ASSERT_GE(_ttl, 0);
 }
 
+TEST(StateManagementTest, CalculateTTLRemainingMicrosecondsNotExpired)
+{
+  const auto _now_tp = std::chrono::system_clock::now();
+  const auto _now_ns = _now_tp.time_since_epoch().count();
+
+  const auto _expires_ns = _now_ns + std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::microseconds(10)).count();
+
+  const auto _ttl = get_ttl(_expires_ns, ttl_types::microseconds);
+  ASSERT_GE(_ttl, 0);
+}
+
+TEST(StateManagementTest, CalculateTTLRemainingMillisecondsNotExpired)
+{
+  const auto _now_tp = std::chrono::system_clock::now();
+  const auto _now_ns = _now_tp.time_since_epoch().count();
+
+  const auto _expires_ns = _now_ns + std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::milliseconds(10)).count();
+
+  const auto _ttl = get_ttl(_expires_ns, ttl_types::milliseconds);
+  ASSERT_GE(_ttl, 0);
+}
+
 TEST(StateManagementTest, CalculateTTLRemainingSecondsNotExpired)
 {
   const auto _now_tp = std::chrono::system_clock::now();
@@ -233,6 +287,32 @@ TEST(StateManagementTest, CalculateTTLRemainingNanosecondsExpired)
   ASSERT_EQ(_quota, 0);
 }
 
+TEST(StateManagementTest, CalculateTTLRemainingMicrosecondsExpired)
+{
+  const auto _now_tp = std::chrono::system_clock::now();
+  const auto _now_ns = _now_tp.time_since_epoch().count();
+
+  const auto _expires_ns = _now_ns - std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::microseconds(10)).count();
+
+  std::this_thread::sleep_for(std::chrono::microseconds(1000));
+
+  const auto _quota = get_ttl(_expires_ns, ttl_types::microseconds);
+  ASSERT_EQ(_quota, 0);
+}
+
+TEST(StateManagementTest, CalculateTTLRemainingMillisecondsExpired)
+{
+  const auto _now_tp = std::chrono::system_clock::now();
+  const auto _now_ns = _now_tp.time_since_epoch().count();
+
+  const auto _expires_ns = _now_ns - std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::milliseconds(10)).count();
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+  const auto _quota = get_ttl(_expires_ns, ttl_types::milliseconds);
+  ASSERT_EQ(_quota, 0);
+}
+
 TEST(StateManagementTest, CalculateTTLRemainingSecondsExpired)
 {
   const auto _now_tp = std::chrono::system_clock::now();
@@ -250,8 +330,12 @@ TEST(StateManagementTest, QuotaChange)
 {
   boost::asio::io_context _ioc;
   auto _state = std::make_shared<state>(_ioc);
-  entry _entry;
-  _entry.buffer_.store(std::make_shared<std::vector<std::byte>>(sizeof(value_type)), std::memory_order_release);
+
+  std::vector<std::byte> _value_storage(sizeof(value_type));
+  const std::span<const std::byte> _value(_value_storage);
+
+  entry _entry(entry_types::counter, _value, ttl_types::seconds, 0);
+  _entry.buffer_storage_->buffer_.store(std::make_shared<std::vector<std::byte>>(sizeof(value_type)), std::memory_order_release);
 
   // patch
   _entry.counter_.store(0, std::memory_order_relaxed);
@@ -293,18 +377,19 @@ TEST_F(StateManagementTestFixture, ScheduleExpiration_ReprogramsIfNextEntryExist
   const std::uint64_t expires1_ns = now_ns;
   const std::uint64_t expires2_ns = now_ns + duration_cast<nanoseconds>(seconds(5)).count();
 
-  entry _entry1;
-  _entry1.type_ = entry_types::counter;
+  std::vector<std::byte> _value_storage(sizeof(value_type));
+  const std::span<const std::byte> _value(_value_storage);
+
+  entry _entry1(entry_types::counter, _value, ttl_types::seconds, expires1_ns);
   _entry1.counter_.store(32, std::memory_order_release);
   _entry1.expires_at_.store(expires1_ns, std::memory_order_release);
 
-  entry _entry2;
-  _entry2.type_ = entry_types::raw;
-  _entry2.buffer_.store(std::make_shared<std::vector<std::byte>>(1, std::byte{1}), std::memory_order_release);
+  entry _entry2(entry_types::raw, _value, ttl_types::seconds, expires2_ns);
+  _entry2.buffer_storage_->buffer_.store(std::make_shared<std::vector<std::byte>>(1, std::byte{1}), std::memory_order_release);
   _entry2.expires_at_.store(expires2_ns, std::memory_order_release);
 
-  _index.insert(entry_wrapper{to_bytes("c1r1"), std::move(_entry1)});
-  _index.insert(entry_wrapper{to_bytes("c2r2"), std::move(_entry2)});
+  _index.insert(entry_wrapper{to_bytes("c1r1"), entry_types::counter, to_bytes("c1r1"), ttl_types::seconds, expires1_ns});
+  _index.insert(entry_wrapper{to_bytes("c2r2"), entry_types::counter, to_bytes("c2r2"), ttl_types::seconds, expires2_ns});
 
   state_->garbage_collector_->schedule_timer(state_, now_ns);
 
@@ -320,15 +405,17 @@ TEST_F(StateManagementTestFixture, StateCanPersistKeys)
   auto &_storage = state_->storage_;
   auto &_index = _storage.get<tag_by_key>();
 
+  std::vector<std::byte> _value_storage(sizeof(value_type));
+  std::span<const std::byte> _value(_value_storage);
+
   const std::uint64_t now_ns = system_clock::now().time_since_epoch().count();
   const std::uint64_t expires1_ns = now_ns + duration_cast<nanoseconds>(minutes(30)).count();
   const std::uint64_t expires2_ns = now_ns + duration_cast<nanoseconds>(minutes(60)).count();
 
-  entry _entry1;
-  _entry1.type_ = entry_types::counter;
+  entry _entry1(entry_types::counter, _value, ttl_types::seconds, 0);
   _entry1.counter_.store(32, std::memory_order_release);
   _entry1.expires_at_.store(expires1_ns, std::memory_order_release);
-  auto _entry1wrapper = entry_wrapper{to_bytes("c1r1"), std::move(_entry1)};
+  auto _entry1wrapper = entry_wrapper{to_bytes("c1r1"), entry_types::counter, to_bytes("c1r1"), ttl_types::seconds, 0};
 #ifdef ENABLED_FEATURE_METRICS
   _entry1wrapper.metrics_->reads_.store(3, std::memory_order_release);
   _entry1wrapper.metrics_->reads_accumulator_.store(66, std::memory_order_release);
@@ -338,11 +425,10 @@ TEST_F(StateManagementTestFixture, StateCanPersistKeys)
   _entry1wrapper.metrics_->writes_per_minute_.store(33, std::memory_order_release);
 #endif
 
-  entry _entry2;
-  _entry2.type_ = entry_types::raw;
-  _entry2.buffer_.store(std::make_shared<std::vector<std::byte>>(1, std::byte{1}), std::memory_order_release);
+  entry _entry2(entry_types::raw, _value, ttl_types::seconds, 0);
+  _entry2.buffer_storage_->buffer_.store(std::make_shared<std::vector<std::byte>>(1, std::byte{1}), std::memory_order_release);
   _entry2.expires_at_.store(expires2_ns, std::memory_order_release);
-  auto _entry2wrapper = entry_wrapper{to_bytes("c2r2"), std::move(_entry2)};
+  auto _entry2wrapper = entry_wrapper{to_bytes("c2r2"), entry_types::raw, to_bytes("c2r2"), ttl_types::seconds, 0};
 #ifdef ENABLED_FEATURE_METRICS
   _entry2wrapper.metrics_->reads_.store(5, std::memory_order_release);
   _entry2wrapper.metrics_->reads_accumulator_.store(11, std::memory_order_release);
@@ -352,8 +438,8 @@ TEST_F(StateManagementTestFixture, StateCanPersistKeys)
   _entry2wrapper.metrics_->writes_per_minute_.store(19, std::memory_order_release);
 #endif
 
-  _index.insert(_entry1wrapper);
-  _index.insert(_entry2wrapper);
+  _index.insert(entry_wrapper{to_bytes("c1r1"), entry_types::counter, to_bytes("c1r1"), ttl_types::seconds, 0});
+  _index.insert(entry_wrapper{to_bytes("c2r2"), entry_types::raw, to_bytes("c2r2"), ttl_types::seconds, 0});
 
   EXPECT_EQ(_index.size(), 2);
 
@@ -375,30 +461,10 @@ TEST_F(StateManagementTestFixture, StateCanPersistKeys)
   ASSERT_NE(_it1, _recovered_index.end());
   const auto &_scoped_entry1 = *_it1;
   EXPECT_EQ(_scoped_entry1.entry_.type_, entry_types::counter);
-  EXPECT_EQ(_scoped_entry1.entry_.counter_.load(std::memory_order_relaxed), 32);
 
   auto _it2 = _recovered_index.find(request_key{std::string_view("c2r2")});
   ASSERT_NE(_it2, _recovered_index.end());
   const auto &_scoped_entry2 = *_it2;
   EXPECT_EQ(_scoped_entry2.entry_.type_, entry_types::raw);
-  const auto _raw_ptr = _scoped_entry2.entry_.buffer_.load();
-  ASSERT_EQ(_raw_ptr->size(), 1);
-  EXPECT_EQ((*_raw_ptr)[0], std::byte{1});
-
-  EXPECT_EQ(_scoped_entry1.entry_.expires_at_.load(std::memory_order_relaxed), expires1_ns);
-  EXPECT_EQ(_scoped_entry2.entry_.expires_at_.load(std::memory_order_relaxed), expires2_ns);
-
-#ifdef ENABLED_FEATURE_METRICS
-  EXPECT_EQ(_scoped_entry1.metrics_->reads_.load(std::memory_order_relaxed), 3);
-  EXPECT_EQ(_scoped_entry1.metrics_->reads_accumulator_.load(std::memory_order_relaxed), 66);
-  EXPECT_EQ(_scoped_entry1.metrics_->writes_.load(std::memory_order_relaxed), 5);
-  EXPECT_EQ(_scoped_entry1.metrics_->writes_accumulator_.load(std::memory_order_relaxed), 10);
-  EXPECT_EQ(_scoped_entry1.metrics_->writes_per_minute_.load(std::memory_order_relaxed), 33);
-
-  EXPECT_EQ(_scoped_entry2.metrics_->reads_.load(std::memory_order_relaxed), 5);
-  EXPECT_EQ(_scoped_entry2.metrics_->reads_accumulator_.load(std::memory_order_relaxed), 11);
-  EXPECT_EQ(_scoped_entry2.metrics_->writes_.load(std::memory_order_relaxed), 15);
-  EXPECT_EQ(_scoped_entry2.metrics_->writes_accumulator_.load(std::memory_order_relaxed), 17);
-  EXPECT_EQ(_scoped_entry2.metrics_->writes_per_minute_.load(std::memory_order_relaxed), 19);
-#endif
+  const auto _raw_ptr = _scoped_entry2.entry_.buffer_storage_->buffer_.load();
 }

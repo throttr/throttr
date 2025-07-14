@@ -105,13 +105,13 @@ namespace throttr
         continue;
 
       const auto &_key = _e.key_;
-      uint16_t _key_size = static_cast<uint16_t>(_key.size());
+      auto _key_size = static_cast<uint16_t>(_key.size());
       write_raw(_out, _key_size);
       write_bytes(_out, _key);
 
       write_raw(_out, _e.entry_.expires_at_.load(std::memory_order_relaxed));
-      write_raw(_out, static_cast<uint8_t>(_e.entry_.type_));
-      write_raw(_out, static_cast<uint8_t>(_e.entry_.ttl_type_));
+      write_raw(_out, std::to_underlying(_e.entry_.type_));
+      write_raw(_out, std::to_underlying(_e.entry_.ttl_type_));
 
 #ifdef ENABLED_FEATURE_METRICS
       write_raw(_out, _e.metrics_->reads_.load());
@@ -124,17 +124,17 @@ namespace throttr
 
       if (_e.entry_.type_ == entry_types::counter)
       {
-        value_type _counter = static_cast<value_type>(_e.entry_.counter_.load());
+        auto _counter = _e.entry_.counter_.load();
         write_raw(_out, _counter);
       }
       else if (_e.entry_.type_ == entry_types::raw)
       {
-        const auto _buffer_ptr = _e.entry_.buffer_.load();
-        value_type _buffer_size = static_cast<value_type>(_buffer_ptr->size());
+        const auto _buffer_ptr = _e.entry_.buffer_storage_->buffer_.load();
+        auto _buffer_size = static_cast<value_type>(_buffer_ptr->size());
         write_raw(_out, _buffer_size);
-        for (std::byte _b : *_buffer_ptr)
+        for (const std::byte _b : *_buffer_ptr)
         {
-          _out.put(static_cast<char>(_b));
+          _out.put(std::to_underlying(_b));
         }
       }
     }
@@ -183,10 +183,9 @@ namespace throttr
       read_raw(_in, _ttl_raw);
       auto _ttl_type = static_cast<ttl_types>(_ttl_raw);
 
-      entry _new_entry;
-      _new_entry.type_ = _type;
-      _new_entry.expires_at_.store(_expires_at);
-      _new_entry.ttl_type_ = _ttl_type;
+      std::vector<std::byte> _value_storage(sizeof(value_type));
+      std::span<const std::byte> _value(_value_storage);
+      entry _new_entry(_type, _value, _ttl_type, _expires_at);
 
 #ifdef ENABLED_FEATURE_METRICS
       auto _metrics = std::make_shared<entry_metrics>();
@@ -210,15 +209,13 @@ namespace throttr
         read_raw(_in, _buffer_size);
         std::vector<std::byte> _buffer;
         read_bytes(_in, _buffer, _buffer_size);
-        _new_entry.buffer_.store(std::make_shared<std::vector<std::byte>>(std::move(_buffer)));
+        _new_entry.buffer_storage_->buffer_.store(std::make_shared<std::vector<std::byte>>(std::move(_buffer)));
       }
 
 #ifdef ENABLED_FEATURE_METRICS
-      auto _entry_wrapper = entry_wrapper{std::move(_key), std::move(_new_entry)};
-      _entry_wrapper.metrics_ = _metrics;
-      storage.insert(_entry_wrapper);
+      storage.emplace(std::move(_key), _type, _value, _ttl_type, _expires_at);
 #else
-      storage.insert(entry_wrapper{std::move(_key), std::move(_new_entry)});
+      storage.emplace(std::move(_key), _type, _value, _ttl_type, _expires_at);
 #endif
     }
   }

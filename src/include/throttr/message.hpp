@@ -19,6 +19,7 @@
 #define THROTTR_MESSAGE_HPP
 
 #include <boost/asio/buffer.hpp>
+#include <iostream>
 #include <vector>
 
 namespace throttr
@@ -42,17 +43,22 @@ namespace throttr
     /**
      * Recyclable
      */
-    bool recyclable_ = true;
+    bool recyclable_ = false;
 
     /**
-     * Used
+     * In use
      */
-    bool used_ = false;
+    bool in_use_ = false;
 
     /**
      * Constructor
      */
     message() = default;
+
+    /**
+     * Destructor
+     */
+    ~message() = default;
   };
 } // namespace throttr
 

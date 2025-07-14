@@ -18,32 +18,33 @@
 #ifndef THROTTR_CONNECTION_ALLOCATOR_HPP
 #define THROTTR_CONNECTION_ALLOCATOR_HPP
 
+#include <array>
 #include <cstddef>
 
 namespace throttr
 {
   /**
-   * Handler memory
+   * Custom handler memory
    */
-  class connection_handler_memory
+  class custom_handler_memory
   {
   public:
     /**
      * Constructor
      */
-    connection_handler_memory() = default;
+    custom_handler_memory() = default;
 
     /**
      * Swap operator
      */
-    connection_handler_memory(const connection_handler_memory &) = delete;
+    custom_handler_memory(const custom_handler_memory &) = delete;
 
     /**
      * Assignment operator
      *
      * @return handler_memory
      */
-    connection_handler_memory &operator=(const connection_handler_memory &) = delete;
+    custom_handler_memory &operator=(const custom_handler_memory &) = delete;
 
     /**
      * Allocate
@@ -53,7 +54,7 @@ namespace throttr
      */
     void *allocate(const std::size_t size)
     {
-      if (!in_use_ && size < sizeof(storage_))
+      if (!in_use_ && size <= 512)
       {
         in_use_ = true;
         return &storage_;
@@ -85,7 +86,7 @@ namespace throttr
     /**
      * Storage
      */
-    std::byte storage_[16] alignas(16);
+    std::array<std::byte, 512> storage_;
 
     /**
      * In use
@@ -96,7 +97,7 @@ namespace throttr
   /**
    * Handler allocator
    */
-  template<typename T> class connection_handler_allocator
+  template<typename T> class custom_allocator
   {
   public:
     using value_type = T;
@@ -106,7 +107,7 @@ namespace throttr
      *
      * @param mem
      */
-    explicit connection_handler_allocator(connection_handler_memory &mem) noexcept : memory_(mem)
+    explicit custom_allocator(custom_handler_memory &mem) noexcept : memory_(mem)
     {
     }
 
@@ -116,8 +117,7 @@ namespace throttr
      * @tparam U
      * @param other
      */
-    template<typename U>
-    explicit connection_handler_allocator(const connection_handler_allocator<U> &other) noexcept : memory_(other.memory_)
+    template<typename U> explicit custom_allocator(const custom_allocator<U> &other) noexcept : memory_(other.memory_)
     {
     }
 
@@ -149,7 +149,7 @@ namespace throttr
      * @param other
      * @return bool
      */
-    template<typename U> bool operator==(const connection_handler_allocator<U> &other) const noexcept
+    template<typename U> bool operator==(const custom_allocator<U> &other) const noexcept
     {
       return &memory_ == &other.memory_;
     }
@@ -161,7 +161,7 @@ namespace throttr
      * @param other
      * @return bool
      */
-    template<typename U> bool operator!=(const connection_handler_allocator<U> &other) const noexcept
+    template<typename U> bool operator!=(const custom_allocator<U> &other) const noexcept
     {
       return !(*this == other);
     }
@@ -172,8 +172,8 @@ namespace throttr
      *
      * @tparam
      */
-    template<typename> friend class connection_handler_allocator;
-    connection_handler_memory &memory_;
+    template<typename> friend class custom_allocator;
+    custom_handler_memory &memory_;
   };
 
 } // namespace throttr

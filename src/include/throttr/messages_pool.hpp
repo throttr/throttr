@@ -13,53 +13,54 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#pragma once
+#ifndef THROTTR__MESSAGES_POOL_HPP
+#define THROTTR__MESSAGES_POOL_HPP
 
-#ifndef THROTTR_ENTRY_METRICS_HPP
-#define THROTTR_ENTRY_METRICS_HPP
-
-#include <atomic>
-#include <iostream>
+#include <memory>
+#include <vector>
 
 namespace throttr
 {
-#ifdef ENABLED_FEATURE_METRICS
+  class message;
+
   /**
-   * Entry metrics
+   * Messages pool
    */
-  struct entry_metrics
+  class messages_pool
   {
+  public:
     /**
-     * Reads
+     * Available
      */
-    std::atomic<uint64_t> reads_ = 0;
+    static thread_local std::vector<std::shared_ptr<message>> available_;
 
     /**
-     * Writes
+     * Used
      */
-    std::atomic<uint64_t> writes_ = 0;
+    static thread_local std::vector<std::shared_ptr<message>> used_;
 
     /**
-     * Reads accumulator
+     * Prepares
      */
-    std::atomic<uint64_t> reads_accumulator_ = 0;
+    static void prepares(std::size_t initial = 16);
 
     /**
-     * Write accumulator
+     * Recycle
      */
-    std::atomic<uint64_t> writes_accumulator_ = 0;
+    static void recycle();
 
     /**
-     * Reads per minute (RPM)
+     * Fit
      */
-    std::atomic<uint64_t> reads_per_minute_ = 0;
+    static void fit(std::size_t count = 16);
 
     /**
-     * Writes per minute (WPM)
+     * Grab
+     *
+     * @return
      */
-    std::atomic<uint64_t> writes_per_minute_ = 0;
+    static std::shared_ptr<message> take_one(std::size_t count = 16);
   };
-#endif
 } // namespace throttr
 
-#endif // THROTTR_ENTRY_METRICS_HPP
+#endif // THROTTR__MESSAGES_POOL_HPP

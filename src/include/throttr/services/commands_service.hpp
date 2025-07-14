@@ -41,7 +41,7 @@ namespace throttr
     /**
      * Commands
      */
-    std::array<command_callback, 32> commands_{};
+    std::array<command_callback, 256> commands_{};
 
     /**
      * Constructor
