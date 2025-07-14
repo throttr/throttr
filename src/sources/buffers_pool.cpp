@@ -57,6 +57,7 @@ namespace throttr
       {
         const auto _scoped_buffer = (*it)->buffer_.load(std::memory_order_relaxed);
         _scoped_buffer->clear();
+        _scoped_buffer->shrink_to_fit();
         available_.push_back(*it);
         it = used_.erase(it);
       }
