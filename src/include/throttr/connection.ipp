@@ -182,9 +182,6 @@ namespace throttr
 
   template<typename Transport> void connection<Transport>::try_process_next()
   {
-    messages_pool::recycle();
-    messages_pool::fit();
-
     const auto _message = messages_pool::take_one();
 
     while (true)

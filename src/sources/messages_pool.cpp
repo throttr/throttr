@@ -58,17 +58,13 @@ namespace throttr
       available_.erase(available_.begin() + count, available_.end());
       available_.shrink_to_fit();
     }
-
-    while (available_.size() < count)
-    {
-      const auto _scoped_message = std::make_shared<message>();
-      _scoped_message->recyclable_ = true;
-      available_.push_back(_scoped_message);
-    }
   }
 
   std::shared_ptr<message> messages_pool::take_one(const std::size_t count)
   {
+    recycle();
+    fit();
+
     const bool _should_refill = available_.size() == 0;
 
     while (_should_refill && available_.size() < count)
@@ -81,7 +77,6 @@ namespace throttr
     const auto _message = available_.front();
     _message->in_use_ = true;
     used_.push_back(_message);
-
     available_.erase(available_.begin());
 
     return _message;

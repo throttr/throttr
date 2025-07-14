@@ -34,21 +34,6 @@ namespace throttr
     }
   }
 
-  void buffers_pool::fit(const std::size_t count)
-  {
-    if (available_.size() > count)
-    {
-      available_.erase(available_.begin() + count, available_.end());
-    }
-
-    while (available_.size() < count)
-    {
-      auto _reusable_buffer = std::make_shared<reusable_buffer>();
-      _reusable_buffer->recyclable_ = true;
-      available_.push_back(_reusable_buffer);
-    }
-  }
-
   void buffers_pool::recycle()
   {
     for (auto it = used_.begin(); it != used_.end();)
@@ -66,23 +51,35 @@ namespace throttr
     }
   }
 
+  void buffers_pool::fit(const std::size_t count)
+  {
+    if (available_.size() > count)
+    {
+      available_.erase(available_.begin() + count, available_.end());
+      available_.shrink_to_fit();
+    }
+  }
+
   std::shared_ptr<reusable_buffer> buffers_pool::take_one(const std::size_t count)
   {
+    recycle();
+    fit();
+
     const bool _should_refill = available_.size() == 0;
 
     while (_should_refill && available_.size() < count)
     {
-      auto _reusable_buffer = std::make_shared<reusable_buffer>();
-      _reusable_buffer->recyclable_ = true;
-      available_.push_back(_reusable_buffer);
+      auto _scoped_reusable_buffer = std::make_shared<reusable_buffer>();
+      _scoped_reusable_buffer->recyclable_ = true;
+      available_.push_back(_scoped_reusable_buffer);
     }
 
-    const auto _element = available_.front();
-    _element->in_use_ = true;
-    used_.push_back(_element);
+    const auto _reusable_buffer = available_.front();
+    _reusable_buffer->in_use_ = true;
+    used_.push_back(_reusable_buffer);
 
     available_.erase(available_.begin());
 
-    return _element;
+    return _reusable_buffer;
   }
 } // namespace throttr

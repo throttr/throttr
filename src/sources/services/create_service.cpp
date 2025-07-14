@@ -50,9 +50,6 @@ namespace throttr
     auto &_index = state->storage_.get<tag_by_key>();
     const std::vector _key(key.data(), key.data() + key.size());
 
-    buffers_pool::recycle();
-    buffers_pool::fit();
-
     if (!as_insert)
     {
       std::string _scoped_key(key.size(), '\0');
