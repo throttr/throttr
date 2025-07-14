@@ -17,9 +17,9 @@
 
 #include <boost/asio/bind_allocator.hpp>
 #include <boost/asio/write.hpp>
+#include <boost/beast/core/bind_handler.hpp>
 #include <boost/core/ignore_unused.hpp>
 #include <boost/uuid/uuid_io.hpp>
-#include <boost/beast/core/bind_handler.hpp>
 #include <throttr/services/commands_service.hpp>
 #include <throttr/services/messages_service.hpp>
 #include <throttr/services/metrics_collector_service.hpp>
@@ -27,7 +27,6 @@
 #include <throttr/state.hpp>
 #include <throttr/utils.hpp>
 
-#include <throttr/buffers_pool.hpp>
 #include <throttr/messages_pool.hpp>
 
 namespace throttr
@@ -158,12 +157,10 @@ namespace throttr
     buffer_start_ = 0;
   }
 
-  template<typename Transport> void connection<Transport>::send(const std::shared_ptr<message> & batch)
+  template<typename Transport> void connection<Transport>::send(const std::shared_ptr<message> &batch)
   {
-    boost::asio::post(
-      socket_.get_executor(),
-      boost::beast::bind_front_handler(&connection::on_send, this->shared_from_this(), batch)
-    );
+    boost::asio::
+      post(socket_.get_executor(), boost::beast::bind_front_handler(&connection::on_send, this->shared_from_this(), batch));
   }
 
   template<typename Transport> void connection<Transport>::on_read(const boost::system::error_code &error, std::size_t length)
@@ -286,7 +283,10 @@ namespace throttr
     const std::shared_ptr<message> _message = pending_writes_.front();
     pending_writes_.pop_front();
 
-    _message->used_ = true;
+    if (_message->recyclable_)
+    {
+      _message->in_use_ = false;
+    }
 
     if (!pending_writes_.empty())
     {
@@ -317,7 +317,6 @@ namespace throttr
   template<typename Transport> void connection<Transport>::write_next()
   {
     std::scoped_lock _write_guard(mutex_);
-
 
     if (pending_writes_.empty())
       return;

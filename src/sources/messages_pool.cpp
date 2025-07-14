@@ -29,25 +29,24 @@ namespace throttr
     available_.reserve(initial);
     for (std::size_t _e = 0; _e < initial; ++_e)
     {
-      available_.push_back(std::make_shared<message>());
+      auto _message = std::make_shared<message>();
+      _message->recyclable_ = true;
+      available_.push_back(_message);
     }
   }
 
   void messages_pool::recycle()
   {
-    std::size_t recycled = 0;
     for (auto it = used_.begin(); it != used_.end();)
     {
-      if ((*it)->used_)
+      if (!(*it)->in_use_)
       {
-        (*it)->used_ = false;
         (*it)->write_buffer_.clear();
         (*it)->write_buffer_.shrink_to_fit();
         (*it)->buffers_.clear();
         (*it)->buffers_.shrink_to_fit();
-        available_.push_back(std::move(*it));
+        available_.push_back(*it);
         it = used_.erase(it);
-        recycled++;
       }
       else
         ++it;
@@ -67,15 +66,16 @@ namespace throttr
   {
     while (available_.size() < count)
     {
-      available_.push_back(std::make_shared<message>());
+      const auto _scoped_message = std::make_shared<message>();
+      _scoped_message->recyclable_ = true;
+      available_.push_back(_scoped_message);
     }
 
     const auto _message = available_.front();
-    available_.erase(available_.begin());
-
-    _message->used_ = true;
-
+    _message->in_use_ = true;
     used_.push_back(_message);
+
+    available_.erase(available_.begin());
 
     return _message;
   }

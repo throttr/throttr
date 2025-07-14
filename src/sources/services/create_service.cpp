@@ -51,6 +51,7 @@ namespace throttr
     const std::vector _key(key.data(), key.data() + key.size());
 
     buffers_pool::recycle();
+    buffers_pool::fit();
 
     if (!as_insert)
     {

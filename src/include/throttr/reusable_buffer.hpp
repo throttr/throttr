@@ -29,9 +29,14 @@ namespace throttr
   {
   public:
     /**
-     * Can be reused
+     * Recyclable
      */
-    bool can_be_reused_ = false;
+    bool recyclable_ = false;
+
+    /**
+     * In use
+     */
+    bool in_use_ = false;
 
     /**
      * Buffer

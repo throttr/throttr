@@ -50,7 +50,7 @@ namespace throttr
     static void recycle();
 
     /**
-     * Refill
+     * Fit
      */
     static void fit(std::size_t count = 16);
 

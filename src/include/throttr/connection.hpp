@@ -148,7 +148,7 @@ namespace throttr
      *
      * @param batch
      */
-    void send(const std::shared_ptr<message> & batch);
+    void send(const std::shared_ptr<message> &batch);
 
   private:
     /**
@@ -180,7 +180,7 @@ namespace throttr
      * @param buffer
      * @return
      */
-    std::size_t get_message_size(std::span<const std::byte> buffer) const;
+    [[nodiscard]] std::size_t get_message_size(std::span<const std::byte> buffer) const;
 
     /**
      * Do read

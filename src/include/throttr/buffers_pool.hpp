@@ -44,6 +44,11 @@ namespace throttr
     static void prepares(std::size_t initial = 16);
 
     /**
+     * Fit
+     */
+    static void fit(std::size_t count = 16);
+
+    /**
      * Recycle
      */
     static void recycle();

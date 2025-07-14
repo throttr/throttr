@@ -26,8 +26,11 @@ TEST_F(PublishTestFixture, OnSuccess)
   boost::asio::io_context _subscriber_io_context;
   boost::asio::io_context _tcp_subscriber_io_context;
   boost::asio::io_context _publisher_io_context;
+
+  std::this_thread::sleep_for(std::chrono::seconds(1));
+
   auto _subscriber = make_connection(_subscriber_io_context);
-  auto _tcp_subscriber = make_connection(_tcp_subscriber_io_context);
+  auto _tcp_subscriber = make_tcp_connection(_tcp_subscriber_io_context);
   auto _publisher = make_connection(_publisher_io_context);
 
   const auto _subscribe_buffer = request_subscribe_builder("news");
@@ -38,6 +41,8 @@ TEST_F(PublishTestFixture, OnSuccess)
 
   std::vector<std::byte> _subscribe_response(1);
   boost::asio::read(_subscriber, boost::asio::buffer(_subscribe_response.data(), _subscribe_response.size()));
+
+  std::this_thread::sleep_for(std::chrono::seconds(1));
 
   std::vector<std::byte> _tcp_subscribe_response(1);
   boost::asio::read(_tcp_subscriber, boost::asio::buffer(_tcp_subscribe_response.data(), _tcp_subscribe_response.size()));

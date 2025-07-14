@@ -48,7 +48,7 @@ namespace throttr
 
   entry::~entry()
   {
-    buffer_storage_->can_be_reused_ = true;
+    buffer_storage_->recyclable_ = true;
   }
 
   void entry::update_buffer(const std::span<const std::byte> value) const
