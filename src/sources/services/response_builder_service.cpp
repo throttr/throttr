@@ -47,10 +47,11 @@ namespace throttr
     using namespace boost::endian;
 
     if (measure)
-      return {17, 5}; // Key size + Expires At + Bytes used | number of batch emplace back
+      return {sizeof(uint8_t) + sizeof(uint64_t) + sizeof(value_type), 5}; // Key size + Expires At + Bytes used | number of batch
+                                                                           // emplace back
 
     const auto _key_length = static_cast<std::byte>(entry->key_.size());
-    std::memcpy(write_buffer.data() + offset, &_key_length, sizeof(uint8_t));
+    std::memcpy(write_buffer.data() + offset, &_key_length, sizeof(uint8_t)); // 1 byte
     batch->emplace_back(write_buffer.data() + offset, sizeof(uint8_t));
     offset++;
 
@@ -60,7 +61,7 @@ namespace throttr
     // Handling _expires_at
     {
       const auto _expires_at = native_to_little(entry->entry_.expires_at_.load(std::memory_order_acquire));
-      std::memcpy(write_buffer.data() + offset, &_expires_at, sizeof(uint64_t));
+      std::memcpy(write_buffer.data() + offset, &_expires_at, sizeof(uint64_t)); // 8 bytes
       batch->emplace_back(write_buffer.data() + offset, sizeof(uint64_t));
       offset += sizeof(uint64_t);
     }
@@ -70,7 +71,7 @@ namespace throttr
       if (entry->entry_.type_ == entry_types::counter)
       {
         constexpr value_type _bytes_used = native_to_little(sizeof(value_type));
-        std::memcpy(write_buffer.data() + offset, &_bytes_used, sizeof(value_type));
+        std::memcpy(write_buffer.data() + offset, &_bytes_used, sizeof(value_type)); // value_type size
         batch->emplace_back(write_buffer.data() + offset, sizeof(value_type));
         offset += sizeof(value_type);
       }
@@ -236,7 +237,6 @@ namespace throttr
       &serialize_entry)
   {
     const auto &_index = state->storage_.get<tag_by_key>();
-    std::size_t _fragments_count = 1;
     std::size_t _fragment_size = 0;
 
     std::size_t _offset = write_buffer.size();
@@ -244,8 +244,8 @@ namespace throttr
     std::vector<const entry_wrapper *> _fragment_items;
     std::vector<std::vector<const entry_wrapper *>> _fragments;
 
-    std::size_t _buffer_required_size = 0;
-    std::size_t _batch_required_size = 2; // status + fragment count
+    std::size_t _buffer_required_size = sizeof(uint64_t); // fragments count
+    std::size_t _batch_required_size = 2;                 // status + fragment count
 
     for (auto &_item : _index)
     {
@@ -257,31 +257,42 @@ namespace throttr
 #endif
 
       const auto [_item_size, _item_batch_size] = serialize_entry(nullptr, &_item, _offset, true);
-      if (_fragment_size + _item_size > max_fragment_size)
+
+      const auto required_space_for_item = _item_size + _item.key_.size();
+
+      // This is how bytes this will use if I push this
+
+      if (const auto fragment_iteration_size = _fragment_size + required_space_for_item;
+          fragment_iteration_size > max_fragment_size)
       {
-        _fragments.push_back(_fragment_items);
+        // This push all the items as a fragment
+        _fragments.push_back(std::move(_fragment_items));
+
+        // This reset the fragment size for next iterations
         _fragment_size = 0;
-        _fragments_count++;
-        _fragment_items.clear();
+
+        // This clear the container to keep the entries until a fragment is completed
+        _fragment_items = {};
+
+        // Fragment requires two prefix slots
         _batch_required_size += 2; // fragment index + keys count
       }
 
-      _fragment_items.emplace_back(&_item);
-      _fragment_size += _item_size + _item.key_.size();
+      _fragment_items.push_back(&_item);
+
+      _fragment_size += required_space_for_item;
 
       _buffer_required_size += _item_size;
-      _batch_required_size += _item_batch_size;
+      _batch_required_size += _item_batch_size + 1;
     }
 
     if (!_fragment_items.empty())
     {
       _fragments.push_back(std::move(_fragment_items));
+      _batch_required_size += 2; // fragment index + keys count
     }
 
-    _batch_required_size += _fragments.size() * 2;
-
-    // buffer count + index per fragment + keys fragment
-    _buffer_required_size += sizeof(std::uint64_t) + _fragments.size() * (sizeof(std::uint64_t) * 2);
+    _buffer_required_size += _fragments.size() * (sizeof(std::uint64_t) * 2);
 
     batch.reserve(batch.size() + _batch_required_size);
     write_buffer.resize(write_buffer.size() + _buffer_required_size);

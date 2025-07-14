@@ -9,6 +9,7 @@ jobs:
   build:
     name: CI
     strategy:
+      fail-fast: false
       matrix:
         type: [debug, release]
         size: [UINT8, UINT16, UINT32, UINT64]

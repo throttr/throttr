@@ -19,6 +19,7 @@
 #define THROTTR_UTILS_HPP
 
 #include <fmt/chrono.h>
+#include <fmt/core.h>
 
 #include <boost/asio/buffer.hpp>
 #include <boost/uuid/uuid.hpp>
@@ -73,16 +74,18 @@ namespace throttr
    */
   static std::string buffers_to_hex(const std::vector<boost::asio::const_buffer> &buffers)
   {
-    std::string result;
+    fmt::memory_buffer out;
+
     for (const auto &buf : buffers)
     {
       const auto *data = static_cast<const uint8_t *>(buf.data());
       for (std::size_t i = 0; i < buf.size(); ++i)
       {
-        fmt::format_to(std::back_inserter(result), "{:02X} ", data[i]);
+        fmt::format_to(std::back_inserter(out), "{:02X} ", data[i]);
       }
     }
-    return result;
+
+    return fmt::to_string(out);
   }
 
   /**
@@ -93,12 +96,14 @@ namespace throttr
    */
   static std::string span_to_hex(std::span<const std::byte> buffer)
   {
-    std::string out;
+    fmt::memory_buffer out;
+
     for (const auto b : buffer)
     {
       fmt::format_to(std::back_inserter(out), "{:02X} ", std::to_integer<uint8_t>(b));
     }
-    return out;
+
+    return fmt::to_string(out);
   }
 
   /**

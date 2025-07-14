@@ -182,8 +182,7 @@ namespace throttr
 
   template<typename Transport> void connection<Transport>::try_process_next()
   {
-    messages_pool::recycle();
-    messages_pool::fit();
+    const auto _message = messages_pool::take_one();
 
     while (true)
     {
@@ -225,13 +224,14 @@ namespace throttr
       metrics_->commands_[static_cast<std::size_t>(_type)].mark();
 #endif
 
-      const auto _message = messages_pool::take_one();
-
       state_->commands_->commands_[static_cast<std::size_t>(
         _type)](state_, _type, _view, _message->buffers_, _message->write_buffer_, this->id_);
-
-      send(_message);
     }
+
+    if (_message->buffers_.empty())
+      _message->in_use_ = false;
+    else
+      send(_message);
 
     compact_buffer_if_needed();
     do_read();

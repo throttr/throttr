@@ -53,7 +53,9 @@ namespace throttr
     signals.async_wait(
       [&](auto /*ec*/, int /*signal_number*/)
       {
+#ifndef NDEBUG
         fmt::println("[{}] [{:%Y-%m-%d %H:%M:%S}] SIGNAL RECEIVED", to_string(state_->id_), std::chrono::system_clock::now());
+#endif
         state_->prepare_for_shutdown(program_options_);
         ioc_.stop();
       });

@@ -35,8 +35,6 @@ namespace throttr
 
     boost::ignore_unused(type, view, id);
 
-    batch.reserve(batch.size() + 1);
-
     response_builder_service::handle_fragmented_entries_response(
       state,
       batch,

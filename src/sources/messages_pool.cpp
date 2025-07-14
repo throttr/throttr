@@ -13,8 +13,6 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-#include "fmt/ostream.h"
-
 #include <throttr/message.hpp>
 #include <throttr/messages_pool.hpp>
 
@@ -41,10 +39,10 @@ namespace throttr
     {
       if (!(*it)->in_use_)
       {
-        (*it)->write_buffer_.clear();
-        (*it)->write_buffer_.shrink_to_fit();
         (*it)->buffers_.clear();
         (*it)->buffers_.shrink_to_fit();
+        (*it)->write_buffer_.clear();
+        (*it)->write_buffer_.shrink_to_fit();
         available_.push_back(*it);
         it = used_.erase(it);
       }
@@ -64,7 +62,12 @@ namespace throttr
 
   std::shared_ptr<message> messages_pool::take_one(const std::size_t count)
   {
-    while (available_.size() < count)
+    recycle();
+    fit();
+
+    const bool _should_refill = available_.empty();
+
+    while (_should_refill && available_.size() < count)
     {
       const auto _scoped_message = std::make_shared<message>();
       _scoped_message->recyclable_ = true;
@@ -74,7 +77,6 @@ namespace throttr
     const auto _message = available_.front();
     _message->in_use_ = true;
     used_.push_back(_message);
-
     available_.erase(available_.begin());
 
     return _message;
