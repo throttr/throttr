@@ -380,19 +380,22 @@ TEST_F(StateManagementTestFixture, ScheduleExpiration_ReprogramsIfNextEntryExist
   const std::uint64_t now_ns = system_clock::now().time_since_epoch().count();
   const std::uint64_t expires1_ns = now_ns;
   const std::uint64_t expires2_ns = now_ns + duration_cast<nanoseconds>(seconds(5)).count();
-  std::vector _value_storage(sizeof(value_type), std::byte{0});
-  const std::span<const std::byte> _value(_value_storage);
 
-  entry _entry1(entry_types::counter, _value, ttl_types::seconds, expires1_ns);
+  auto _entry1_bytes = to_bytes("c1r1");
+  auto _entry1_value_bytes = std::vector(sizeof(value_type), std::byte{1});
+
+  auto _entry2_bytes = to_bytes("c2r2");
+  auto _entry2_value_bytes = std::vector(sizeof(value_type), std::byte{1});
+
+  entry _entry1(entry_types::counter, _entry1_value_bytes, ttl_types::seconds, expires1_ns);
   _entry1.counter_.store(32, std::memory_order_release);
   _entry1.expires_at_.store(expires1_ns, std::memory_order_release);
 
-  entry _entry2(entry_types::raw, _value, ttl_types::seconds, expires2_ns);
-  _entry2.buffer_storage_->buffer_.store(std::make_shared<std::vector<std::byte>>(1, std::byte{1}), std::memory_order_release);
+  entry _entry2(entry_types::raw, _entry2_value_bytes, ttl_types::seconds, expires2_ns);
   _entry2.expires_at_.store(expires2_ns, std::memory_order_release);
 
-  _index.insert(entry_wrapper{to_bytes("c1r1"), entry_types::counter, to_bytes("c1r1"), ttl_types::seconds, expires1_ns});
-  _index.insert(entry_wrapper{to_bytes("c2r2"), entry_types::counter, to_bytes("c2r2"), ttl_types::seconds, expires2_ns});
+  _index.insert(entry_wrapper{_entry1_bytes, entry_types::counter, _entry1_value_bytes, ttl_types::seconds, expires1_ns});
+  _index.insert(entry_wrapper{_entry2_bytes, entry_types::counter, _entry2_value_bytes, ttl_types::seconds, expires2_ns});
 
   state_->garbage_collector_->schedule_timer(state_, now_ns);
 
@@ -409,17 +412,17 @@ TEST_F(StateManagementTestFixture, StateCanPersistKeys)
   auto &_storage = state_->storage_;
   auto &_index = _storage.get<tag_by_key>();
 
-  std::vector _value_storage(sizeof(value_type), std::byte{0});
-  std::span<const std::byte> _value(_value_storage);
-
   const std::uint64_t now_ns = system_clock::now().time_since_epoch().count();
   const std::uint64_t expires1_ns = now_ns + duration_cast<nanoseconds>(minutes(30)).count();
   const std::uint64_t expires2_ns = now_ns + duration_cast<nanoseconds>(minutes(60)).count();
 
-  entry _entry1(entry_types::counter, _value, ttl_types::seconds, 0);
+  auto _entry1_bytes = to_bytes("c1r1");
+  auto _entry1_value_bytes = std::vector(sizeof(value_type), std::byte{1});
+
+  entry _entry1(entry_types::counter, _entry1_value_bytes, ttl_types::seconds, 0);
   _entry1.counter_.store(32, std::memory_order_release);
   _entry1.expires_at_.store(expires1_ns, std::memory_order_release);
-  auto _entry1wrapper = entry_wrapper{to_bytes("c1r1"), entry_types::counter, to_bytes("c1r1"), ttl_types::seconds, 0};
+  auto _entry1wrapper = entry_wrapper{_entry1_bytes, entry_types::counter, _entry1_value_bytes, ttl_types::seconds, 0};
 #ifdef ENABLED_FEATURE_METRICS
   _entry1wrapper.metrics_->reads_.store(3, std::memory_order_release);
   _entry1wrapper.metrics_->reads_accumulator_.store(66, std::memory_order_release);
@@ -429,10 +432,12 @@ TEST_F(StateManagementTestFixture, StateCanPersistKeys)
   _entry1wrapper.metrics_->writes_per_minute_.store(33, std::memory_order_release);
 #endif
 
-  entry _entry2(entry_types::raw, _value, ttl_types::seconds, 0);
-  _entry2.buffer_storage_->buffer_.store(std::make_shared<std::vector<std::byte>>(1, std::byte{1}), std::memory_order_release);
+  auto _entry2_bytes = to_bytes("c2r2");
+  auto _entry2_value_bytes = std::vector(sizeof(value_type), std::byte{1});
+
+  entry _entry2(entry_types::raw, _entry2_bytes, ttl_types::seconds, 0);
   _entry2.expires_at_.store(expires2_ns, std::memory_order_release);
-  auto _entry2wrapper = entry_wrapper{to_bytes("c2r2"), entry_types::raw, to_bytes("c2r2"), ttl_types::seconds, 0};
+  auto _entry2wrapper = entry_wrapper{_entry2_bytes, entry_types::raw, _entry2_bytes, ttl_types::seconds, 0};
 #ifdef ENABLED_FEATURE_METRICS
   _entry2wrapper.metrics_->reads_.store(5, std::memory_order_release);
   _entry2wrapper.metrics_->reads_accumulator_.store(11, std::memory_order_release);
@@ -442,8 +447,8 @@ TEST_F(StateManagementTestFixture, StateCanPersistKeys)
   _entry2wrapper.metrics_->writes_per_minute_.store(19, std::memory_order_release);
 #endif
 
-  _index.insert(entry_wrapper{to_bytes("c1r1"), entry_types::counter, to_bytes("c1r1"), ttl_types::seconds, 0});
-  _index.insert(entry_wrapper{to_bytes("c2r2"), entry_types::raw, to_bytes("c2r2"), ttl_types::seconds, 0});
+  _index.insert(entry_wrapper{_entry1_bytes, entry_types::counter, _entry1_value_bytes, ttl_types::seconds, 0});
+  _index.insert(entry_wrapper{_entry2_bytes, entry_types::raw, _entry2_value_bytes, ttl_types::seconds, 0});
 
   EXPECT_EQ(_index.size(), 2);
 
